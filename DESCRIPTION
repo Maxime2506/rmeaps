@@ -1,0 +1,16 @@
+Package: rmeaps
+Type: Package
+Title: MEAPS : Estimation de la distribution statistique des trajets entre des origines et des destinations.
+Version: 1.0
+Date: 2023-01-31
+Authors@R: c(
+  person("Maxime", "Parodi", email = "maxime.parodi@sciencespo.fr", role = c("aut", "cre")),
+  person("Xavier", "Timbeau", email = "xavier.timbeau@sciencespo.fr", role = "aut")
+  )
+Description: 'MEAPS est un modèle ergodique d'absorption avec priorité et saturation. Il estime la distribution des trajets entre des points de départs, typiquement le lieu de résidence, et des points d'intérêts, par exemple des zones d'emplois.'
+License: GPL (>= 2)
+Encoding: UTF-8
+Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6)
+LinkingTo: Rcpp, RcppParallel
+SystemRequirements: GNU make
+RoxygenNote: 7.2.1
