@@ -88,8 +88,8 @@ struct Meaps_parallel2 : public Worker
                   const NumericVector f,
                   const IntegerMatrix shuf,
                   const std::size_t N,
-                    const std::size_t K,
-                    const std::size_t Ns) : rkdist(rkdist), emplois(emplois), actifs(actifs), 
+                  const std::size_t K,
+                  const std::size_t Ns) : rkdist(rkdist), emplois(emplois), actifs(actifs), 
                   modds(modds), f(f), shuf(shuf), N(N), K(K), Ns(Ns),
                   liaisons() {
     liaisons.resize(N*K, 0.0);
