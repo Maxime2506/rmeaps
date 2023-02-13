@@ -13,4 +13,4 @@ Encoding: UTF-8
 Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6)
 LinkingTo: Rcpp, RcppParallel
 SystemRequirements: GNU make
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
