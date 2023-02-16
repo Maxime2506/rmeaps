@@ -1,9 +1,12 @@
-// [[Rcpp::plugins(openmp)]]
-#include <Rcpp.h>
-#include <valarray>
 #ifdef _OPENMP
 # include <omp.h>
 #endif
+// [[Rcpp::plugins(openmp)]]
+#include <Rcpp.h>
+// [[Rcpp::depends(RcppProgress)]]
+#include <progress.hpp>
+#include <progress_bar.hpp>
+#include <valarray>
 #include "repartir_actifs.h"
 
 using namespace Rcpp;
@@ -14,15 +17,19 @@ using namespace Rcpp;
 //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+//' @param progress Ajoute une barre de progression. Default : true.
+//' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
-NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
+NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
                                NumericVector emplois,
                                NumericVector actifs,
                                NumericMatrix modds,
                                NumericVector f,
-                               IntegerMatrix shuf) {
+                               IntegerMatrix shuf,
+                               bool progress = true,
+                               bool normalisation = false) {
   
   const int N = rkdist.nrow(),
             K = rkdist.ncol(),
@@ -47,9 +54,9 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
     stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de lignes.");
   }
   
-  #ifdef _OPENMP
-  omp_set_num_threads(2L);
-  #endif
+#ifdef _OPENMP
+  REprintf("Nombre de threads = %i\n", omp_get_max_threads());
+#endif
   
   // Conversion en objet C++.
   std::vector<int> rkdistcpp = as<std::vector<int>>(rkdist);
@@ -73,11 +80,12 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   // Conversion de l'emploi en c++ et calage.
   std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
   // Attention : calage des emplois sur le nombre d'actifs.
-  double cale = sum(actifs * (1 - f)) / sum(emplois); 
-  for (auto& k: emploisinitial) { k *= cale; }
-  
+  if (normalisation) {
+    double cale = sum(actifs * (1 - f)) / sum(emplois); 
+    for (auto& k: emploisinitial) { k *= cale; }
+  }
   // Lancement du bootstrap.
- 
+  Progress p(Nboot * Ns, progress);
   #ifdef _OPENMP
   #pragma omp declare reduction(vsum : std::vector<double> : \
             std::transform(omp_out.begin(), omp_out.end(), \
@@ -104,6 +112,9 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
     }
       
     for (auto i: theshuf) {
+      
+      // Increment progress_bar.
+      p.increment();
       
       std::valarray<int> rki = ranking[std::slice(i, K, N)];
       std::valarray<double> lignodds = odds[std::slice(i, K, N)];

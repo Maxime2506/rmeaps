@@ -17,7 +17,7 @@ using namespace std;
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
-NumericMatrix meaps_single(
+NumericMatrix meaps_oneshuf(
     const IntegerMatrix rkdist, 
     const NumericVector emplois,
     const NumericVector actifs,
