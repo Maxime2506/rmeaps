@@ -10,6 +10,20 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// chances_absorption
+NumericMatrix chances_absorption(const IntegerMatrix rkdist, const NumericVector emplois, const NumericMatrix modds, const NumericVector f);
+RcppExport SEXP _rmeaps_chances_absorption(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP moddsSEXP, SEXP fSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type rkdist(rkdistSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix >::type modds(moddsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type f(fSEXP);
+    rcpp_result_gen = Rcpp::wrap(chances_absorption(rkdist, emplois, modds, f));
+    return rcpp_result_gen;
+END_RCPP
+}
 // deborder
 List deborder(NumericVector conteneurs, const double& quantite);
 RcppExport SEXP _rmeaps_deborder(SEXP conteneursSEXP, SEXP quantiteSEXP) {
@@ -35,9 +49,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// meaps_single
-NumericMatrix meaps_single(const IntegerMatrix rkdist, const NumericVector emplois, const NumericVector actifs, const NumericMatrix modds, const NumericVector f, IntegerVector shuf);
-RcppExport SEXP _rmeaps_meaps_single(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP) {
+// meaps_oneshuf
+NumericMatrix meaps_oneshuf(const IntegerMatrix rkdist, const NumericVector emplois, const NumericVector actifs, const NumericMatrix modds, const NumericVector f, IntegerVector shuf);
+RcppExport SEXP _rmeaps_meaps_oneshuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,13 +61,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericMatrix >::type modds(moddsSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type f(fSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type shuf(shufSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_single(rkdist, emplois, actifs, modds, f, shuf));
+    rcpp_result_gen = Rcpp::wrap(meaps_oneshuf(rkdist, emplois, actifs, modds, f, shuf));
     return rcpp_result_gen;
 END_RCPP
 }
-// meaps_bootstrap2
-NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf);
-RcppExport SEXP _rmeaps_meaps_bootstrap2(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP) {
+// meaps_multishuf
+NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, bool progress, bool normalisation);
+RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP progressSEXP, SEXP normalisationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -63,16 +77,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_bootstrap2(rkdist, emplois, actifs, modds, f, shuf));
+    Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
+    rcpp_result_gen = Rcpp::wrap(meaps_multishuf(rkdist, emplois, actifs, modds, f, shuf, progress, normalisation));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rmeaps_chances_absorption", (DL_FUNC) &_rmeaps_chances_absorption, 4},
     {"_rmeaps_deborder", (DL_FUNC) &_rmeaps_deborder, 2},
     {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
-    {"_rmeaps_meaps_single", (DL_FUNC) &_rmeaps_meaps_single, 6},
-    {"_rmeaps_meaps_bootstrap2", (DL_FUNC) &_rmeaps_meaps_bootstrap2, 6},
+    {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 6},
+    {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 8},
     {NULL, NULL, 0}
 };
 
