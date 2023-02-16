@@ -48,7 +48,7 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   }
   
   #ifdef _OPENMP
-  omp_set_num_threads(1L);
+  omp_set_num_threads(2L);
   #endif
   
   // Conversion en objet C++.
@@ -79,15 +79,16 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   // Lancement du bootstrap.
  
   #ifdef _OPENMP
-  #pragma omp parallel for shared(Nboot, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
-   // reduction (+ : liaisons[:NK])
+  #pragma omp parallel for shared(Nboot, Ns, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
+   reduction (+ : liaisons[:NK])
   #endif
   for (int iboot = 0; iboot < Nboot; ++iboot) {
     
     std::valarray<int> theshuf = ishuf[std::slice(iboot, Ns, Nboot)];
     
     // Initialisation de l'emploi disponible.
-    std::vector<double> emp(emploisinitial);
+    std::vector<double> emp(K);
+    std::copy(emploisinitial.begin(), emploisinitial.end(), emp.begin());
     
     // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
     // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
@@ -96,10 +97,6 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
     for (auto i: theshuf) {
       freq_actifs[i]++;
     }
-    Rcout << "freqactif \n";
-    for (int i =0; i<Ns;++i) Rcout << freq_actifs[i] << " / ";
-    Rcout << "\n";
-      
       
     for (auto i: theshuf) {
       
@@ -133,7 +130,6 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
       
       // Inscription des résultats locaux dans la perspective globale.
       for(std::size_t k = 0; k < k_valid ; ++k) {
-        Rcout << "k = " << k << " rep = " << repartition[k] << "\n";
         emp[arrangement[k]] -= repartition[k];
         liaisons[i + N * arrangement[k]] += repartition[k]; // Attention : ordre de remplissage en "ligne".
       }
