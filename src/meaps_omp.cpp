@@ -27,7 +27,8 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   const int N = rkdist.nrow(),
             K = rkdist.ncol(),
             Ns = shuf.ncol(),
-            Nboot = shuf.nrow();
+            Nboot = shuf.nrow(),
+            NK = N * K;
   
   // Quelques vérifs préalables.
   if (emplois.size() != K) {
@@ -47,7 +48,6 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   }
   
   #ifdef _OPENMP
-  Rcout << "Openmp est défini avec un unique thread.\n";
   omp_set_num_threads(1L);
   #endif
   
@@ -59,15 +59,16 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   std::vector<double> actifscpp = as<std::vector<double>>(actifs);
   
   // Passage aux valarrays.
-  std::valarray<int> ranking(rkdistcpp.data(), N*K);
-  const std::valarray<double> odds(moddscpp.data(), N*K);
+  std::valarray<int> ranking(rkdistcpp.data(), NK);
+  const std::valarray<double> odds(moddscpp.data(), NK);
   std::valarray<int> ishuf(ishufcpp.data(), Ns*Nboot);
   // Décalage des rangs d'une unité.
   ranking -= 1L;
   ishuf -= 1L;
   
   // Initialisation du résultat.
-  std::vector<double> liaisons(N*K);
+  // std::vector<double> liaisons(N*K);
+  double liaisons[NK] = {}; // essai avec un array.
   
   // Conversion de l'emploi en c++ et calage.
   std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
@@ -76,11 +77,10 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   for (auto& k: emploisinitial) { k *= cale; }
   
   // Lancement du bootstrap.
+ 
   #ifdef _OPENMP
-  #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
-    std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   #pragma omp parallel for shared(Nboot, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
-    reduction (vsum : liaisons)
+   // reduction (+ : liaisons[:NK])
   #endif
   for (int iboot = 0; iboot < Nboot; ++iboot) {
     
@@ -96,7 +96,11 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
     for (auto i: theshuf) {
       freq_actifs[i]++;
     }
-    
+    Rcout << "freqactif \n";
+    for (int i =0; i<Ns;++i) Rcout << freq_actifs[i] << " / ";
+    Rcout << "\n";
+      
+      
     for (auto i: theshuf) {
       
       std::valarray<int> rki = ranking[std::slice(i, K, N)];
@@ -106,7 +110,7 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
       std::size_t k_valid = 0;
       std::vector<int> arrangement(K);
       for (int k = 0; k < K; ++k) {
-        temp = ranking[k];
+        temp = rki[k];
         if (R_IsNA(temp) == false) { 
           arrangement[temp] = k; //Attention : rkdist rank à partir de 1. Décalage déjà pris en compte.
           k_valid++;
@@ -129,8 +133,9 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
       
       // Inscription des résultats locaux dans la perspective globale.
       for(std::size_t k = 0; k < k_valid ; ++k) {
+        Rcout << "k = " << k << " rep = " << repartition[k] << "\n";
         emp[arrangement[k]] -= repartition[k];
-        liaisons[i * N + arrangement[k]] += repartition[k]; // Attention : ordre de remplissage en "ligne".
+        liaisons[i + N * arrangement[k]] += repartition[k]; // Attention : ordre de remplissage en "ligne".
       }
     }
   }
@@ -139,7 +144,7 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   NumericMatrix resultat(N, K);
   for (int i = 0; i < N; ++i) {
     for (int j = 0; j < K; ++j) {
-      resultat(i,j) = liaisons[i * N + j] / Nboot ;
+      resultat(i,j) = liaisons[i + N * j] / Nboot ;
     } 
   }
   return resultat;

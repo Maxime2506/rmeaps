@@ -46,6 +46,7 @@ std::vector<double> repartir_actifs(std::vector<double>& dispo,
     for (int j = 0; j < k_valid; ++j) {
       c_abs[j] = od[j] * c_ref;
     }
+    
     // Calcul des proba d'arrivées sur chacun des sites (dépend du chemin, != p_abs).
     double logpass = 0.0, 
       logfuit;
