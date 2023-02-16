@@ -68,7 +68,7 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   
   // Initialisation du résultat.
   // std::vector<double> liaisons(N*K);
-  double liaisons[NK] = {}; // essai avec un array.
+  std::vector<double> liaisons(NK);
   
   // Conversion de l'emploi en c++ et calage.
   std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
@@ -79,8 +79,13 @@ NumericMatrix meaps_bootstrap2(IntegerMatrix rkdist,
   // Lancement du bootstrap.
  
   #ifdef _OPENMP
-  #pragma omp parallel for shared(Nboot, Ns, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
-   reduction (+ : liaisons[:NK])
+  #pragma omp declare reduction(vsum : std::vector<double> : \
+            std::transform(omp_out.begin(), omp_out.end(), \
+                           omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+            initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+  #pragma omp parallel for \
+     shared(Nboot, Ns, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
+    reduction (vsum : liaisons)
   #endif
   for (int iboot = 0; iboot < Nboot; ++iboot) {
     

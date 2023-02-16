@@ -111,7 +111,7 @@ rkdist <- rowRanks(distance, ties.method = "random")
 
 NB_emplois = 500
 marge_emplois <- tibble(position = emplois) |> 
-  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = TRUE))^2,
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
          emplois = NB_emplois * dense / sum(dense)) |> 
   pull(emplois)
 
@@ -119,7 +119,7 @@ NB_actifs = 500
 la_fuite = 0
 
 marge_actifs <- tibble(position = residences) |> 
-  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = TRUE)),
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE)),
          actifs = NB_actifs * dense / sum(dense)) |> 
   pull(actifs)
 
