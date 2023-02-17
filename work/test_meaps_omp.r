@@ -174,3 +174,40 @@ meaps_tension(
   modds = mat_odds,
   f = rep(la_fuite, 16),
   shuf = sm2)
+
+
+# gros test
+# 
+
+library(sf)
+library(matrixStats)
+residences <- expand_grid(x=1:1000, y=1:1000) |> 
+  as.matrix() |> 
+  st_multipoint(dim = "XY") |> 
+  st_sfc() |> 
+  st_cast(to = "POINT")
+
+emplois <- expand_grid(x=1:2000, y=1:2000) |> 
+  as.matrix() |> 
+  st_multipoint(dim = "XY") |> 
+  st_sfc() |> 
+  st_cast(to = "POINT")
+
+distance <- st_distance(residences, emplois)
+rkdist <- rowRanks(distance, ties.method = "random")
+
+NB_emplois = 50000
+marge_emplois <- tibble(position = emplois) |> 
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
+         emplois = NB_emplois * dense / sum(dense)) |> 
+  pull(emplois)
+
+NB_actifs = 50000
+la_fuite = 0
+
+marge_actifs <- tibble(position = residences) |> 
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE)),
+         actifs = NB_actifs * dense / sum(dense)) |> 
+  pull(actifs)
+
+mat_odds <- matrix(1, nrow = 16, ncol = 4)
