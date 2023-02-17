@@ -8,10 +8,12 @@ using namespace Rcpp;
 std::vector<double> repartir_actifs(std::vector<double>& dispo, 
                                     std::vector<double>& od,
                                     double& fuite, 
-                                    double& actifs) {
+                                    double& actifs,
+                                    double seuil_newton = 1e-6) {
   
   int k_valid = dispo.size();
   std::vector<double> repartition(k_valid);
+  
   // Calcul de la place disponible total sur la ligne.
   double tot = 0;
   for (auto& d: dispo) {
@@ -40,7 +42,7 @@ std::vector<double> repartir_actifs(std::vector<double>& dispo,
         Rcout << "Le calcul par la méthode de Newton de la chance d\'absorption n\'a pas convergé.\n";
         eps = 0; // L'estimation est poursuivie malgré tout...
       }
-    } while (eps > 1e-6);
+    } while (eps > seuil_newton);
     
     std::vector<double> c_abs(k_valid);
     for (int j = 0; j < k_valid; ++j) {

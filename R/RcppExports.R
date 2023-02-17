@@ -12,6 +12,16 @@ chances_absorption <- function(rkdist, emplois, modds, f) {
     .Call(`_rmeaps_chances_absorption`, rkdist, emplois, modds, f)
 }
 
+#' La fonction communaliser effectue un regroupement de la matrice des flux (résultant de meaps) selon des groupes origines et destinations.
+#' @param flux La matrice des flux de fromid vers toid.
+#' @param group_orig Un vecteur d'integers (par ex. code commune) donnant le code du groupe de départ.
+#' @param group_dest Un vecteur d'integers (par ex. code commune) donnant le code du groupe d'arrivée.
+#' 
+#' @return Une matrice contenant les flux agrégés selon les groupes de départ et d'arrivée. 
+communaliser <- function(flux, group_orig, group_dest) {
+    .Call(`_rmeaps_communaliser`, flux, group_orig, group_dest)
+}
+
 #' La fonction déborder remplit une série de conteneurs dans l'ordre de présentation. Il passe au conteneur suivant si le précédent est rempli.
 #' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
 #' @param quantité La quantité totale à verser dans les conteneurs.
@@ -58,10 +68,12 @@ distribuer <- function(conteneurs, proportion, quantite) {
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. 
 #'        Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
 #'        Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' @param seuil_newton Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf) {
-    .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf)
+meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, normalisation, fuite_min, seuil_newton)
 }
 
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
@@ -70,11 +82,29 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf) {
 #' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, progress = TRUE, normalisation = FALSE) {
-    .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, progress, normalisation)
+meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
+}
+
+#' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+#' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
+#' @param progress Ajoute une barre de progression. Default : true.
+#' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' 
+#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+meaps_tension <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_tension`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 

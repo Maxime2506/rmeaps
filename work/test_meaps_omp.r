@@ -9,7 +9,7 @@ reste = lag(passe, default = 1) * pabs
 
 la_fuite = 0
 
-meaps_single(
+meaps_oneshuf(
   rkdist = matrix(1:5, nrow = 1),
   emplois = rep(1,5),
   actifs = 1,
@@ -18,7 +18,7 @@ meaps_single(
   shuf = 1)
 
 nb_shuf = 4
-meaps_bootstrap2(rkdist = matrix(1:5, nrow = 1),
+meaps_multishuf(rkdist = matrix(1:5, nrow = 1),
                 emplois = rep(1,5),
                 actifs = 1,
                 modds = matrix(1, nrow = 1, ncol = 5),
@@ -27,7 +27,7 @@ meaps_bootstrap2(rkdist = matrix(1:5, nrow = 1),
 
 
 # carré 2x2
-meaps_single(
+meaps_oneshuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
@@ -37,7 +37,7 @@ meaps_single(
 
 # nb : p_abs théorique pour fuite_min = 1e-3 : 1 - sqrt(1e-3) = 0.9683772
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
@@ -45,7 +45,7 @@ meaps_bootstrap2(
   f = rep(0.1, 2),
   shuf = matrix(1:2, ncol = 2, byrow = TRUE))
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
@@ -54,7 +54,7 @@ meaps_bootstrap2(
   shuf = matrix(1:2, ncol = 2, nrow = 5, byrow = TRUE))
 
 # carré 2x3
-meaps_single(
+meaps_oneshuf(
   rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,3),
   actifs = c(1,1),
@@ -62,7 +62,7 @@ meaps_single(
   f = rep(0, 2),
   shuf = 1:2)
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,3),
   actifs = c(1,1),
@@ -74,7 +74,7 @@ meaps_bootstrap2(
 
 
 # deux lignes
-meaps_single(
+meaps_oneshuf(
   rkdist = matrix(c(1:5, 5:1), nrow = 2, byrow = TRUE),
   emplois = rep(2,5),
   actifs = c(1,1),
@@ -82,7 +82,7 @@ meaps_single(
   f = rep(la_fuite, 2),
   shuf = 1:2)
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = matrix(c(1:5, 5:1), nrow = 2, byrow = TRUE),
   emplois = rep(2, 5),
   actifs = c(1, 1),
@@ -126,20 +126,31 @@ marge_actifs <- tibble(position = residences) |>
 mat_odds <- matrix(1, nrow = 16, ncol = 4)
 
 
-meaps_single(
+chances_absorption(
+  rkdist = rkdist,
+  emplois = marge_emplois,
+  modds = mat_odds,
+  f = rep(la_fuite, 16)) -> A
+
+A / (A+1)
+
+
+meaps_oneshuf(
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,
   modds = mat_odds,
   f = rep(la_fuite, 16),
-  shuf = 1:16)
+  shuf = 1:16) -> B
+
+communaliser(B, rep(1:4, 4), c(1,1,2,2))
 
 shuf_mat = matrix(1:16, nrow = 1)
 sm2 = rbind(shuf_mat, shuf_mat)
 sm3 = rbind(sm2, shuf_mat)
 sm12 = rbind(sm3, sm3, sm3, sm3)
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,
@@ -147,7 +158,7 @@ meaps_bootstrap2(
   f = rep(la_fuite, 16),
   shuf = shuf_mat)
 
-meaps_bootstrap2(
+meaps_multishuf(
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,

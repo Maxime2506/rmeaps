@@ -17,25 +17,29 @@ using namespace Rcpp;
 //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+//' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 //' @param progress Ajoute une barre de progression. Default : true.
 //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+//' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
 NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
-                               NumericVector emplois,
-                               NumericVector actifs,
-                               NumericMatrix modds,
-                               NumericVector f,
-                               IntegerMatrix shuf,
-                               bool progress = true,
-                               bool normalisation = false) {
+                              NumericVector emplois,
+                              NumericVector actifs,
+                              NumericMatrix modds,
+                              NumericVector f,
+                              IntegerMatrix shuf,
+                              int nthreads = 0,
+                              bool progress = true,
+                              bool normalisation = false,
+                              double fuite_min = 1e-3,
+                              double seuil_newton = 1e-6) {
   
   const int N = rkdist.nrow(),
             K = rkdist.ncol(),
             Ns = shuf.ncol(),
-            Nboot = shuf.nrow(),
-            NK = N * K;
+            Nboot = shuf.nrow();
   
   // Quelques vérifs préalables.
   if (emplois.size() != K) {
@@ -55,7 +59,9 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
   }
   
 #ifdef _OPENMP
-  REprintf("Nombre de threads = %i\n", omp_get_max_threads());
+  if (nthreads == 0) { nthreads = omp_get_max_threads(); }
+  REprintf("Nombre de threads = %i\n", nthreads);
+  omp_set_num_threads(nthreads);
 #endif
   
   // Conversion en objet C++.
@@ -66,8 +72,8 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
   std::vector<double> actifscpp = as<std::vector<double>>(actifs);
   
   // Passage aux valarrays.
-  std::valarray<int> ranking(rkdistcpp.data(), NK);
-  const std::valarray<double> odds(moddscpp.data(), NK);
+  std::valarray<int> ranking(rkdistcpp.data(), N*K);
+  const std::valarray<double> odds(moddscpp.data(), N*K);
   std::valarray<int> ishuf(ishufcpp.data(), Ns*Nboot);
   // Décalage des rangs d'une unité.
   ranking -= 1L;
@@ -75,7 +81,7 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
   
   // Initialisation du résultat.
   // std::vector<double> liaisons(N*K);
-  std::vector<double> liaisons(NK);
+  std::vector<double> liaisons(N*K, 0.0);
   
   // Conversion de l'emploi en c++ et calage.
   std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
@@ -138,11 +144,11 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
       }
       
       // Choix d'une limite basse pour la fuite.
-      double fuite = std::max(1e-3, fcpp[i]);
+      double fuite = std::max(fuite_min, fcpp[i]);
       // Nombre d'actifs en emplois dans la zone repartis en freq_actif paquets.
       double actifs_inzone = (1 - fuite) * actifscpp[i] / freq_actifs[i];
       
-      repartition = repartir_actifs(dispo, od, fuite, actifs_inzone);
+      repartition = repartir_actifs(dispo, od, fuite, actifs_inzone, seuil_newton);
       
       // Inscription des résultats locaux dans la perspective globale.
       for(std::size_t k = 0; k < k_valid ; ++k) {

@@ -1,7 +1,5 @@
 #include <Rcpp.h>
-#include "deborder.h"
-#include "distribuer.h"
-#include "utils_newton_methods.h"
+#include "repartir_actifs.h"
 using namespace Rcpp;
 using namespace std;
 
@@ -14,35 +12,39 @@ using namespace std;
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. 
 //'        Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
 //'        Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.
+//' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+//' @param seuil_newton Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
 NumericMatrix meaps_oneshuf(
     const IntegerMatrix rkdist, 
-    const NumericVector emplois,
+    NumericVector emplois,
     const NumericVector actifs,
     const NumericMatrix modds,
     const NumericVector f, 
-    IntegerVector shuf)
+    const IntegerVector shuf,
+    bool normalisation = false,
+    double fuite_min = 1e-3,
+    double seuil_newton = 1e-6)
 {
-  int N = rkdist.nrow(),
+  const int N = rkdist.nrow(),
       K = rkdist.ncol(),
-      Ns = shuf.size(),
-      k_valid;
-  double tot, p_ref, c_ref, new_cref, eps;
+      Ns = shuf.size();
+  int k_valid;
   NumericMatrix liaisons(N,K);
   NumericVector odds(K);
   IntegerVector rki(K), ishuf(Ns);
   LogicalVector nna_rki(K);
   
-  vector<double> emp(K); 
-  // Attention : calage des emplois sur le nombre d'actifs.
   double tot_emp = sum(emplois);
   double tot_act_inzone = sum(actifs * (1 - f));
-  for(int j = 0; j < K; ++j) {
-    emp[j] = tot_act_inzone * emplois[j] / tot_emp;
+  // Attention : calage des emplois sur le nombre d'actifs.
+  if (normalisation) {
+      emplois = emplois * tot_act_inzone / tot_emp;
   }
-  
+  vector<double> emp(K); 
+  emp = as<vector<double>>(emplois);
   ishuf = shuf - 1L;
   
   // Le vecteur shuf peut être plus long que le nombre de départs d'actifs s'il fait repasser plusieurs fois
@@ -57,7 +59,6 @@ NumericMatrix meaps_oneshuf(
     
     // On vérifie si on est pas trop long
     if(i%1000 == 1) {Rcpp::checkUserInterrupt();}
-    // Si aucun actif au départ, ou valeur négative, on ne calcule rien.
 
     rki = rkdist(i, _);
     nna_rki = !is_na(rki);
@@ -66,55 +67,20 @@ NumericMatrix meaps_oneshuf(
     
     for(int j = 0; j < K; ++j) {
       if(nna_rki[j]==TRUE)
-        arrangement[rki[j]-1L] = j;
+        arrangement[rki[j] - 1L] = j;
     }
     
-    vector<double> dispo (k_valid), repartition(k_valid);
+    vector<double> dispo (k_valid), od(k_valid), repartition(k_valid);
     for (int j = 0; j < k_valid; ++j) {
-      dispo[j] = emp[arrangement[j]]; 
+      dispo[j] = emp[arrangement[j]];
+      od[j] = modds(i, arrangement[j]);
     }
-
-    tot = 0;
-    for (auto& d: dispo) {
-      tot += d;
-      }
-    // Choix d'une limite basse pour la fuite.
-    double fuite = max(1e-3, f[i]);
     
-    // Seuil où l'emploi disponible est suffisamment petit pour s'épargner des calculs inutiles et fragiles.
-    if (tot < 1e-2 || k_valid == 1) {
-      
-      repartition = deborder(dispo, (1 - fuite) * actifs[i] / freq_actifs[i]);
-      
-    } else {
-      odds = modds(i, _);
-      p_ref = 1  - pow(fuite, 1 / tot);
-      c_ref = p_ref / (1 - p_ref);// Chance d'absorption de référence. Calcul initial non calé sur la fuite.
-      
-      vector<double> od = as<vector<double>>(odds[arrangement]),
-                     proportions(k_valid);
-      // Calcul par la méthode de Newton de la chance d'absorption de référence compatible avec la fuite.
-      do {
-        new_cref = c_ref - (log_fuite(c_ref, dispo, od) + log(fuite))/ d_logfuite(c_ref, dispo, od); 
-        eps = abs(new_cref - c_ref);
-        c_ref = new_cref;
-      } while (eps > 1e-6);
-      
-      vector<double> c_abs(k_valid);
-      for (int j = 0; j < k_valid; ++j) {
-        c_abs[j] = od[j] * c_ref;
-        }
-      
-      double logpass = 0.0, 
-             logfuit;
-      
-      for (int j = 0; j < k_valid; ++j) {
-        logfuit = - dispo[j] * log(1 + c_abs[j]); // proba conditionnelle en log de fuir j une fois arrivée jusqu'à j.
-        proportions[j] = exp(logpass) * (1 - exp(logfuit));
-        logpass += logfuit; // proba en log d'arriver jusqu'à j+1, calculé à partir de la proba d'arriver jusqu'en j.
-      }
-      repartition = distribuer(dispo, proportions, (1 - fuite) * actifs[i] / freq_actifs[i]);
-   }
+    // Choix d'une limite basse pour la fuite.
+    double fuite = max(fuite_min, f[i]);
+    double actifsinzone = (1 - fuite) * actifs[i] / freq_actifs[i];
+    
+    repartition = repartir_actifs(dispo, od, fuite, actifsinzone, seuil_newton);
     
     // Inscription des résultats locaux dans la perspective globale.
     for(int j = 0; j < k_valid ; ++j) {
