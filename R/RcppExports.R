@@ -71,11 +71,12 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf) {
 #' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param threads Définit le nombre de threads. Defaut le maximum.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, progress = TRUE, normalisation = FALSE) {
-    .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, progress, normalisation)
+meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, threads = 0L, progress = TRUE, normalisation = FALSE) {
+    .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, threads, progress, normalisation)
 }
 

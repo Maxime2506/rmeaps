@@ -17,6 +17,7 @@ using namespace Rcpp;
 //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+//' @param threads Définit le nombre de threads. Defaut le maximum.
 //' @param progress Ajoute une barre de progression. Default : true.
 //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 //' 
@@ -28,6 +29,7 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
                                NumericMatrix modds,
                                NumericVector f,
                                IntegerMatrix shuf,
+                               int threads = 0L,
                                bool progress = true,
                                bool normalisation = false) {
   
@@ -55,6 +57,9 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
   }
   
 #ifdef _OPENMP
+  if (threads!=0L) {
+    omp_set_num_threads(threads);
+  }
   REprintf("Nombre de threads = %i\n", omp_get_max_threads());
 #endif
   

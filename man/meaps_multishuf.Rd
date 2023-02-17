@@ -11,6 +11,7 @@ meaps_multishuf(
   modds,
   f,
   shuf,
+  threads = 0L,
   progress = TRUE,
   normalisation = FALSE
 )
@@ -27,6 +28,8 @@ meaps_multishuf(
 \item{f}{Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.}
 
 \item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.}
+
+\item{threads}{Définit le nombre de threads. Defaut le maximum.}
 
 \item{progress}{Ajoute une barre de progression. Default : true.}
 

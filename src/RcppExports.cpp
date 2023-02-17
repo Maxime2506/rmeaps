@@ -66,8 +66,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // meaps_multishuf
-NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, bool progress, bool normalisation);
-RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP progressSEXP, SEXP normalisationSEXP) {
+NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int threads, bool progress, bool normalisation);
+RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP threadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -77,9 +77,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
     Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_multishuf(rkdist, emplois, actifs, modds, f, shuf, progress, normalisation));
+    rcpp_result_gen = Rcpp::wrap(meaps_multishuf(rkdist, emplois, actifs, modds, f, shuf, threads, progress, normalisation));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -89,7 +90,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_deborder", (DL_FUNC) &_rmeaps_deborder, 2},
     {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
     {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 6},
-    {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 8},
+    {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 9},
     {NULL, NULL, 0}
 };
 
