@@ -166,3 +166,11 @@ meaps_multishuf(
   f = rep(la_fuite, 16),
   shuf = sm2)
 
+
+meaps_tension(
+  rkdist = rkdist,
+  emplois = marge_emplois,
+  actifs = marge_actifs,
+  modds = mat_odds,
+  f = rep(la_fuite, 16),
+  shuf = sm2)
