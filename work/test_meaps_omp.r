@@ -181,13 +181,13 @@ meaps_tension(
 
 library(sf)
 library(matrixStats)
-residences <- expand_grid(x=1:1000, y=1:1000) |> 
+residences <- expand_grid(x=1:50, y=1:50) |> 
   as.matrix() |> 
   st_multipoint(dim = "XY") |> 
   st_sfc() |> 
   st_cast(to = "POINT")
 
-emplois <- expand_grid(x=1:2000, y=1:2000) |> 
+emplois <- expand_grid(x=1:50, y=1:50) |> 
   as.matrix() |> 
   st_multipoint(dim = "XY") |> 
   st_sfc() |> 
@@ -210,4 +210,14 @@ marge_actifs <- tibble(position = residences) |>
          actifs = NB_actifs * dense / sum(dense)) |> 
   pull(actifs)
 
-mat_odds <- matrix(1, nrow = 16, ncol = 4)
+mat_odds <- matrix(1, nrow = nrow(marge_actifs), ncol = nrow(marge_emplois))
+
+shuf <- map(1:256, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
+shuf <- do.call(cbind, shuf)
+meaps_tension(
+  rkdist = rkdist,
+  emplois = marge_emplois,
+  actifs = marge_actifs,
+  modds = mat_odds,
+  f = rep(la_fuite, nrow(marge_actifs)),
+  shuf = shuf)
