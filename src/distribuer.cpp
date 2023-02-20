@@ -4,13 +4,13 @@
 using namespace Rcpp;
 using namespace std;
 
-//' La fonction distribuer remplit un ensemble de conteneurs.
-//' Cette version interne ne se préoccupe pas du reste non versé.
-//' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
-//' @param proportion Un vecteur définissant les proportions des débits vers les conteneurs.
-//' @param quantité La quantité totale à verser dans les conteneurs.
-//' 
-//' @return La répartition finale de la quantité dans les conteneurs.
+////' La fonction distribuer remplit un ensemble de conteneurs.
+////' Cette version interne ne se préoccupe pas du reste non versé.
+////' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
+////' @param proportion Un vecteur définissant les proportions des débits vers les conteneurs.
+////' @param quantité La quantité totale à verser dans les conteneurs.
+////' 
+////' @return La répartition finale de la quantité dans les conteneurs.
 vector<double> distribuer(const vector<double>& conteneurs, 
                 const vector<double>& proportion, 
                 const double& quantite) {

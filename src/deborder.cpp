@@ -3,11 +3,11 @@
 using namespace Rcpp;
 using namespace std;
 
-//' La fonction déborder remplit une série de conteneurs dans l'ordre de présentation. Il passe au conteneur suivant si le précédent est rempli.
-//' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
-//' @param quantité La quantité totale à verser dans les conteneurs.
-//' 
-//' @return Une liste avec : part = la répartition finale de la quantité dans les conteneurs et reste = la quantité qui n'a pas pu être versée si tout est rempli.
+//// ' La fonction déborder remplit une série de conteneurs dans l'ordre de présentation. Il passe au conteneur suivant si le précédent est rempli.
+//// ' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
+//// ' @param quantité La quantité totale à verser dans les conteneurs.
+//// '
+//// ' @return Une liste avec : part = la répartition finale de la quantité dans les conteneurs et reste = la quantité qui n'a pas pu être versée si tout est rempli.
 vector<double> deborder(
   const vector<double>& conteneurs,
   const double& quantite) {

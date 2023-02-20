@@ -11,6 +11,7 @@
 
 using namespace Rcpp;
 
+//' MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.
 //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -21,6 +22,8 @@ using namespace Rcpp;
 //' @param progress Ajoute une barre de progression. Default : true.
 //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+//' @param seuil_newton Seuil relatif pour la convergence par newton du calage de la probabilité d'absorption. Défault = 1e-6.
+//' @param seuil_dispo seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
@@ -34,7 +37,8 @@ List meaps_tension(IntegerMatrix rkdist,
                             bool progress = true,
                             bool normalisation = false,
                             double fuite_min = 1e-3,
-                            double seuil_newton = 1e-6) {
+                            double seuil_newton = 1e-6,
+                            double seuil_dispo = 0.1) {
   
   const int N = rkdist.nrow(),
     K = rkdist.ncol(),
@@ -155,8 +159,8 @@ List meaps_tension(IntegerMatrix rkdist,
         
         // Inscription des résultats locaux dans la perspective globale.
         for(std::size_t k = 0; k < k_valid ; ++k) {
-          if (dispo[k] == repartition[k] && dispo[k] > 0.0) { 
-            liaisons[ N*K + arrangement[k] ] += 1.0;
+          if ((dispo[k]-repartition[k]) < seuil_dispo && dispo[k] > seuil_dispo) { 
+            liaisons[ N*K + arrangement[k] ] += 1.0; 
             liaisons[ (N + 1L) * K + arrangement[k] ] += rang_actifs;
             }
           emp[ arrangement[k] ] -= repartition[k];
