@@ -103,8 +103,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // meaps_tension
-List meaps_tension(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
-RcppExport SEXP _rmeaps_meaps_tension(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
+List meaps_tension(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton, double seuil_dispo);
+RcppExport SEXP _rmeaps_meaps_tension(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP, SEXP seuil_dispoSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -119,7 +119,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
     Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
     Rcpp::traits::input_parameter< double >::type seuil_newton(seuil_newtonSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_tension(rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton));
+    Rcpp::traits::input_parameter< double >::type seuil_dispo(seuil_dispoSEXP);
+    rcpp_result_gen = Rcpp::wrap(meaps_tension(rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -131,7 +132,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
     {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 9},
     {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 11},
-    {"_rmeaps_meaps_tension", (DL_FUNC) &_rmeaps_meaps_tension, 11},
+    {"_rmeaps_meaps_tension", (DL_FUNC) &_rmeaps_meaps_tension, 12},
     {NULL, NULL, 0}
 };
 

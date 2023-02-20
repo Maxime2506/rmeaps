@@ -23,13 +23,6 @@ communaliser <- function(flux, group_orig, group_dest) {
 }
 
 #' La fonction déborder remplit une série de conteneurs dans l'ordre de présentation. Il passe au conteneur suivant si le précédent est rempli.
-#' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
-#' @param quantité La quantité totale à verser dans les conteneurs.
-#' 
-#' @return Une liste avec : part = la répartition finale de la quantité dans les conteneurs et reste = la quantité qui n'a pas pu être versée si tout est rempli.
-NULL
-
-#' La fonction déborder remplit une série de conteneurs dans l'ordre de présentation. Il passe au conteneur suivant si le précédent est rempli.
 #' Celle-ci est exportée et donne le reste non distribué.
 #' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
 #' @param quantité La quantité totale à verser dans les conteneurs.
@@ -38,15 +31,6 @@ NULL
 deborder <- function(conteneurs, quantite) {
     .Call(`_rmeaps_deborder`, conteneurs, quantite)
 }
-
-#' La fonction distribuer remplit un ensemble de conteneurs.
-#' Cette version interne ne se préoccupe pas du reste non versé.
-#' @param conteneurs Un vecteur donnant la capacité de chacun des conteneurs dans l'ordre voulu de remplissage.
-#' @param proportion Un vecteur définissant les proportions des débits vers les conteneurs.
-#' @param quantité La quantité totale à verser dans les conteneurs.
-#' 
-#' @return La répartition finale de la quantité dans les conteneurs.
-NULL
 
 #' La fonction distribuer remplit un ensemble de conteneurs. 
 #' Celle-ci est exportée et donne également le reste non distribué.
@@ -68,6 +52,7 @@ distribuer <- function(conteneurs, proportion, quantite) {
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. 
 #'        Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
 #'        Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.
+#' @param normalisation Détermine si on renormalise les emplois surles actifs globalement. Défaut false
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' @param seuil_newton Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.
 #' 
@@ -76,7 +61,7 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation
     .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, normalisation, fuite_min, seuil_newton)
 }
 
-#' La fonction meaps sur plusieurs shufs
+#' La fonction MEAPS sur plusieurs shufs
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -93,6 +78,7 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 
     .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 
+#' MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -103,9 +89,11 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' @param seuil_newton Seuil relatif pour la convergence par newton du calage de la probabilité d'absorption. Défault = 1e-6.
+#' @param seuil_dispo seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_tension <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
-    .Call(`_rmeaps_meaps_tension`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
+meaps_tension <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6, seuil_dispo = 0.1) {
+    .Call(`_rmeaps_meaps_tension`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo)
 }
 

@@ -31,6 +31,8 @@ meaps_oneshuf(
 Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
 Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.}
 
+\item{normalisation}{Détermine si on renormalise les emplois surles actifs globalement. Défaut false}
+
 \item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
 
 \item{seuil_newton}{Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.}
