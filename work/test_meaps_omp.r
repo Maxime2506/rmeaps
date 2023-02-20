@@ -37,6 +37,7 @@ meaps_oneshuf(
 
 # nb : p_abs théorique pour fuite_min = 1e-3 : 1 - sqrt(1e-3) = 0.9683772
 
+
 meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
@@ -44,6 +45,16 @@ meaps_multishuf(
   modds = matrix(1, nrow = 2, ncol = 2),
   f = rep(0.1, 2),
   shuf = matrix(1:2, ncol = 2, byrow = TRUE))
+
+meaps_alt(
+  rkdist = t(matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE)),
+  emplois = rep(1,2),
+  actifs = c(1,1),
+  modds = matrix(1, nrow = 2, ncol = 2),
+  f = rep(0.1, 2),
+  shuf = t(matrix(1:2, ncol = 2, byrow = TRUE)))
+
+
 
 meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
@@ -94,6 +105,8 @@ meaps_multishuf(
 # Grille 4x4
 library(sf)
 library(matrixStats)
+library(microbenchmark)
+
 residences <- expand_grid(x=1:4, y=1:4) |> 
   as.matrix() |> 
   st_multipoint(dim = "XY") |> 
@@ -174,3 +187,23 @@ meaps_tension(
   modds = mat_odds,
   f = rep(la_fuite, 16),
   shuf = sm2)
+
+altrk = t(rkdist)
+altsm2 = t(sm2)
+
+zz <- microbenchmark("old" = meaps_multishuf(
+  rkdist = rkdist,
+  emplois = marge_emplois,
+  actifs = marge_actifs,
+  modds = mat_odds,
+  f = rep(la_fuite, 16),
+  shuf = sm2),
+  "alt" = meaps_alt(
+    rkdist = altrk,
+    emplois = marge_emplois,
+    actifs = marge_actifs,
+    modds = mat_odds,
+    f = rep(la_fuite, 16),
+    shuf = altsm2))
+
+

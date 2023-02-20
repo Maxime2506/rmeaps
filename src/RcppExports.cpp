@@ -81,6 +81,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// meaps_alt
+NumericMatrix meaps_alt(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
+RcppExport SEXP _rmeaps_meaps_alt(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerMatrix >::type rkdist(rkdistSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
+    Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
+    Rcpp::traits::input_parameter< double >::type seuil_newton(seuil_newtonSEXP);
+    rcpp_result_gen = Rcpp::wrap(meaps_alt(rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton));
+    return rcpp_result_gen;
+END_RCPP
+}
 // meaps_multishuf
 NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
 RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
@@ -130,6 +151,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_deborder", (DL_FUNC) &_rmeaps_deborder, 2},
     {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
     {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 9},
+    {"_rmeaps_meaps_alt", (DL_FUNC) &_rmeaps_meaps_alt, 11},
     {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 11},
     {"_rmeaps_meaps_tension", (DL_FUNC) &_rmeaps_meaps_tension, 11},
     {NULL, NULL, 0}

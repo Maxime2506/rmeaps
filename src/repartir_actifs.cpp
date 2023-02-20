@@ -50,14 +50,13 @@ std::vector<double> repartir_actifs(std::vector<double>& dispo,
     }
     
     // Calcul des proba d'arrivées sur chacun des sites (dépend du chemin, != p_abs).
-    double logpass = 0.0, 
-      logfuit;
+    double logpass = 0.0, logfuit;
     for (int j = 0; j < k_valid; ++j) {
       logfuit = - dispo[j] * log(1 + c_abs[j]); // proba conditionnelle en log de fuir j une fois arrivée jusqu'à j.
       proportions[j] = exp(logpass) * (1 - exp(logfuit));
       logpass += logfuit; // proba en log d'arriver jusqu'à j+1, calculé à partir de la proba d'arriver jusqu'en j.
     }
-    
+      
     repartition = distribuer(dispo, proportions, actifs);
     
   }

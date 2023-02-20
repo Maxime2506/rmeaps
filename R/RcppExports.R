@@ -89,6 +89,23 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+meaps_alt <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_alt`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
+}
+
+#' La fonction meaps sur plusieurs shufs
+#' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+#' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
+#' @param progress Ajoute une barre de progression. Default : true.
+#' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' 
+#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
     .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
