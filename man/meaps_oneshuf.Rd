@@ -4,7 +4,17 @@
 \alias{meaps_oneshuf}
 \title{La fonction meaps sur un shuf.}
 \usage{
-meaps_oneshuf(rkdist, emplois, actifs, modds, f, shuf)
+meaps_oneshuf(
+  rkdist,
+  emplois,
+  actifs,
+  modds,
+  f,
+  shuf,
+  normalisation = FALSE,
+  fuite_min = 0.001,
+  seuil_newton = 1e-06
+)
 }
 \arguments{
 \item{rkdist}{La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.}
@@ -20,6 +30,10 @@ meaps_oneshuf(rkdist, emplois, actifs, modds, f, shuf)
 \item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. 
 Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
 Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.}
+
+\item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
+
+\item{seuil_newton}{Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.}
 }
 \value{
 renvoie une matrice avec les estimations du nombre de trajets de i vers j.

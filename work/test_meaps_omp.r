@@ -188,14 +188,58 @@ meaps_tension(
   f = rep(la_fuite, 16),
   shuf = sm2)
 
+<<<<<<< HEAD
 altrk = t(rkdist)
 altsm2 = t(sm2)
 
 zz <- microbenchmark("old" = meaps_multishuf(
+=======
+
+# gros test
+# 
+
+library(sf)
+library(matrixStats)
+residences <- expand_grid(x=1:50, y=1:50) |> 
+  as.matrix() |> 
+  st_multipoint(dim = "XY") |> 
+  st_sfc() |> 
+  st_cast(to = "POINT")
+
+emplois <- expand_grid(x=1:50, y=1:50) |> 
+  as.matrix() |> 
+  st_multipoint(dim = "XY") |> 
+  st_sfc() |> 
+  st_cast(to = "POINT")
+
+distance <- st_distance(residences, emplois)
+rkdist <- rowRanks(distance, ties.method = "random")
+
+NB_emplois = 50000
+marge_emplois <- tibble(position = emplois) |> 
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
+         emplois = NB_emplois * dense / sum(dense)) |> 
+  pull(emplois)
+
+NB_actifs = 50000
+la_fuite = 0
+
+marge_actifs <- tibble(position = residences) |> 
+  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE)),
+         actifs = NB_actifs * dense / sum(dense)) |> 
+  pull(actifs)
+
+mat_odds <- matrix(1, nrow = nrow(marge_actifs), ncol = nrow(marge_emplois))
+
+shuf <- map(1:256, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
+shuf <- do.call(cbind, shuf)
+meaps_tension(
+>>>>>>> 94d391bbde07762a892316a97948e33134a842ea
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,
   modds = mat_odds,
+<<<<<<< HEAD
   f = rep(la_fuite, 16),
   shuf = sm2),
   "alt" = meaps_alt(
@@ -207,3 +251,7 @@ zz <- microbenchmark("old" = meaps_multishuf(
     shuf = altsm2))
 
 
+=======
+  f = rep(la_fuite, nrow(marge_actifs)),
+  shuf = shuf)
+>>>>>>> 94d391bbde07762a892316a97948e33134a842ea

@@ -11,9 +11,11 @@ meaps_multishuf(
   modds,
   f,
   shuf,
-  threads = 0L,
+  nthreads = 0L,
   progress = TRUE,
-  normalisation = FALSE
+  normalisation = FALSE,
+  fuite_min = 0.001,
+  seuil_newton = 1e-06
 )
 }
 \arguments{
@@ -29,11 +31,13 @@ meaps_multishuf(
 
 \item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.}
 
-\item{threads}{Définit le nombre de threads. Defaut le maximum.}
+\item{nthreads}{Nombre de threads pour OpenMP. Default : 0 = choix auto.}
 
 \item{progress}{Ajoute une barre de progression. Default : true.}
 
 \item{normalisation}{Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.}
+
+\item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
 }
 \value{
 renvoie une matrice avec les estimations du nombre de trajets de i vers j.
