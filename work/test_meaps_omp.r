@@ -194,18 +194,17 @@ altsm2 = t(sm2)
 
 ### zz <- microbenchmark("old" = meaps_multishuf())
 
-# gros test
+# gros test ----------------------
 # 
 library(tidyverse)
 library(sf)
 library(matrixStats)
-library(rmeaps)
 maxx <- 5
 maxy <- 5
-n <- 3
-k <- 3
-NB_actifs  <- 2
-NB_emplois = 2
+n <- 30
+k <- 30
+NB_actifs  <- 20000
+NB_emplois <- 18000
 la_fuite <-  0.1
 
 residences <- expand_grid(x=seq(0, maxx, length.out=n), y=seq(0, maxy, length.out=n)) |> 
@@ -224,7 +223,7 @@ distance <- st_distance(residences, emplois)
 rkdist <- rowRanks(distance, ties.method = "random")
 
 marge_emplois <- tibble(position = emplois) |> 
-  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
+  mutate(dense = 1 / (1+st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
          emplois = NB_emplois * dense / sum(dense)) |> 
   pull(emplois)
 
@@ -235,13 +234,20 @@ marge_actifs <- tibble(position = residences) |>
 
 mat_odds <- matrix(1, nrow = nrow(marge_actifs), ncol = nrow(marge_emplois))
 
-shuf <- map(1:64, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
+shuf <- map(1:128, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
 shuf <- do.call(rbind, shuf)
-tens <- meaps_oneshuf(
+tens <- meaps_tension(
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,
   modds = mat_odds,
   f = rep(la_fuite, nrow(marge_actifs)),
-  shuf = shuf[1, , drop=FALSE])
-sum(tens)
+  shuf = shuf, seuil_dispo = 0.5)
+sum(tens$flux)
+tens$tension
+ggplot(tibble(r = tens$tension))+geom_histogram(aes(x=r), bins=100)
+
+bench::mark(
+  multishuf = meaps_multishuf(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
+  alt = meaps_alt(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
+  )
