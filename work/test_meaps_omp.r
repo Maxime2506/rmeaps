@@ -11,11 +11,12 @@ la_fuite = 0
 
 meaps_oneshuf(
   rkdist = matrix(1:5, nrow = 1),
-  emplois = rep(1,5),
+  emplois = rep(.3,5),
   actifs = 1,
   modds = matrix(1, nrow = 1, ncol = 5),
   f = la_fuite,
-  shuf = 1)
+  shuf = 1,
+  normalisation = FALSE)
 
 nb_shuf = 4
 meaps_multishuf(rkdist = matrix(1:5, nrow = 1),
@@ -188,25 +189,32 @@ meaps_tension(
   f = rep(la_fuite, 16),
   shuf = sm2)
 
-<<<<<<< HEAD
 altrk = t(rkdist)
 altsm2 = t(sm2)
 
-zz <- microbenchmark("old" = meaps_multishuf(
-=======
+### zz <- microbenchmark("old" = meaps_multishuf())
 
 # gros test
 # 
-
+library(tidyverse)
 library(sf)
 library(matrixStats)
-residences <- expand_grid(x=1:50, y=1:50) |> 
+library(rmeaps)
+maxx <- 5
+maxy <- 5
+n <- 3
+k <- 3
+NB_actifs  <- 2
+NB_emplois = 2
+la_fuite <-  0.1
+
+residences <- expand_grid(x=seq(0, maxx, length.out=n), y=seq(0, maxy, length.out=n)) |> 
   as.matrix() |> 
   st_multipoint(dim = "XY") |> 
   st_sfc() |> 
   st_cast(to = "POINT")
 
-emplois <- expand_grid(x=1:50, y=1:50) |> 
+emplois <- expand_grid(x=seq(0, maxx, length.out=k), y=seq(0, maxy, length.out=k)) |> 
   as.matrix() |> 
   st_multipoint(dim = "XY") |> 
   st_sfc() |> 
@@ -215,43 +223,25 @@ emplois <- expand_grid(x=1:50, y=1:50) |>
 distance <- st_distance(residences, emplois)
 rkdist <- rowRanks(distance, ties.method = "random")
 
-NB_emplois = 50000
 marge_emplois <- tibble(position = emplois) |> 
   mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE))^2,
          emplois = NB_emplois * dense / sum(dense)) |> 
   pull(emplois)
 
-NB_actifs = 50000
-la_fuite = 0
-
 marge_actifs <- tibble(position = residences) |> 
-  mutate(dense = 1 / (st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE)),
+  mutate(dense = 1 / (1+st_distance(position, st_point(c(2.5, 2.5)), by_element = FALSE)),
          actifs = NB_actifs * dense / sum(dense)) |> 
   pull(actifs)
 
 mat_odds <- matrix(1, nrow = nrow(marge_actifs), ncol = nrow(marge_emplois))
 
-shuf <- map(1:256, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
-shuf <- do.call(cbind, shuf)
-meaps_tension(
->>>>>>> 94d391bbde07762a892316a97948e33134a842ea
+shuf <- map(1:64, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
+shuf <- do.call(rbind, shuf)
+tens <- meaps_oneshuf(
   rkdist = rkdist,
   emplois = marge_emplois,
   actifs = marge_actifs,
   modds = mat_odds,
-<<<<<<< HEAD
-  f = rep(la_fuite, 16),
-  shuf = sm2),
-  "alt" = meaps_alt(
-    rkdist = altrk,
-    emplois = marge_emplois,
-    actifs = marge_actifs,
-    modds = mat_odds,
-    f = rep(la_fuite, 16),
-    shuf = altsm2))
-
-
-=======
   f = rep(la_fuite, nrow(marge_actifs)),
-  shuf = shuf)
->>>>>>> 94d391bbde07762a892316a97948e33134a842ea
+  shuf = shuf[1, , drop=FALSE])
+sum(tens)
