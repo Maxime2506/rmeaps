@@ -14,3 +14,6 @@ Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4)
 LinkingTo: Rcpp, RcppParallel, RcppProgress
 SystemRequirements: GNU make
 RoxygenNote: 7.2.3
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

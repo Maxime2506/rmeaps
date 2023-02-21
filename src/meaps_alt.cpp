@@ -58,15 +58,16 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   }
   
 #ifdef _OPENMP
-  if (nthreads == 0) { nthreads = omp_get_max_threads(); }
-  REprintf("Nombre de threads = %i\n", nthreads);
-  omp_set_num_threads(nthreads);
+  int ntr = nthreads;
+  if (ntr == 0) {ntr = omp_get_max_threads();}
+  if (ntr > omp_get_max_threads()) { ntr = omp_get_max_threads(); }
+  if (progress==TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
   
   // Les rangs dans shuf commencent à 1.
   shuf = shuf - 1L;
   
-  // Conversion en objet C++.
+  // Conversion en vecteur de vecteurs C++.
   std::vector<int> shufcpp = as< std::vector<int> >(shuf);
   std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
   for (int i = 0; i < Nboot; ++i) {
@@ -79,12 +80,13 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   if (normalisation) {
     emplois = emplois * sum(actifs * (1 - f)) / sum(emplois); 
   }
-  // Conversion en objet c++ 
+  
+  // Conversion en vecteurs c++ 
   std::vector<double> emploisinitial = as< std::vector<double> >(emplois);
   std::vector<double> fcpp = as< std::vector<double> >(f);
   std::vector<double> actifscpp = as< std::vector<double> >(actifs);
   
-  // Construction des vecteurs reordonnés pour chacun des actifs.
+  // Construction des vecteurs arrangés selon l'ordre subjectifs des actifs.
   std::vector< std::vector<int> > arrangement(N, std::vector<int>(K));
   std::vector< std::vector<double> > odds(N, std::vector<double>(K));
   int temp, k_valid;
@@ -113,7 +115,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
     std::transform(omp_out.begin(), omp_out.end(),                        \
                  omp_in.begin(), omp_out.begin(), std::plus<double>())) \
     initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-  #pragma omp parallel for                                                           \
+  #pragma omp parallel for num_threads(ntr)                                                          \
     shared(Nboot, N, ishuf, emploisinitial, odds, fcpp, actifscpp) \
     reduction (vsum : liaisons)
   #endif
@@ -147,7 +149,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         
         // Choix d'une limite basse pour la fuite.
         double fuite = std::max(fuite_min, fcpp[i]);
-        // Nombre d'actifs en emplois dans la zone repartis en freq_actif paquets.
+        // Nombre d'actifs partant par freq_actif paquets.
         double actifspartant = actifscpp[i] / freq_actifs[i];
         
         repartition = repartir_alt(dispo, odds[i], fuite, actifspartant, seuil_newton);

@@ -59,9 +59,10 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
   }
   
 #ifdef _OPENMP
-  if (nthreads == 0) { nthreads = omp_get_max_threads(); }
-  REprintf("Nombre de threads = %i\n", nthreads);
-  omp_set_num_threads(nthreads);
+  int ntr = nthreads;
+  if (ntr == 0) {ntr = omp_get_max_threads();}
+  if (ntr > omp_get_max_threads()) { ntr = omp_get_max_threads(); }
+  if (progress==TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
   
   // Conversion en objet C++.
@@ -97,7 +98,7 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
             std::transform(omp_out.begin(), omp_out.end(), \
                            omp_in.begin(), omp_out.begin(), std::plus<double>())) \
             initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-  #pragma omp parallel for \
+  #pragma omp parallel for num_threads(ntr) \
      shared(Nboot, Ns, N, K, ishuf, emploisinitial, ranking, odds, fcpp, actifscpp) \
     reduction (vsum : liaisons)
   #endif
