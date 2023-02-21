@@ -92,10 +92,10 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   for (int i = 0; i < N; ++i) {
     k_valid = 0L;
     for (int k = 0; k < K; ++k) {
-      temp = rkdist(i, k);
+      temp = rkdist(k, i);
       if (R_IsNA(temp) == false) { 
         arrangement[i][temp - 1L] = k; //Attention : rkdist rank à partir de 1.
-        odds[i][temp - 1L] = modds(i, k);
+        odds[i][temp - 1L] = modds(k, i);
         k_valid++;
       }
     }
@@ -148,9 +148,9 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         // Choix d'une limite basse pour la fuite.
         double fuite = std::max(fuite_min, fcpp[i]);
         // Nombre d'actifs en emplois dans la zone repartis en freq_actif paquets.
-        double actifs_inzone = (1 - fuite) * actifscpp[i] / freq_actifs[i];
+        double actifspartant = actifscpp[i] / freq_actifs[i];
         
-        repartition = repartir_alt(dispo, odds[i], fuite, actifs_inzone, seuil_newton);
+        repartition = repartir_alt(dispo, odds[i], fuite, actifspartant, seuil_newton);
         
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {
@@ -167,6 +167,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
       resultat(i,j) = liaisons[i + N * j] / Nboot ;
     } 
   }
+  
   return resultat;
 }
 

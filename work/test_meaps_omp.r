@@ -188,12 +188,22 @@ meaps_tension(
   f = rep(la_fuite, 16),
   shuf = sm2)
 
-<<<<<<< HEAD
 altrk = t(rkdist)
 altsm2 = t(sm2)
 
-zz <- microbenchmark("old" = meaps_multishuf(
-=======
+zz <- microbenchmark("old" = meaps_multishuf(rkdist = rkdist,
+                                             emplois = marge_emplois,
+                                             actifs = marge_actifs,
+                                             modds = mat_odds,
+                                             f = rep(la_fuite, 16),
+                                             shuf = sm2),
+                     "alt" = meaps_alt(
+                       rkdist = altrk,
+                       emplois = marge_emplois,
+                       actifs = marge_actifs,
+                       modds = mat_odds,
+                       f = rep(la_fuite, 16),
+                       shuf = altsm2))
 
 # gros test
 # 
@@ -233,25 +243,24 @@ mat_odds <- matrix(1, nrow = nrow(marge_actifs), ncol = nrow(marge_emplois))
 
 shuf <- map(1:256, ~sample.int(nrow(marge_actifs), nrow(marge_actifs)))
 shuf <- do.call(cbind, shuf)
-meaps_tension(
->>>>>>> 94d391bbde07762a892316a97948e33134a842ea
-  rkdist = rkdist,
-  emplois = marge_emplois,
-  actifs = marge_actifs,
-  modds = mat_odds,
-<<<<<<< HEAD
-  f = rep(la_fuite, 16),
-  shuf = sm2),
-  "alt" = meaps_alt(
-    rkdist = altrk,
-    emplois = marge_emplois,
-    actifs = marge_actifs,
-    modds = mat_odds,
-    f = rep(la_fuite, 16),
-    shuf = altsm2))
+
+transrkdist = t(rkdist)
+transshuf = t(shuf)
+
+zz <- microbenchmark("old" = meaps_multishuf(rkdist = rkdist,
+                                             emplois = marge_emplois,
+                                             actifs = marge_actifs,
+                                             modds = mat_odds,
+                                             f = rep(la_fuite, 2500),
+                                             shuf = shuf),
+                     "alt" = meaps_alt(
+                       rkdist = transrkdist,
+                       emplois = marge_emplois,
+                       actifs = marge_actifs,
+                       modds = mat_odds,
+                       f = rep(la_fuite, 2500),
+                       shuf = transshuf),
+                     times = 2)
 
 
-=======
-  f = rep(la_fuite, nrow(marge_actifs)),
-  shuf = shuf)
->>>>>>> 94d391bbde07762a892316a97948e33134a842ea
+

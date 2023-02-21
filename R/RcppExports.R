@@ -61,7 +61,7 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation
     .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, normalisation, fuite_min, seuil_newton)
 }
 
-#' La fonction MEAPS sur plusieurs shufs
+#' La fonction meaps sur plusieurs shufs
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -78,7 +78,7 @@ meaps_alt <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, pr
     .Call(`_rmeaps_meaps_alt`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 
-#' La fonction meaps sur plusieurs shufs
+#' La fonction MEAPS sur plusieurs shufs
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
