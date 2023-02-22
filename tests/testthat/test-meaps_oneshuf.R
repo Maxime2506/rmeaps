@@ -1,6 +1,6 @@
 test_that("meaps_oneshuf sur un petit échantillon", {
   
-  d <- genere_data(n=2, k=2, densite="uniforme")
+  d <- genere_data(n=2, k=2, densite="uniforme", ties = "first")
   
   meaps1 <- meaps_oneshuf(
     rkdist=d$rkdist,
@@ -13,6 +13,7 @@ test_that("meaps_oneshuf sur un petit échantillon", {
   expect_equal(sum(meaps1), sum(d$emplois))
   expect_equal(rowSums(meaps1), d$actifs*(1-d$fuite))
   expect_equal(colSums(meaps1), d$emplois)
+  expect_snapshot(meaps1)
 
   })
 

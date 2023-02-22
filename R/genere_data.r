@@ -16,7 +16,8 @@
 genere_data <- function(n = 3, k = 3, nshuf = 64, 
                         nb_actifs = n*n*10, nb_emplois = nb_actifs*(1-fuite), 
                         fuite = 0.1,
-                        densite = "uniforme") {
+                        densite = "uniforme",
+                        ties = "random") {
   
   maxx <- 1
   maxy <- 1
@@ -36,10 +37,10 @@ genere_data <- function(n = 3, k = 3, nshuf = 64,
     sf::st_cast(to = "POINT")
   
   distance <- sf::st_distance(residences, emplois)
-  rkdist <- matrixStats::rowRanks(distance, ties.method = "random")
+  rkdist <- matrixStats::rowRanks(distance, ties.method = ties)
   fn_dens <- switch(
     densite,
-    "uniforme" = \(x) 1,
+    "uniforme" = \(x) 1, 
     "radiale" =\(x) 1 / (0.5+sf::st_distance(x, sf::st_point(c(.5, .5)), by_element = FALSE))^2)
   
   marge_emplois <- tibble::tibble(position = emplois) |> 

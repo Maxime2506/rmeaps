@@ -15,5 +15,10 @@ LinkingTo: Rcpp, RcppParallel, RcppProgress
 SystemRequirements: GNU make
 RoxygenNote: 7.2.3
 Suggests: 
+    sf,
+    tidyr,
+    dplyr,
+    matrixStats,
+    bench,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
