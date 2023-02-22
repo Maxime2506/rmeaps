@@ -16,6 +16,8 @@ using namespace Rcpp;
 //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+//' @param mode Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...
+//' @param odds_subjectifs Attractivité des sites proches des actifs, pour le mode defini. default : null.
 //' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 //' @param progress Ajoute une barre de progression. Default : true.
 //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
@@ -24,21 +26,23 @@ using namespace Rcpp;
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
 NumericMatrix meaps_alt(IntegerMatrix rkdist,
-                              NumericVector emplois,
-                              NumericVector actifs,
-                              NumericMatrix modds,
-                              NumericVector f,
-                              IntegerMatrix shuf,
-                              int nthreads = 0,
-                              bool progress = true,
-                              bool normalisation = false,
-                              double fuite_min = 1e-3,
-                              double seuil_newton = 1e-6) {
+                        NumericVector emplois,
+                        NumericVector actifs,
+                        NumericMatrix modds,
+                        NumericVector f,
+                        IntegerMatrix shuf,
+                        std::string mode = "continu",
+                        Nullable<NumericVector> oddssubjectifs = R_NilValue,
+                        int nthreads = 0,
+                        bool progress = true,
+                        bool normalisation = false,
+                        double fuite_min = 1e-3,
+                        double seuil_newton = 1e-6) {
   
-  const int K = rkdist.nrow(),
-    N = rkdist.ncol(),
-    Nboot = shuf.ncol(),
-    Ns = shuf.nrow();
+  const int N = rkdist.nrow(),
+            K = rkdist.ncol(),
+            Nboot = shuf.nrow(),
+            Ns = shuf.ncol();
   
   // Quelques vérifs préalables.
   if (emplois.size() != K) {
@@ -57,6 +61,15 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
     stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de lignes.");
   }
   
+  if ((mode == "subjectif_c" || mode == "subjectif_d")&& oddssubjectifs.isNull()) {
+    stop("En mode subjectif, le vecteur oddssubjectifs doit être défini");
+  }
+  
+  std::vector<double> odsub;
+  if (mode == "subjectif_c"|| mode == "subjectif_d") {
+    odsub = as< std::vector<double> >(oddssubjectifs);
+  }
+ 
 #ifdef _OPENMP
   int ntr = nthreads;
   if (ntr == 0) {ntr = omp_get_max_threads();}
@@ -72,9 +85,15 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
   for (int i = 0; i < Nboot; ++i) {
     for (int j = 0; j < Ns; ++j) {
-      ishuf[i][j] = shufcpp[ i * Ns + j];
+      ishuf[i][j] = shufcpp[ i  + j * Nboot];
+      if (ishuf[i][j] >= N) { 
+        stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
+      }
     }
   }
+  
+  // Choix d'une limite basse pour la fuite.
+  f = ifelse(f > fuite_min, f, fuite_min);
   
   // Calage de l'emploi sur les actifs.
   if (normalisation) {
@@ -90,19 +109,32 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   std::vector< std::vector<int> > arrangement(N, std::vector<int>(K));
   std::vector< std::vector<double> > odds(N, std::vector<double>(K));
   int temp, k_valid;
+  std::set<int> unicite;
   
   for (int i = 0; i < N; ++i) {
     k_valid = 0L;
+    unicite.clear();
     for (int k = 0; k < K; ++k) {
-      temp = rkdist(k, i);
+      temp = rkdist(i, k);
       if (R_IsNA(temp) == false) { 
+        if (!unicite.insert(temp).second) {
+          stop("Il y a des doublons dans les rangs d'une ligne de rkdist.");
+        }
         arrangement[i][temp - 1L] = k; //Attention : rkdist rank à partir de 1.
-        odds[i][temp - 1L] = modds(k, i);
+        odds[i][temp - 1L] = modds(i, k);
         k_valid++;
       }
     }
     arrangement[i].resize(k_valid);
     odds[i].resize(k_valid);
+  }
+  
+  // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
+  // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
+  // poids de la ligne par cette fréquence.
+  std::vector<int> freq_actifs(N, 0L);
+  for (int i = 0; i < N; ++i) {
+    freq_actifs[i]++;
   }
   
   // Initialisation du résultat.
@@ -126,14 +158,6 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
       // Initialisation de l'emploi disponible.
       std::vector<double> emp(emploisinitial); // deep copy.
       
-      // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
-      // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
-      // poids de la ligne par cette fréquence.
-      std::vector<int> freq_actifs(N, 0L);
-      for (auto i: theshuf) {
-        freq_actifs[i]++;
-      }
-      
       for (auto i: theshuf) {
         
         // Increment progress_bar.
@@ -142,17 +166,33 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         std::vector<int> arr = arrangement[i];
         int k_valid = arr.size();
         
-        std::vector<double> dispo (k_valid), repartition(k_valid);
+        std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
         for (int k = 0; k < k_valid; ++k) {
-          dispo[k] = emp[ arr[k] ]; 
+          placeslibres[k] = emp[ arr[k] ]; 
         }
         
-        // Choix d'une limite basse pour la fuite.
-        double fuite = std::max(fuite_min, fcpp[i]);
+        if (mode == "subjectif_d") {
+          for (int k = 0; k < k_valid; ++k) {
+            attractivites[k] = emploisinitial[ arr[k] ] * odsub[k]; 
+          }
+        } else if (mode== "subjectif_c") {
+          for (int k = 0; k < k_valid; ++k) {
+            attractivites[k] = placeslibres[k] * odsub[k]; 
+          }
+        } else if (mode == "discret") {
+          for (int k = 0; k < k_valid; ++k) {
+            attractivites[k] = emploisinitial[ arr[k] ]; 
+          }
+        } else {
+          for (int k = 0; k < k_valid; ++k) {
+            attractivites[k] = placeslibres[k]; // Cas continu de l'emploi homogène. attractivité liée à la proportion d'emplois disp.
+          }
+        }
+        
         // Nombre d'actifs partant par freq_actif paquets.
         double actifspartant = actifscpp[i] / freq_actifs[i];
         
-        repartition = repartir_alt(dispo, odds[i], fuite, actifspartant, seuil_newton);
+        repartition = repartir_alt(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
         
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {

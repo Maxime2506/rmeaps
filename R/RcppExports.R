@@ -68,14 +68,16 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation
 #' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param mode Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...
+#' @param odds_subjectifs Attractivité des sites proches des actifs, pour le mode defini. default : null.
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_alt <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
-    .Call(`_rmeaps_meaps_alt`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
+meaps_alt <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_alt`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 
 #' La fonction MEAPS sur plusieurs shufs
