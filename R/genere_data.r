@@ -40,7 +40,7 @@ genere_data <- function(n = 3, k = 3, nshuf = 64,
   rkdist <- matrixStats::rowRanks(distance, ties.method = ties)
   fn_dens <- switch(
     densite,
-    "uniforme" = \(x) 1,
+    "uniforme" = \(x) 1, 
     "radiale" =\(x) 1 / (0.5+sf::st_distance(x, sf::st_point(c(.5, .5)), by_element = FALSE))^2)
   
   marge_emplois <- tibble::tibble(position = emplois) |> 
