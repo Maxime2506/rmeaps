@@ -62,19 +62,21 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
   
   // Replacement des débordements sur les sites non remplis à proportion de la répartition calculée ci-dessus.``
   // RQ : debordement peut atteindre 0 car on a évacué dès le départ le cas où il n'y a pas assez d'emplois pour le nombre d'actifs.
-  double repartition_tot, new_debord, demande_sup; 
+  double proportion_tot, new_debord, demande_sup; 
+  std::vector<double> proportions(repartition);
+  
   while (debordement > 0) {
-    repartition_tot = 0.0;
+    proportion_tot = 0.0;
     new_debord = 0.0;
-
+    
     for (int j = 0; j < k_valid; ++j) {
-      if (repartition[j] < placeslibres[j]) { repartition_tot += repartition[j]; }
+      if (repartition[j] < placeslibres[j]) { proportion_tot += proportions[j]; }
     }
     
     for (int j = 0; j < k_valid; ++j)
       { if (placeslibres[j] > 0.0) {
         if (repartition[j] < placeslibres[j]) {
-          demande_sup = debordement * repartition[j]  / repartition_tot;
+          demande_sup = debordement * proportions[j]  / proportion_tot;
           if (demande_sup + repartition[j] > placeslibres[j]) {
             new_debord += repartition[j] + demande_sup - placeslibres[j];
             repartition[j] = placeslibres[j];
@@ -88,3 +90,7 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
   }
   return repartition;
 } 
+
+
+
+

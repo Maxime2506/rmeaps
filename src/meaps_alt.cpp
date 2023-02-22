@@ -133,7 +133,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
   // poids de la ligne par cette fréquence.
   std::vector<int> freq_actifs(N, 0L);
-  for (int i = 0; i < N; ++i) {
+  for (auto i : ishuf[0]) {
     freq_actifs[i]++;
   }
   
