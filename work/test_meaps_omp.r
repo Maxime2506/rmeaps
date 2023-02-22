@@ -52,6 +52,9 @@ meaps_alt(
   shuf = matrix(1:2, ncol = 2, byrow = TRUE)) 
 
 
+
+
+
 meaps_alt(
   rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,3),
