@@ -193,7 +193,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         double actifspartant = actifscpp[i] / freq_actifs[i];
         
         repartition = repartir_alt(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
-        
+       
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {
           emp[ arr[k] ] -= repartition[k];

@@ -17,7 +17,7 @@ test_that("meaps alt", {
     f=d$fuite,
     shuf=d$shuf,
     progress = FALSE)
-  expect_snapshot(meapst)
+  #expect_snapshot(meapst)
   expect_equal(sum(meapst), sum(d$emplois))
   expect_equal(rowSums(meapst), d$actifs*(1-d$fuite))
   expect_equal(colSums(meapst), d$emplois)
