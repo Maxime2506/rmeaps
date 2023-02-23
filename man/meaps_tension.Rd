@@ -2,7 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{meaps_tension}
 \alias{meaps_tension}
-\title{MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.}
+\title{MEAPS en calculant la tension sur les opportunités, 
+c'est-à-dire le rang moyen sur les shufs juste avant saturation.}
 \usage{
 meaps_tension(
   rkdist,
@@ -48,5 +49,6 @@ meaps_tension(
 renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 }
 \description{
-MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+MEAPS en calculant la tension sur les opportunités, 
+c'est-à-dire le rang moyen sur les shufs juste avant saturation.
 }

@@ -2,7 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{meaps_alt}
 \alias{meaps_alt}
-\title{La fonction meaps sur plusieurs shufs}
+\title{La fonction meaps sur plusieurs shufs
+version optimisée}
 \usage{
 meaps_alt(
   rkdist,
@@ -50,4 +51,5 @@ renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 }
 \description{
 La fonction meaps sur plusieurs shufs
+version optimisée
 }

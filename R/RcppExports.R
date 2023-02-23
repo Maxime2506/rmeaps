@@ -61,7 +61,8 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, normalisation
     .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, normalisation, fuite_min, seuil_newton)
 }
 
-#' La fonction meaps sur plusieurs shufs
+#' La fonction MEAPS sur plusieurs shufs
+#' version optimisée
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -97,7 +98,8 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 
     .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 
-#' MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+#' MEAPS en calculant la tension sur les opportunités, 
+#' c'est-à-dire le rang moyen sur les shufs juste avant saturation.
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -114,5 +116,13 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 meaps_tension <- function(rkdist, emplois, actifs, modds, f, shuf, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6, seuil_dispo = 0.1) {
     .Call(`_rmeaps_meaps_tension`, rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo)
+}
+
+#' MEAPS en calculant la tension sur les opportunités, 
+#' c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+NULL
+
+meaps_tension_alt <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6, seuil_dispo = 0.1) {
+    .Call(`_rmeaps_meaps_tension_alt`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo)
 }
 

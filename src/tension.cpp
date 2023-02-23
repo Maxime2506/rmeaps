@@ -11,7 +11,8 @@
 
 using namespace Rcpp;
 
-//' MEAPS en calculant la tension surles opportinuté, c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+//' MEAPS en calculant la tension sur les opportunités, 
+//' c'est-à-dire le rang moyen sur les shufs juste avant saturation.
 //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
