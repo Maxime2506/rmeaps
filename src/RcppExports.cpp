@@ -82,8 +82,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // meaps_alt
-NumericMatrix meaps_alt(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
-RcppExport SEXP _rmeaps_meaps_alt(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
+NumericMatrix meaps_alt(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
+RcppExport SEXP _rmeaps_meaps_alt(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -93,12 +93,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type oddssubjectifs(oddssubjectifsSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
     Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
     Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
     Rcpp::traits::input_parameter< double >::type seuil_newton(seuil_newtonSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_alt(rkdist, emplois, actifs, modds, f, shuf, nthreads, progress, normalisation, fuite_min, seuil_newton));
+    rcpp_result_gen = Rcpp::wrap(meaps_alt(rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -145,6 +147,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// meaps_tension_alt
+List meaps_tension_alt(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton, double seuil_dispo);
+RcppExport SEXP _rmeaps_meaps_tension_alt(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP, SEXP seuil_dispoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerMatrix >::type rkdist(rkdistSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type oddssubjectifs(oddssubjectifsSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
+    Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
+    Rcpp::traits::input_parameter< double >::type seuil_newton(seuil_newtonSEXP);
+    Rcpp::traits::input_parameter< double >::type seuil_dispo(seuil_dispoSEXP);
+    rcpp_result_gen = Rcpp::wrap(meaps_tension_alt(rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_chances_absorption", (DL_FUNC) &_rmeaps_chances_absorption, 4},
@@ -152,9 +178,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_deborder", (DL_FUNC) &_rmeaps_deborder, 2},
     {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
     {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 9},
-    {"_rmeaps_meaps_alt", (DL_FUNC) &_rmeaps_meaps_alt, 11},
+    {"_rmeaps_meaps_alt", (DL_FUNC) &_rmeaps_meaps_alt, 13},
     {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 11},
     {"_rmeaps_meaps_tension", (DL_FUNC) &_rmeaps_meaps_tension, 12},
+    {"_rmeaps_meaps_tension_alt", (DL_FUNC) &_rmeaps_meaps_tension_alt, 14},
     {NULL, NULL, 0}
 };
 

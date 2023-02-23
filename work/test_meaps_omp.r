@@ -1,69 +1,32 @@
 library(tidyverse)
 
-# Ligne 5 cases
-cref = 0.6
-cabs = rep(cref, 5)
-pabs = cabs / (1 + cabs)
-passe = cumprod(1-pabs)
-reste = lag(passe, default = 1) * pabs
-
-la_fuite = 0
-
-meaps_oneshuf(
-  rkdist = matrix(1:5, nrow = 1),
-  emplois = rep(.3,5),
-  actifs = 1,
-  modds = matrix(1, nrow = 1, ncol = 5),
-  f = la_fuite,
-  shuf = 1,
-  normalisation = FALSE)
-
-nb_shuf = 4
-meaps_multishuf(rkdist = matrix(1:5, nrow = 1),
-                emplois = rep(1,5),
-                actifs = 1,
-                modds = matrix(1, nrow = 1, ncol = 5),
-                f = la_fuite,
-                shuf = matrix(rep(1L, nb_shuf), ncol = 1))
-
-
 # carré 2x2
+# nb : p_abs théorique pour fuite_min = 1e-3 : 1 - sqrt(1e-3) = 0.9683772
 meaps_oneshuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 2),
-  f = rep(0, 2),
+  f = rep(1e-3, 2),
   shuf = 1:2)
 
-# nb : p_abs théorique pour fuite_min = 1e-3 : 1 - sqrt(1e-3) = 0.9683772
-
-
 meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 2),
   f = rep(0.1, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE))
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation=TRUE)
 
 meaps_alt(
-  rkdist = t(matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE)),
-  emplois = rep(1,2),
-  actifs = c(1,1),
-  modds = matrix(1, nrow = 2, ncol = 2),
-  f = rep(0.1, 2),
-  shuf = t(matrix(1:2, ncol = 2, byrow = TRUE)))
-
-
-
-meaps_multishuf(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 2),
-  f = rep(0, 2),
-  shuf = matrix(1:2, ncol = 2, nrow = 5, byrow = TRUE))
+  f = rep(0.1, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation = TRUE)
 
 # carré 2x3
 meaps_oneshuf(
@@ -71,7 +34,7 @@ meaps_oneshuf(
   emplois = rep(1,3),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 3),
-  f = rep(0, 2),
+  f = rep(1e-3, 2),
   shuf = 1:2)
 
 meaps_multishuf(
@@ -80,8 +43,40 @@ meaps_multishuf(
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 3),
   f = rep(0, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE)) |> rowSums()
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation=TRUE) 
 
+meaps_alt(
+  rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
+  emplois = rep(1,3),
+  actifs = c(1,1),
+  modds = matrix(1, nrow = 2, ncol = 3),
+  f = rep(0, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation=TRUE, progress=FALSE) 
+
+
+
+
+
+meaps_alt(
+  rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
+  emplois = rep(1,3),
+  actifs = c(1,1),
+  modds = matrix(1, nrow = 2, ncol = 3),
+  mode ="discret",
+  f = rep(0, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE)) 
+
+meaps_alt(
+  rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
+  emplois = rep(1,3),
+  actifs = c(1,1),
+  modds = matrix(1, nrow = 2, ncol = 3),
+  mode ="subjectif_c",
+  oddssubjectifs = c(1,1,1),
+  f = rep(0, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE)) 
 
 
 
@@ -248,21 +243,40 @@ ggplot(tibble(r = tens$tension))+geom_histogram(aes(x=r), bins=100)
 
 
 # la version alt prend en input la transposée pour les matrices.
-t_rkdist <- t(rkdist)
-t_mat_odds <- t(mat_odds)
-t_shuf <- t(shuf)
+# t_rkdist <- t(rkdist)
+# t_mat_odds <- t(mat_odds)
+# t_shuf <- t(shuf)
 
 
 bench::mark(
   multishuf = meaps_multishuf(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
-  alt = meaps_alt(t_rkdist, marge_emplois, marge_actifs, t_mat_odds, rep(la_fuite, nrow(marge_actifs)), t_shuf),
+  alt = meaps_alt(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
   )
-# comparaison trop sévère
-any(abs(multishuf - alt) > 1e-6)
+# comparaison 
+quantile(abs(multishuf - alt)/multishuf, probs = c(.8, .9, .95, .99, .999, .9999, 1))
+
+
+
+
 
 microbenchmark::microbenchmark(
   multishuf = meaps_multishuf(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
-  alt = meaps_alt(t_rkdist, marge_emplois, marge_actifs, t_mat_odds, rep(la_fuite, nrow(marge_actifs)), t_shuf),
-  times = 5
+  alt = meaps_alt(rkdist, marge_emplois, marge_actifs, mat_odds, rep(la_fuite, nrow(marge_actifs)), shuf),
+  times = 2
 )
+
+
+
+meaps_alt(t_rkdist, marge_emplois, marge_actifs, t_mat_odds, rep(la_fuite, nrow(marge_actifs)), t_shuf,
+          mode = "continu")
+
+meaps_alt(t_rkdist, marge_emplois, marge_actifs, t_mat_odds, rep(la_fuite, nrow(marge_actifs)), t_shuf,
+          mode = "discret")
+
+
+odsubj <- (900:1)/mean(900:1)
+
+meaps_alt(t_rkdist, marge_emplois, marge_actifs, t_mat_odds, rep(la_fuite, nrow(marge_actifs)), t_shuf,
+          mode = "subjectif", oddssubjectifs = odsubj)
+
 

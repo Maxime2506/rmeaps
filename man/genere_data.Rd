@@ -11,7 +11,8 @@ genere_data(
   nb_actifs = n * n * 10,
   nb_emplois = nb_actifs * (1 - fuite),
   fuite = 0.1,
-  densite = "uniforme"
+  densite = "uniforme",
+  ties = "random"
 )
 }
 \arguments{
