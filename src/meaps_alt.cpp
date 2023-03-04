@@ -112,12 +112,15 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   int temp, k_valid;
   std::set<int> unicite;
   
+  
   for (int i = 0; i < N; ++i) {
     k_valid = 0L;
     unicite.clear();
+    LogicalVector nas = is_na(rkdist(i, _));
     for (int k = 0; k < K; ++k) {
       temp = rkdist(i, k);
-      if (R_IsNA(temp) == false) { 
+      //Rcout << i <<","<< k << "temp:" << temp << "\n";
+      if (nas(k) == 0) { 
         if (!unicite.insert(temp).second) {
           stop("Il y a des doublons dans les rangs d'une ligne de rkdist.");
         }
