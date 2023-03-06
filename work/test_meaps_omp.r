@@ -41,7 +41,8 @@ meaps_multishuf(
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 3),
   f = rep(0, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE)) 
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation = TRUE) 
 
 meaps_alt(
   rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
@@ -49,7 +50,8 @@ meaps_alt(
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 3),
   f = rep(0, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE)) 
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation = TRUE) 
 
 
 
