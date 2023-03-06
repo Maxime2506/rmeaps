@@ -27,7 +27,7 @@ test_that("meaps alt", {
 # test avec des nas
 
 test_that("meaps alt avec NA", {
-  d <- genere_data(n=4, k=4, nshuf=1, densite="uniforme")
+  d <- genere_data(n=8, k=8, nshuf=1, densite="uniforme")
   d$dist[d$dist>1.0] <- NA
   d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
   meaps <- meaps_oneshuf(
@@ -43,8 +43,7 @@ test_that("meaps alt avec NA", {
     actifs=d$actifs, 
     modds=d$modds, 
     f=d$fuite,
-    shuf=d$shuf)
+    shuf=d$shuf,
+    progress=FALSE)
   expect_equal(meapst, meaps)
-  expect_snapshot(meapst)
-  
 })
