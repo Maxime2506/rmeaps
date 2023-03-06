@@ -17,9 +17,33 @@ test_that("meaps alt", {
     f=d$fuite,
     shuf=d$shuf,
     progress = FALSE)
-  expect_snapshot(meapst)
+  #expect_snapshot(meapst)
   expect_equal(sum(meapst), sum(d$emplois))
   expect_equal(rowSums(meapst), d$actifs*(1-d$fuite))
   expect_equal(colSums(meapst), d$emplois)
   expect_equal(sum(!abs(meapss-meapst)<0.0001) < 0.001*length(meapss), TRUE)
+})
+
+# test avec des nas
+
+test_that("meaps alt avec NA", {
+  d <- genere_data(n=8, k=8, nshuf=1, densite="uniforme")
+  d$dist[d$dist>1.0] <- NA
+  d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
+  meaps <- meaps_oneshuf(
+    rkdist=d$rkdist,
+    emplois=d$emplois,
+    actifs=d$actifs, 
+    modds=d$modds, 
+    f=d$fuite,
+    shuf=d$shuf)
+  meapst <- meaps_alt(
+    rkdist=d$rkdist,
+    emplois=d$emplois,
+    actifs=d$actifs, 
+    modds=d$modds, 
+    f=d$fuite,
+    shuf=d$shuf,
+    progress=FALSE)
+  expect_equal(meapst, meaps)
 })

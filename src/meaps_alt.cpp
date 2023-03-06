@@ -9,7 +9,8 @@
 #include "repartir_alt.h"
 
 using namespace Rcpp;
-//' La fonction meaps sur plusieurs shufs
+//' La fonction MEAPS sur plusieurs shufs
+//' version optimisée
 //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
@@ -111,12 +112,15 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   int temp, k_valid;
   std::set<int> unicite;
   
+  
   for (int i = 0; i < N; ++i) {
     k_valid = 0L;
     unicite.clear();
+    LogicalVector nas = is_na(rkdist(i, _));
     for (int k = 0; k < K; ++k) {
       temp = rkdist(i, k);
-      if (R_IsNA(temp) == false) { 
+      //Rcout << i <<","<< k << "temp:" << temp << "\n";
+      if (nas(k) == 0) { 
         if (!unicite.insert(temp).second) {
           stop("Il y a des doublons dans les rangs d'une ligne de rkdist.");
         }
@@ -193,7 +197,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         double actifspartant = actifscpp[i] / freq_actifs[i];
         
         repartition = repartir_alt(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
-        
+       
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {
           emp[ arr[k] ] -= repartition[k];

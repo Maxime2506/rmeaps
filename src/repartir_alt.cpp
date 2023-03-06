@@ -44,7 +44,7 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
       eps = 0; // L'estimation est poursuivie malgré tout...
     }
   } while (eps > seuil_newton);
-   
+  
   // Calcul des actifs arrivants sur chacun des sites d'emplois, en tenant compte de la capacité en regard de la demande (débordement).
   double actifsrestants = actifs, debordement = 0.0, demande;
   for (int j = 0; j < k_valid; ++j) {
@@ -59,7 +59,6 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
       actifsrestants -= demande;
     }
   }
-  
   // Replacement des débordements sur les sites non remplis à proportion de la répartition calculée ci-dessus.``
   // RQ : debordement peut atteindre 0 car on a évacué dès le départ le cas où il n'y a pas assez d'emplois pour le nombre d'actifs.
   double proportion_tot, new_debord, demande_sup; 
@@ -72,21 +71,21 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
     for (int j = 0; j < k_valid; ++j) {
       if (repartition[j] < placeslibres[j]) { proportion_tot += proportions[j]; }
     }
-    
-    for (int j = 0; j < k_valid; ++j)
-      { if (placeslibres[j] > 0.0) {
-        if (repartition[j] < placeslibres[j]) {
-          demande_sup = debordement * proportions[j]  / proportion_tot;
-          if (demande_sup + repartition[j] > placeslibres[j]) {
-            new_debord += repartition[j] + demande_sup - placeslibres[j];
-            repartition[j] = placeslibres[j];
+    for (int k = 0; k < k_valid; ++k) {
+      if (placeslibres[k] > 0.0) {
+        if (repartition[k] < placeslibres[k]) {
+          demande_sup = debordement * proportions[k]  / proportion_tot;
+          if (demande_sup + repartition[k] > placeslibres[k]) {
+            new_debord += repartition[k] + demande_sup - placeslibres[k];
+            repartition[k] = placeslibres[k];
           } else {
-            repartition[j] += demande_sup; 
+            repartition[k] += demande_sup; 
           }
         }
+        
       }
-      debordement = new_debord;
-      }
+    }
+    debordement = new_debord;
   }
   return repartition;
 } 

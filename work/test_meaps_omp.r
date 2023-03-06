@@ -15,16 +15,18 @@ meaps_multishuf(
   emplois = rep(1,2),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 2),
-  f = rep(1e-3, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE))
+  f = rep(0.1, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation=TRUE)
 
 meaps_alt(
   rkdist = matrix(c(1:2, 2:1), nrow = 2, byrow = TRUE),
   emplois = rep(1,2),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 2),
-  f = rep(1e-3, 2),
-  shuf = matrix(1:2, ncol = 2, byrow = TRUE))
+  f = rep(0.1, 2),
+  shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+  normalisation = TRUE)
 
 # carré 2x3
 meaps_oneshuf(
@@ -32,7 +34,7 @@ meaps_oneshuf(
   emplois = rep(1,3),
   actifs = c(1,1),
   modds = matrix(1, nrow = 2, ncol = 3),
-  f = rep(0, 2),
+  f = rep(1e-3, 2),
   shuf = 1:2)
 
 meaps_multishuf(
@@ -42,7 +44,11 @@ meaps_multishuf(
   modds = matrix(1, nrow = 2, ncol = 3),
   f = rep(0, 2),
   shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+<<<<<<< HEAD
   normalisation = TRUE) 
+=======
+  normalisation=TRUE) 
+>>>>>>> 908ea9928f5b28b7c473d06e853fea80f2c1530b
 
 meaps_alt(
   rkdist = matrix(c(1:3, 3:1), nrow = 2, byrow = TRUE),
@@ -51,7 +57,11 @@ meaps_alt(
   modds = matrix(1, nrow = 2, ncol = 3),
   f = rep(0, 2),
   shuf = matrix(1:2, ncol = 2, byrow = TRUE),
+<<<<<<< HEAD
   normalisation = TRUE) 
+=======
+  normalisation=TRUE, progress=FALSE) 
+>>>>>>> 908ea9928f5b28b7c473d06e853fea80f2c1530b
 
 
 
