@@ -46,4 +46,24 @@ test_that("meaps alt avec NA", {
     shuf=d$shuf,
     progress=FALSE)
   expect_equal(meapst, meaps)
+  expect_equal(all(abs(rowSums(meapst)-d$actifs*(1-d$fuite))<0.0001), TRUE)
+  expect_equal(all(abs(colSums(meapst)-d$emplois)<0.0001), TRUE)
+})
+
+# test des odds grands
+
+test_that("meaps alt avec NA", {
+  d <- genere_data(n=8, k=8, nshuf=1, densite="uniforme")
+  d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
+  d$modds[1,1] <- 1000
+  meapst <- meaps_alt(
+    rkdist=d$rkdist,
+    emplois=d$emplois,
+    actifs=d$actifs, 
+    modds=d$modds, 
+    f=d$fuite,
+    shuf=d$shuf,
+    progress=FALSE)
+  expect_equal(rowSums(meapst), d$actifs*(1-d$fuite))
+  expect_equal(colSums(meapst), d$emplois)
 })
