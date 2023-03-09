@@ -112,7 +112,6 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
   int temp, k_valid;
   std::set<int> unicite;
   
-  
   for (int i = 0; i < N; ++i) {
     k_valid = 0L;
     unicite.clear();

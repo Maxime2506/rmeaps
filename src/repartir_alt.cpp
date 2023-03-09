@@ -37,13 +37,25 @@ std::vector<double> repartir_alt(std::vector<double>& placeslibres,
   do {
     new_cref = c_ref - (sumlog_passage(c_ref, placeslibres, attractivites, od) + log(fuite))/ d_sumlog_passage(c_ref, placeslibres, attractivites, od); 
     eps = std::abs(new_cref - c_ref);
-    c_ref = new_cref;
+    c_ref = std::max(0., new_cref);
     compteur++;
     if (compteur > 100) {
       Rcout << "Le calcul par la méthode de Newton de la chance d\'absorption n\'a pas convergé.\n";
       eps = 0; // L'estimation est poursuivie malgré tout...
     }
   } while (eps > seuil_newton);
+  
+  if (!std::isfinite(new_cref)) {
+    Rcout << "\nplaces\n";
+    for (auto ii: placeslibres) Rcout << ii << " ";
+    Rcout << "\nod\n";
+    for (auto ii: od) Rcout << ii << " ";
+    Rcout << "\nfuite = " << fuite << "\n";
+    Rcout << "\nactifs = " << actifs << "\n";
+    
+  }
+  
+  
   
   // Calcul des actifs arrivants sur chacun des sites d'emplois, en tenant compte de la capacité en regard de la demande (débordement).
   double actifsrestants = actifs, debordement = 0.0, demande;
