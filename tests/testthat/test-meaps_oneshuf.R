@@ -46,6 +46,7 @@ test_that("meaps_oneshuf sur un petit échantillon, timing", {
     modds=d$modds, 
     f=d$fuite,
     shuf=1:length(d$actifs)))
+  
   # on teste qu'on fait plus de 5 itérations par seconde (en monoprocesseur)
   expect_equal(bench[["itr/sec"]]>5, TRUE)
 })

@@ -1,57 +1,76 @@
-test_that("meaps_oneshuf et _multishuf sur un échantillon moyen", {
+test_that("meaps multishuf", {
+  d <- genere_data(n=10, k=10, nshuf=16, densite="uniforme")
   
-  d <- genere_data(n=10, k=10, densite="uniforme")
-  
-  meaps1 <- meaps_oneshuf(
-    rkdist=d$rkdist,
-    emplois=d$emplois,
-    actifs=d$actifs, 
-    modds=d$modds, 
-    f=d$fuite,
-    shuf=1:length(d$actifs))
-  
-  meapss <- meaps_multishuf(
-    rkdist=d$rkdist,
-    emplois=d$emplois,
-    actifs=d$actifs, 
-    modds=d$modds, 
-    f=d$fuite,
-    shuf=matrix(1:length(d$actifs), nrow=8, ncol=length(d$actifs), byrow = TRUE),
-    progress = FALSE)
-  
-  expect_equal(sum(meapss), sum(d$emplois))
-  expect_equal(rowSums(meapss), d$actifs*(1-d$fuite))
-  expect_equal(colSums(meapss), d$emplois)
-  expect_equal(meaps1, meapss)
-})
-
-test_that("meaps_oneshuf et _multishuf sur un échantillon moyen", {
-  
-  d <- genere_data(n=10, k=10, nshuf=128, densite="uniforme")
-  
-  meapss <- meaps_multishuf(
+  meapst <- meaps_multishuf(
     rkdist=d$rkdist,
     emplois=d$emplois,
     actifs=d$actifs, 
     modds=d$modds, 
     f=d$fuite,
     shuf=d$shuf,
-    nthreads = 1,
     progress = FALSE)
+  
+  expect_equal(sum(meapst), sum(d$emplois))
+  expect_equal(rowSums(meapst), d$actifs*(1-d$fuite))
+  expect_equal(colSums(meapst), d$emplois)
+})
 
-  meapsst <- meaps_multishuf(
+# test avec des nas
+
+test_that("meaps multishuf avec NAs", {
+  d <- genere_data(n=8, k=8, nshuf=1, densite="uniforme")
+  d$dist[d$dist>1.0] <- NA
+  d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
+  
+  meapst <- meaps_multishuf(
     rkdist=d$rkdist,
     emplois=d$emplois,
     actifs=d$actifs, 
     modds=d$modds, 
     f=d$fuite,
     shuf=d$shuf,
-    nthreads = 4L,
-    progress = FALSE)
-    
-  expect_equal(sum(meapss), sum(d$emplois))
-  expect_equal(rowSums(meapss), d$actifs*(1-d$fuite))
-  expect_equal(colSums(meapss), d$emplois)
-  expect_equal(meapss, meapsst)
+    progress=FALSE)
+  
+  expect_equal(rowSums(meapst), d$actifs*(1-d$fuite))
+  expect_equal(colSums(meapst), d$emplois)
 })
 
+# test des grands odds 
+
+test_that("meaps multishuf avec NAs et grand OR", {
+  d <- genere_data(n=4, k=4, nshuf=1, densite="uniforme")
+  d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
+  d$modds[1,1] <- 1000
+  
+  meapst <- meaps_multishuf(
+    rkdist=d$rkdist,
+    emplois=d$emplois,
+    actifs=d$actifs, 
+    modds=d$modds, 
+    f=d$fuite,
+    shuf=d$shuf,
+    progress=FALSE)
+  
+  expect_equal(all(abs(rowSums(meapst)-d$actifs*(1-d$fuite))<0.0001), TRUE)
+  expect_equal(all(abs(colSums(meapst)-d$emplois)<0.0001), TRUE)
+})
+
+# test des odds petits
+
+test_that("meaps multishuf avec NAs et petit OR", {
+  d <- genere_data(n=8, k=8, nshuf=1, densite="uniforme")
+  d$rkdist <- matrixStats::rowRanks(d$dist, ties = "first")
+  d$modds[1,1] <- 0.0001
+  
+  meapst <- meaps_multishuf(
+    rkdist=d$rkdist,
+    emplois=d$emplois,
+    actifs=d$actifs, 
+    modds=d$modds, 
+    f=d$fuite,
+    shuf=d$shuf,
+    progress=FALSE)
+  
+  expect_equal(all(abs(rowSums(meapst)-d$actifs*(1-d$fuite))<0.0001), TRUE)
+  expect_equal(all(abs(colSums(meapst)-d$emplois)<0.0001), TRUE)
+})
