@@ -1,9 +1,9 @@
 #include <Rcpp.h>
-#include "utils_newton_methods.h"
+#include "fonctions_newton.h"
 using namespace Rcpp;
 using namespace std;
 
-//' La fonction renvoie les chances d'absorption issue de meaps. 
+//' La fonction renvoie les chances d'absorption issue de meaps pour la méthode continue (default). 
 //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
@@ -41,12 +41,12 @@ NumericMatrix chances_absorption(
     
     for(int j = 0; j < K; ++j) {
       if(nna_rki[j]==TRUE)
-        arrangement[rki[j] - 1L] = j;
+        arrangement[ rki[j] - 1L ] = j;
     } 
     
     vector<double> dispo (k_valid);
     for (int j = 0; j < k_valid; ++j) {
-      dispo[j] = emplois[arrangement[j]]; 
+      dispo[j] = emplois[ arrangement[j] ]; 
     }
     
     // Choix d'une limite basse pour la fuite.
@@ -59,9 +59,9 @@ NumericMatrix chances_absorption(
     vector<double> od = as<vector<double>>(odds[arrangement]);
     // Calcul par la méthode de Newton de la chance d'absorption de référence compatible avec la fuite.
     do {
-      new_cref = c_ref - (log_fuite(c_ref, dispo, od) + log(fuite))/ d_logfuite(c_ref, dispo, od); 
+      new_cref = c_ref - (sumlog_passage(c_ref, dispo, dispo, od) + log(fuite))/ d_sumlog_passage(c_ref, dispo, dispo, od); 
       eps = abs(new_cref - c_ref);
-      c_ref = new_cref;
+      c_ref = std::max(0., new_cref);
     } while (eps > 1e-6);
     
     vector<double> c_abs(k_valid);

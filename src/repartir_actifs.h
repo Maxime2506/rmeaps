@@ -1,7 +1,8 @@
 #ifndef __REPARTIR_ACTIFS__
 #define __REPARTIR_ACTIFS__
 
-std::vector<double> repartir_actifs(std::vector<double>& dispo, 
+std::vector<double> repartir_actifs(std::vector<double>& placeslibres, 
+                                    std::vector<double>& attractivites, 
                                     std::vector<double>& od,
                                     double& fuite, 
                                     double& actifs,

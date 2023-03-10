@@ -6,7 +6,7 @@
 // [[Rcpp::depends(RcppProgress)]]
 #include <progress.hpp>
 #include <progress_bar.hpp>
-#include "repartir_alt.h"
+#include "repartir_actifs.h"
 
 using namespace Rcpp;
 //' La fonction MEAPS sur plusieurs shufs
@@ -26,7 +26,7 @@ using namespace Rcpp;
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
-NumericMatrix meaps_alt(IntegerMatrix rkdist,
+NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
                         NumericVector emplois,
                         NumericVector actifs,
                         NumericMatrix modds,
@@ -195,7 +195,7 @@ NumericMatrix meaps_alt(IntegerMatrix rkdist,
         // Nombre d'actifs partant par freq_actif paquets.
         double actifspartant = actifscpp[i] / freq_actifs[i];
         
-        repartition = repartir_alt(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
+        repartition = repartir_actifs(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
        
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {

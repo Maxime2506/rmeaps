@@ -1,12 +1,15 @@
 #ifndef __MEAPS__
 #define __MEAPS__
 
-Rcpp::NumericMatrix meaps_single(
+Rcpp::NumericMatrix meaps_oneshuf(
     const Rcpp::IntegerMatrix rkdist, 
-    const Rcpp::NumericVector emplois,
+    Rcpp::NumericVector emplois,
     const Rcpp::NumericVector actifs,
     const Rcpp::NumericMatrix modds,
     const Rcpp::NumericVector f, 
-    Rcpp::IntegerVector shuf);
+    const Rcpp::IntegerVector shuf,
+    bool normalisation,
+    double fuite_min,
+    double seuil_newton);
 
 #endif // __MEAPS__
