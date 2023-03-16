@@ -129,6 +129,9 @@ NumericMatrix meaps_oneshuf(IntegerMatrix rkdist,
     std::vector<int> arr = arrangement[i];
     int k_valid = arr.size();
     
+    // Cas particulier où il n'y a aucune destination valide.
+    if (k_valid == 0) continue;
+    
     std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
     for (int k = 0; k < k_valid; ++k) {
       placeslibres[k] = emp[ arr[k] ]; 
@@ -138,7 +141,7 @@ NumericMatrix meaps_oneshuf(IntegerMatrix rkdist,
       for (int k = 0; k < k_valid; ++k) {
         attractivites[k] = emploisinitial[ arr[k] ] * odsub[k]; 
       }
-    } else if (mode== "subjectif_c") {
+    } else if (mode == "subjectif_c") {
       for (int k = 0; k < k_valid; ++k) {
         attractivites[k] = placeslibres[k] * odsub[k]; 
       }

@@ -169,6 +169,9 @@ NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
         std::vector<int> arr = arrangement[i];
         int k_valid = arr.size();
         
+        // Cas particulier où il n'y a aucune destination valide.
+        if (k_valid == 0) continue;
+        
         std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
         for (int k = 0; k < k_valid; ++k) {
           placeslibres[k] = emp[ arr[k] ]; 
