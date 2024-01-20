@@ -42,13 +42,13 @@ std::vector<double> repartir_actifs(std::vector<double>& placeslibres,
   } while (eps > seuil_newton);
   
   if (!std::isfinite(new_cref)) {
-    Rcout << "\nplaces\n";
-    for (auto ii: placeslibres) Rcout << ii << " ";
-    Rcout << "\nod\n";
-    for (auto ii: od) Rcout << ii << " ";
-    Rcout << "\nfuite = " << fuite << "\n";
-    Rcout << "\nactifs = " << actifs << "\n";
-    
+    Rcout << "Oups, il y a un problème et new_cref est infini";
+    //Rcout << "\nplaces\n";
+    //for (auto ii: placeslibres) Rcout << ii << " ";
+    //Rcout << "\nod\n";
+    //for (auto ii: od) Rcout << ii << " ";
+    //Rcout << "\nfuite = " << fuite << "\n";
+    //Rcout << "\nactifs = " << actifs << "\n";
   }
   
   
