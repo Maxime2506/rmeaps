@@ -3,7 +3,8 @@
 \name{meaps_tension}
 \alias{meaps_tension}
 \title{MEAPS en calculant la tension sur les opportunités, 
-c'est-à-dire le rang moyen sur les shufs juste avant saturation.}
+c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+version optimisée}
 \usage{
 meaps_tension(
   rkdist,
@@ -12,6 +13,8 @@ meaps_tension(
   modds,
   f,
   shuf,
+  mode = "continu",
+  oddssubjectifs = NULL,
   nthreads = 0L,
   progress = TRUE,
   normalisation = FALSE,
@@ -46,9 +49,10 @@ meaps_tension(
 \item{seuil_dispo}{seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1}
 }
 \value{
-renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+renvoie une matrice avec les estimations du nombre de trajets de i vers j ($flux) ainsi que le rang au moment de la saturation ($tension)
 }
 \description{
 MEAPS en calculant la tension sur les opportunités, 
 c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+version optimisée
 }

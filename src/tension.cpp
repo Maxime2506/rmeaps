@@ -12,22 +12,22 @@ using namespace Rcpp;
 
 //' MEAPS en calculant la tension sur les opportunités, 
 //' c'est-à-dire le rang moyen sur les shufs juste avant saturation.
- //' version optimisée
- //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
- //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
- //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
- //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
- //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
- //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
- //' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
- //' @param progress Ajoute une barre de progression. Default : true.
- //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
- //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
- //' @param seuil_newton Seuil relatif pour la convergence par newton du calage de la probabilité d'absorption. Défault = 1e-6.
- //' @param seuil_dispo seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1
- //' 
- //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j ($flux) ainsi que le rang au moment de la saturation ($tension)
- // [[Rcpp::export]]
+//' version optimisée
+//' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+//' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+//' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+//' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
+//' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+//' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+//' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
+//' @param progress Ajoute une barre de progression. Default : true.
+//' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+//' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+//' @param seuil_newton Seuil relatif pour la convergence par newton du calage de la probabilité d'absorption. Défault = 1e-6.
+//' @param seuil_dispo seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1
+//' 
+//' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j ($flux) ainsi que le rang au moment de la saturation ($tension)
+// [[Rcpp::export]]
  List meaps_tension(IntegerMatrix rkdist,
                     NumericVector emplois,
                     NumericVector actifs,

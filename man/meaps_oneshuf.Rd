@@ -2,7 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{meaps_oneshuf}
 \alias{meaps_oneshuf}
-\title{La fonction meaps sur un shuf.}
+\title{La fonction MEAPS sur un shuf
+version optimisée}
 \usage{
 meaps_oneshuf(
   rkdist,
@@ -11,6 +12,8 @@ meaps_oneshuf(
   modds,
   f,
   shuf,
+  mode = "continu",
+  oddssubjectifs = NULL,
   normalisation = FALSE,
   fuite_min = 0.001,
   seuil_newton = 1e-06
@@ -21,25 +24,26 @@ meaps_oneshuf(
 
 \item{emplois}{Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).}
 
-\item{actifs}{Le vecteur des actifs partant de chacune des lignes visées par shuf.}
+\item{actifs}{Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.}
 
 \item{modds}{La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.}
 
 \item{f}{Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.}
 
-\item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. 
-Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf.
-Dans ce cas, le nombre d'actifs sera répartie également entre les différents départs depuis cette ligne.}
+\item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.}
 
-\item{normalisation}{Détermine si on renormalise les emplois surles actifs globalement. Défaut false}
+\item{mode}{Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...}
+
+\item{normalisation}{Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.}
 
 \item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
 
-\item{seuil_newton}{Seuil de convergence pour la méthde de Newton du calcul des probas d'absorption.}
+\item{odds_subjectifs}{Attractivité des sites proches des actifs, pour le mode defini. default : null.}
 }
 \value{
 renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 }
 \description{
-La fonction meaps sur un shuf.
+La fonction MEAPS sur un shuf
+version optimisée
 }

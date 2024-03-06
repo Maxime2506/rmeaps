@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{chances_absorption}
 \alias{chances_absorption}
-\title{La fonction renvoie les chances d'absorption issue de meaps.}
+\title{La fonction renvoie les chances d'absorption issue de meaps pour la méthode continue (default).}
 \usage{
 chances_absorption(rkdist, emplois, modds, f)
 }
@@ -19,5 +19,5 @@ chances_absorption(rkdist, emplois, modds, f)
 renvoie le vecteur des chances d'absorption.
 }
 \description{
-La fonction renvoie les chances d'absorption issue de meaps.
+La fonction renvoie les chances d'absorption issue de meaps pour la méthode continue (default).
 }

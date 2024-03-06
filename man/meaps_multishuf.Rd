@@ -2,7 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{meaps_multishuf}
 \alias{meaps_multishuf}
-\title{La fonction MEAPS sur plusieurs shufs}
+\title{La fonction MEAPS sur plusieurs shufs
+version optimisée}
 \usage{
 meaps_multishuf(
   rkdist,
@@ -11,6 +12,8 @@ meaps_multishuf(
   modds,
   f,
   shuf,
+  mode = "continu",
+  oddssubjectifs = NULL,
   nthreads = 0L,
   progress = TRUE,
   normalisation = FALSE,
@@ -31,6 +34,8 @@ meaps_multishuf(
 
 \item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.}
 
+\item{mode}{Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...}
+
 \item{nthreads}{Nombre de threads pour OpenMP. Default : 0 = choix auto.}
 
 \item{progress}{Ajoute une barre de progression. Default : true.}
@@ -38,10 +43,13 @@ meaps_multishuf(
 \item{normalisation}{Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.}
 
 \item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
+
+\item{odds_subjectifs}{Attractivité des sites proches des actifs, pour le mode defini. default : null.}
 }
 \value{
 renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 }
 \description{
 La fonction MEAPS sur plusieurs shufs
+version optimisée
 }
