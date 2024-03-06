@@ -11,10 +11,10 @@
 #'
 
 emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=TRUE) {
-  if(is_tibble(les_actifs))
+  if(tibble::is_tibble(les_actifs))
     act <- les_actifs |> 
       pull(var)
-  if(is_vector(les_actifs))
+  if(rlang::is_vector(les_actifs))
     act <- les_actifs
   freq <- act %/% seuil + 1
   set <- NULL
