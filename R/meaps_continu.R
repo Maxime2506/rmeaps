@@ -25,15 +25,13 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                          seuil_newton = 1e-6) {
   
   
-  dist_dgr <- switch(
-    class(dist),
-    "matrix" = .transfom_matrix(dist),
-    "dgRMatrix" = dist,
-    "list" = .transform_triplet(dist),
-    "None"
-    )
-  
-  if (dist_dgr == "None") stop("Format des distances non géré.")
+  mat <- if (inherits(dist, "matrix")) {
+    .transfom_matrix(dist) 
+  } else if (inherits(dist, "dgRMatrix")) {
+    .transform_triplet(dist)
+  } else {
+    stop("Format non reconnu")
+  }
   
 
   dist_dgr@x <- meaps_continu_cpp(j_dist = dist_dgr@j,
