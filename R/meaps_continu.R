@@ -25,7 +25,7 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                          seuil_newton = 1e-6) {
   
   
-  mat <- if (inherits(dist, "matrix")) {
+  dist_dgr <- if (inherits(dist, "matrix")) {
     .transfom_matrix(dist) 
   } else if (inherits(dist, "dgRMatrix")) {
     .transform_triplet(dist)
