@@ -7,11 +7,12 @@
 #include <progress.hpp>
 #include <progress_bar.hpp>
 #include "repartir_actifs.h"
+#include "calculer_rang.h"
 
 using namespace Rcpp;
-//' La fonction MEAPS sur plusieurs shufs
- //' version optimisée
- //' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+
+ //' La fonction meaps sur plusieurs shufs
+ //' @param dist La matrice (creuses en colonnes) des distances dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
  //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
  //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
  //' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
@@ -26,26 +27,30 @@ using namespace Rcpp;
  //' 
  //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
  // [[Rcpp::export]]
- NumericMatrix meaps_multishuf(IntegerMatrix rkdist,
-                               NumericVector emplois,
-                               NumericVector actifs,
-                               NumericMatrix modds,
-                               NumericVector f,
-                               IntegerMatrix shuf,
-                               std::string mode = "continu",
-                               Nullable<NumericVector> oddssubjectifs = R_NilValue,
-                               int nthreads = 0,
-                               bool progress = true,
-                               bool normalisation = false,
-                               double fuite_min = 1e-3,
-                               double seuil_newton = 1e-6) {
+ NumericVector meaps_dgr2(IntegerVector j_dist,
+                         IntegerVector p_dist,
+                         NumericVector x_dist,
+                         const int N,
+                         const int K,
+                         NumericVector emplois,
+                         NumericVector actifs,
+                         IntegerVector j_modds,
+                         IntegerVector p_modds,
+                         NumericVector x_modds,
+                         NumericVector f,
+                         IntegerMatrix shuf,
+                         std::string mode = "continu",
+                         Nullable<NumericVector> oddssubjectifs = R_NilValue,
+                         int nthreads = 0,
+                         bool progress = true,
+                         bool normalisation = false,
+                         double fuite_min = 1e-3,
+                         double seuil_newton = 1e-6) {
    
-   const std::size_t N = rkdist.nrow(),
-     K = rkdist.ncol(),
-     Nboot = shuf.nrow(),
+   const int Nboot = shuf.nrow(),
      Ns = shuf.ncol();
    
-   // Quelques vérifs préalables.
+   // Quelques vérifications préalables.
    if (emplois.size() != K) {
      stop("Le vecteur emplois et le nb de colonnes de la matrice rkdist ne correspondent pas.");
    }
@@ -54,12 +59,6 @@ using namespace Rcpp;
    }
    if (actifs.size() != N) {
      stop("Le vecteur actifs et le nb de lignes de la matrice rkdist ne correspondent pas.");
-   }
-   if (modds.ncol() != K) {
-     stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de colonnes.");
-   }
-   if (modds.nrow() != N) {
-     stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de lignes.");
    }
    
    if ((mode == "subjectif_c" || mode == "subjectif_d")&& oddssubjectifs.isNull()) {
@@ -81,13 +80,11 @@ using namespace Rcpp;
    // Les rangs dans shuf commencent à 1.
    shuf = shuf - 1L;
    
-   // REMARQUE : les conversions de Numeric et IntegerVector en équivalent std::vector sont ici nécessaires car
-   // les vecteurs initiaux de sont pas thread safe dans openmp.
    // Conversion en vecteur de vecteurs C++.
-   std::vector< std::size_t > shufcpp = as< std::vector< std::size_t > >(shuf);
+   std::vector<int> shufcpp = as< std::vector<int> >(shuf);
    std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
-   for (std::size_t i = 0; i < Nboot; ++i) {
-     for (std::size_t j = 0; j < Ns; ++j) {
+   for (int i = 0; i < Nboot; ++i) {
+     for (int j = 0; j < Ns; ++j) {
        ishuf[i][j] = shufcpp[ i  + j * Nboot];
        if (ishuf[i][j] >= N) { 
          stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
@@ -108,30 +105,18 @@ using namespace Rcpp;
    std::vector<double> fcpp = as< std::vector<double> >(f);
    std::vector<double> actifscpp = as< std::vector<double> >(actifs);
    
-   // Construction des vecteurs arrangés selon l'ordre subjectifs des actifs.
-   std::vector< std::vector<int> > arrangement(N, std::vector<int>(K));
-   std::vector< std::vector<double> > odds(N, std::vector<double>(K));
-   int temp, k_valid;
-   std::set<int> unicite;
-   
-   for (std::size_t i = 0; i < N; ++i) {
-     k_valid = 0L;
-     unicite.clear();
-     LogicalVector nas = is_na(rkdist(i, _));
-     for (std::size_t k = 0; k < K; ++k) {
-       temp = rkdist(i, k);
-       //Rcout << i <<","<< k << "temp:" << temp << "\n";
-       if (nas(k) == 0) { 
-         if (!unicite.insert(temp).second) {
-           stop("Il y a des doublons dans les rangs d'une ligne de rkdist.");
-         }
-         arrangement[i][temp - 1L] = k; //Attention : rkdist rank à partir de 1.
-         odds[i][temp - 1L] = modds(i, k);
-         k_valid++;
+   // Préparation des données @x de odds sur la structure @p @j des distances.
+   std::vector<double> odds_x(x_dist.size());
+   for (int from = 0; from < N; ++from) {
+     for (int k = p_dist(from); k != p_dist(from + 1L); ++k) {
+       auto pos = std::find(j_modds.begin() + p_modds(from), j_modds.begin() + p_modds(from + 1L), j_dist[k]);
+       if (*pos == j_modds[p_modds(from + 1L)]) {
+         odds_x.push_back(1);
+       } else {
+         double val = exp( x_modds[*pos]);
+         odds_x.push_back(val);
        }
      }
-     arrangement[i].resize(k_valid);
-     odds[i].resize(k_valid);
    }
    
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
@@ -143,7 +128,13 @@ using namespace Rcpp;
    }
    
    // Initialisation du résultat.
-   std::vector<double> liaisons(N*K, 0.0);
+   // On conserve l'ordre subjectif et on ne remplit que les non zeros (différent de la version précédente)
+   // std::vector< std::vector<double> > liaisons(N, std::vector<double>(K));
+   // for (int from = 0; from < N; ++i) {
+   //   liaisons[from].resize(dist.outerIndexPtr(from + 1L) - dist.outerIndexPtr(from))
+   // }
+   
+   std::vector<double> liaisons(x_dist.size(), 0.0);
    
    // Lancement du bootstrap.
    Progress p(Nboot * Ns, progress);
@@ -153,7 +144,7 @@ using namespace Rcpp;
                   omp_in.begin(), omp_out.begin(), std::plus<double>())) \
      initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 #pragma omp parallel for num_threads(ntr)                                                          \
-     shared(Nboot, N, ishuf, emploisinitial, odds, fcpp, actifscpp)                                \
+     shared(Nboot, N, ishuf, emploisinitial, fcpp, actifscpp, x_dist, p_dist, odds_x)                                \
      reduction (vsum : liaisons)
 #endif
      for (int iboot = 0; iboot < Nboot; ++iboot) {
@@ -163,60 +154,77 @@ using namespace Rcpp;
        // Initialisation de l'emploi disponible.
        std::vector<double> emp(emploisinitial); // deep copy.
        
-       for (std::size_t i: theshuf) {
+       for (auto from: theshuf) {
          
          // Increment progress_bar.
          p.increment();
          
-         std::vector<int> arr = arrangement[i];
-         std::size_t k_valid = arr.size();
+         // Construction des vecteurs dans l'ordre des rangs de distances
+         int k_valid = p_dist(from + 1L) - p_dist(from);
+         std::vector<int> arr(k_valid);
+         std::vector<double> les_distances(x_dist.begin() + p_dist(from), x_dist.begin() + p_dist(from + 1L));
          
-         // Cas particulier où il n'y a aucune destination valide.
-         if (k_valid == 0) continue;
+         arr = calculer_rang(les_distances);
+         
+         std::vector<int> index(k_valid);
+         std::iota(begin(index), end(index), 0);
+         std::sort(begin(index), end(index), 
+                   [&arr](std::size_t i, std::size_t j) { return arr[i] < arr[j]; });
+         
+         std::vector<double> odds(k_valid);
+         for (int k = 0; k < k_valid; ++k) {
+           odds[k] = odds_x[ p_dist(from) + index[k] ];
+         }
          
          std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
-         for (std::size_t k = 0; k < k_valid; ++k) {
+         for (int k = 0; k < k_valid; ++k) {
            placeslibres[k] = emp[ arr[k] ]; 
          }
          
          if (mode == "subjectif_d") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
+           for (int k = 0; k < k_valid; ++k) {
              attractivites[k] = emploisinitial[ arr[k] ] * odsub[k]; 
            }
          } else if (mode== "subjectif_c") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
+           for (int k = 0; k < k_valid; ++k) {
              attractivites[k] = placeslibres[k] * odsub[k]; 
            }
          } else if (mode == "discret") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
+           for (int k = 0; k < k_valid; ++k) {
              attractivites[k] = emploisinitial[ arr[k] ]; 
            }
          } else {
-           for (std::size_t k = 0; k < k_valid; ++k) {
+           for (int k = 0; k < k_valid; ++k) {
              attractivites[k] = placeslibres[k]; // Cas continu de l'emploi homogène. attractivité liée à la proportion d'emplois disp.
            }
          }
          
          // Nombre d'actifs partant par freq_actif paquets.
-         double actifspartant = actifscpp[i] / freq_actifs[i];
+         double actifspartant = actifscpp[from] / freq_actifs[from];
          
-         repartition = repartir_actifs(placeslibres, attractivites, odds[i], fcpp[i], actifspartant, seuil_newton);
+         repartition = repartir_actifs(placeslibres, attractivites, odds, fcpp[from], actifspartant, seuil_newton);
          
          // Inscription des résultats locaux dans la perspective globale.
-         for(std::size_t k = 0; k < k_valid ; ++k) {
+         std::vector<int> indexes = arr;
+         std::sort(indexes.begin(), indexes.end());
+         
+         for(int k = 0; k < k_valid ; ++k) {
            emp[ arr[k] ] -= repartition[k];
-           liaisons[ i + N * arr[k] ] += repartition[k];
+           
+           int indice = *std::find(indexes.begin(), indexes.end(), arr[k]); //Nécessaire car arr change à chaque boot
+           liaisons[ p_dist[from] + indice ] += repartition[k]; 
          }
        }
      }
-     
-     // Passage d'un array à NumericMatrix, divisées par le nombre de tirage Nboot.
-     NumericMatrix resultat(N, K);
-   for (std::size_t i = 0; i < N; ++i) {
-     for (std::size_t j = 0; j < K; ++j) {
-       resultat(i,j) = liaisons[i + N * j] / Nboot ;
-     } 
-   }
+ 
+   NumericVector resultat = wrap(liaisons);
+   
+   // division par le nb de boot.
+   resultat = resultat / Nboot ;
    
    return resultat;
  }
+ 
+ 
+ 
+ 

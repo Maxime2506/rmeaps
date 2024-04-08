@@ -1,0 +1,1 @@
+Rcpp::loadModule("RankedRowSparseMatrix", TRUE)

@@ -1,5 +1,7 @@
+#include <Rcpp.h>
 #include <algorithm>
 #include <iostream>
+#include <random>
 
 using namespace std;
 
@@ -11,7 +13,10 @@ std::vector<int> calculer_rang(const std::vector<double> &v)
             [&v](std::size_t i, std::size_t j) { return v[i] < v[j]; });
   
   std::vector<int> r(w.size());
-  
+
+  std::random_device rd;
+  std::mt19937 g(rd());
+
   for (std::size_t n, i = 0; i < w.size(); i += n)
   {
     n = 1;
@@ -19,7 +24,7 @@ std::vector<int> calculer_rang(const std::vector<double> &v)
     
     std::vector<int> egaux(n);
     std::iota(begin(egaux), end(egaux), 0L);
-    std::random_shuffle(egaux.begin(), egaux.end());
+    std::shuffle(egaux.begin(), egaux.end(),g);
     for (std::size_t k = 0; k < n; ++k)
     {
       //r[w[i+k]] = i + (n + 1) / 2.0; // average rank of n tied values

@@ -3,13 +3,14 @@
 #endif
 // [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
-#include <RcppSparse.h>
 // [[Rcpp::depends(RcppProgress)]]
 #include <progress.hpp>
 #include <progress_bar.hpp>
 #include "repartir_alt.h"
+#include "calculer_rang.h"
 
 using namespace Rcpp;
+
 //' La fonction meaps sur plusieurs shufs
 //' @param dist La matrice (creuses en colonnes) des distances dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
@@ -26,23 +27,27 @@ using namespace Rcpp;
 //' 
 //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 // [[Rcpp::export]]
-RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
-                    NumericVector emplois,
-                    NumericVector actifs,
-                    RcppSparse::Matrix modds,
-                    NumericVector f,
-                    IntegerMatrix shuf,
-                    std::string mode = "continu",
-                    Nullable<NumericVector> oddssubjectifs = R_NilValue,
-                    int nthreads = 0,
-                    bool progress = true,
-                    bool normalisation = false,
-                    double fuite_min = 1e-3,
-                    double seuil_newton = 1e-6) {
+NumericVector meaps_dgc(IntegerVector i_dist,
+                        IntegerVector p_dist,
+                        NumericVector x_dist,
+                        const int N,
+                        const int K,
+                        NumericVector emplois,
+                        NumericVector actifs,
+                        IntegerVector i_modds,
+                        IntegerVector p_modds,
+                        NumericVector x_modds,
+                        NumericVector f,
+                        IntegerMatrix shuf,
+                        std::string mode = "continu",
+                        Nullable<NumericVector> oddssubjectifs = R_NilValue,
+                        int nthreads = 0,
+                        bool progress = true,
+                        bool normalisation = false,
+                        double fuite_min = 1e-3,
+                        double seuil_newton = 1e-6) {
   
-  const int N = dist.Dim(1L),
-            K = dist.Dim(0L),
-            Nboot = shuf.nrow(),
+  const int Nboot = shuf.nrow(),
             Ns = shuf.ncol();
   
   // Quelques vérifications préalables.
@@ -55,12 +60,6 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
   if (actifs.size() != N) {
     stop("Le vecteur actifs et le nb de lignes de la matrice rkdist ne correspondent pas.");
   }
-  if (modds.ncol() != K) {
-    stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de colonnes.");
-  }
-  if (modds.nrow() != N) {
-    stop("La matrice modds et la matrice rkdist n\'ont pas le même nombre de lignes.");
-  }
   
   if ((mode == "subjectif_c" || mode == "subjectif_d")&& oddssubjectifs.isNull()) {
     stop("En mode subjectif, le vecteur oddssubjectifs doit être défini");
@@ -70,13 +69,13 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
   if (mode == "subjectif_c"|| mode == "subjectif_d") {
     odsub = as< std::vector<double> >(oddssubjectifs);
   }
- 
-#ifdef _OPENMP
-  int ntr = nthreads;
-  if (ntr == 0) {ntr = omp_get_max_threads();}
-  if (ntr > omp_get_max_threads()) { ntr = omp_get_max_threads(); }
-  if (progress==TRUE) REprintf("Nombre de threads = %i\n", ntr);
-#endif
+
+  #ifdef _OPENMP
+    int ntr = nthreads;
+    if (ntr == 0) {ntr = omp_get_max_threads();}
+    if (ntr > omp_get_max_threads()) { ntr = omp_get_max_threads(); }
+    if (progress==TRUE) REprintf("Nombre de threads = %i\n", ntr);
+  #endif
   
   // Les rangs dans shuf commencent à 1.
   shuf = shuf - 1L;
@@ -107,38 +106,34 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
   std::vector<double> actifscpp = as< std::vector<double> >(actifs);
   
   // Construction des vecteurs arrangés selon l'ordre subjectifs des actifs.
-  std::vecteur<double> les_distances(K);
-  std::vecteur<int> les_rangs(K);
   std::vector< std::vector<int> > arrangement(N, std::vector<int>(K));
   std::vector< std::vector<double> > odds(N, std::vector<double>(K));
 
-  int debut, fin, pos, to;
-
   for (int from = 0; from < N; ++from) {
-    debut = dist.p[from];
-    fin = dist.p[from + 1L] - 1L;
-    if (fin < debut) continue; //Au cas où un from n'accède à aucun to.
-    les_distances = dist.x(debut, fin);
+    std::vector<double> les_distances(x_dist.begin() + p_dist(from), x_dist.begin() + p_dist(from + 1L));
+    
+    int taille = les_distances.size();
+    std::vector<int> les_rangs(taille);
     les_rangs = calculer_rang(les_distances);
-
-    pos = modds.p[from];
-    std::map<int, double> les_odds(modds.p[from + 1L] - pos);
-    for(int k = 0; k < les_odds.size(); ++k) {
-        les_odds.insert(make_pair(modds.i[pos + k], modds.x[pos + k]))
+    
+    std::map<int, double> les_odds;
+    for (int it = p_modds(from); it < p_modds(from + 1L); ++it ) {
+      les_odds.insert(std::make_pair(i_modds(it), x_modds(it)));
     }
-
-    for(int k = 0; k < les_rangs.size(); ++k) {
-        to = les_rangs[k] - 1L;
-        arrangement[from][to] = dist.i[debut + k];
-
-        if (les_odds.find(dist.i[debut + k]) == les_odds.end()) {
-            odds[from][to] = 1; //La valeur par défaut pour modds est un odds ratio fixé à 1.
-        } else {
-            odds[from][to] = les_odds[dist.i[debut + k]];
-        }  
+    
+    for (int it = p_dist(from); it < p_dist(from + 1L) ; ++it) {
+      int rang_to = les_rangs[ it - p_dist(from) ] - 1L;
+      arrangement[from][rang_to] = i_dist(it);
+      
+      if (les_odds.find( i_dist(it) ) == les_odds.end()) {
+        odds[from][rang_to] = 1; //La valeur par défaut pour modds est un odds ratio fixé à 1.
+      } else {
+        odds[from][rang_to] = exp(les_odds[i_dist(it)]); //Attention : on veut des log en entrée.
+      }  
     }
-    arrangement[from].resize(fin - debut);
-    odds[from].resize(fin - debut);
+    arrangement[from].resize(taille);
+    odds[from].resize(taille);
+    
   }
   // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
   // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
@@ -149,9 +144,14 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
   }
   
   // Initialisation du résultat.
-  RcppSparse::Matrix liaisons = dist.clone();
-  for (int k =0; k < liaisons.x.size(); ++k) { liaisons.x(k) = 0; }
+  // On conserve l'ordre subjectif et on ne remplit que les non zeros (différent de la version précédente)
+  // std::vector< std::vector<double> > liaisons(N, std::vector<double>(K));
+  // for (int from = 0; from < N; ++i) {
+  //   liaisons[from].resize(dist.outerIndexPtr(from + 1L) - dist.outerIndexPtr(from))
+  // }
 
+  std::vector<double> liaisons(x_dist.size(), 0.0);
+  
   // Lancement du bootstrap.
   Progress p(Nboot * Ns, progress);
   #ifdef _OPENMP
@@ -161,7 +161,7 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
     initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   #pragma omp parallel for num_threads(ntr)                                                          \
     shared(Nboot, N, ishuf, emploisinitial, odds, fcpp, actifscpp) \
-    reduction (vsum : liaisons.x)
+    reduction (vsum : liaisons)
   #endif
     for (int iboot = 0; iboot < Nboot; ++iboot) {
       
@@ -209,15 +209,24 @@ RcppSparse::Matrix meaps_dgc(RcppSparse::Matrix &dist,
         // Inscription des résultats locaux dans la perspective globale.
         for(int k = 0; k < k_valid ; ++k) {
           emp[ arr[k] ] -= repartition[k];
-          liaisons.x[ liaisons.p[from] + arr[k] ] += repartition[k];
+          liaisons[ p_dist[from] + k ] += repartition[k];
         }
       }
     }
     
-  // Division par le nombre de tirage Nboot.
-  liaisons.x = liaisons.x / Nboot;
+    int position;
+    NumericVector resultat(i_dist.size());
+    for (int from = 0; from < N; ++from) {
+      for(int k = 0; k < p_dist(from + 1L) - p_dist(from); ++k) {
+        position = *std::find( i_dist.begin() + p_dist(from), i_dist.begin() + p_dist(from + 1L), arrangement[from][k]);
+        resultat[ p_dist[from] + position ] += liaisons[ p_dist(from) + k ];
+      }
+    }
+    
+  // division par le nb de boot.
+  resultat = resultat / Nboot ;
   
-  return liaisons;
+  return resultat;
 }
 
 

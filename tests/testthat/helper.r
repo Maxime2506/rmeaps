@@ -7,16 +7,21 @@
 #' @param nb_emplois nombre d'emplois défaut : 9xk^2
 #' @param fuite fuite défaut : 10%
 #' @param densite forme de la répartition des actifs et des emplois. Si "uniforme" alors c'est uniforme, "radial" c'ets en 1/r^2 ou r est la distance au centre
-#'
+#' @param tx_nas produit des valeurs NA pour les distances. (default = 0).
+#' @param dist_not_equal supprime quasiment les cas de distances égales.
+#' 
 #' @return une liste pour de données meaps (rkdist les rangs, dist les distances, actifs les actifs, emplois les emplois, shuf un shuf)
 #' @export
 #'
 #' @examples
 #' genere_data(densite="radiale")
-genere_data <- function(n = 3, k = 3, nshuf = 64, 
-                        nb_actifs = n*n*10, nb_emplois = nb_actifs*(1-fuite), 
+genere_data <- function(n = 3, k = 3, nshuf = 16, 
+                        nb_actifs = n*n*10, 
+                        nb_emplois = nb_actifs*(1-fuite), 
                         fuite = 0.1,
                         densite = "uniforme",
+                        tx_nas = 0L,
+                        dist_not_equal = TRUE,
                         ties = "random") {
   
   maxx <- 1
@@ -37,6 +42,16 @@ genere_data <- function(n = 3, k = 3, nshuf = 64,
     sf::st_cast(to = "POINT")
   
   distance <- sf::st_distance(residences, emplois)
+  if (dist_not_equal) distance = distance + runif(length(distance))
+  
+  nb_nas <- round(tx_nas * nrow(distance) * ncol(distance))
+  if (nb_nas > 0) {
+    xnas = runif(n=nb_nas, min = 1, max = nrow(distance)) |> round()
+    ynas = runif(n=nb_nas, min = 1, max = ncol(distance)) |> round()
+    for (nb in 1:nb_nas) { distance[ xnas[nb], ynas[nb] ] <- NA }
+    }
+  
+  
   rkdist <- matrixStats::rowRanks(distance, ties.method = ties)
   fn_dens <- switch(
     densite,

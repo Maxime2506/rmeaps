@@ -10,8 +10,9 @@ Authors@R: c(
 Description: 'MEAPS est un modèle ergodique d'absorption avec priorité et saturation. Il estime la distribution des trajets entre des points de départs, typiquement le lieu de résidence, et des points d'intérêts, par exemple des zones d'emplois.'
 License: CeCILL-B
 Encoding: UTF-8
-Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4), Matrix
-LinkingTo: Rcpp, RcppParallel, RcppProgress
+Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4), Matrix, methods
+LinkingTo: Rcpp, RcppParallel, RcppProgress, Matrix
+RcppModules: RankedRowSparseMatrix
 SystemRequirements: GNU make
 RoxygenNote: 7.3.1
 Suggests: 
@@ -19,6 +20,7 @@ Suggests:
     tidyr,
     dplyr,
     matrixStats,
+    MatrixExtra,
     bench,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
