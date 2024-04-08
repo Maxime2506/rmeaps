@@ -40,20 +40,11 @@ END_RCPP
 // meaps_oneshuf
 NumericMatrix meaps_oneshuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerVector shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, bool normalisation, double fuite_min, double seuil_newton);
 RcppExport SEXP _rmeaps_meaps_oneshuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
-NumericMatrix meaps_oneshuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerVector shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, bool normalisation, double fuite_min, double seuil_newton);
-RcppExport SEXP _rmeaps_meaps_oneshuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< IntegerMatrix >::type rkdist(rkdistSEXP);
-    Rcpp::traits::input_parameter< IntegerMatrix >::type rkdist(rkdistSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type shuf(shufSEXP);
-    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type oddssubjectifs(oddssubjectifsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type actifs(actifsSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type modds(moddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
@@ -91,9 +82,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// meaps_multishuf
-NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
-RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
 // meaps_multishuf
 NumericMatrix meaps_multishuf(IntegerMatrix rkdist, NumericVector emplois, NumericVector actifs, NumericMatrix modds, NumericVector f, IntegerMatrix shuf, std::string mode, Nullable<NumericVector> oddssubjectifs, int nthreads, bool progress, bool normalisation, double fuite_min, double seuil_newton);
 RcppExport SEXP _rmeaps_meaps_multishuf(SEXP rkdistSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP moddsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP, SEXP seuil_newtonSEXP) {
@@ -227,8 +215,6 @@ RcppExport SEXP _rcpp_module_boot_RankedRowSparseMatrix();
 static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_chances_absorption", (DL_FUNC) &_rmeaps_chances_absorption, 4},
     {"_rmeaps_communaliser", (DL_FUNC) &_rmeaps_communaliser, 3},
-    {"_rmeaps_deborder", (DL_FUNC) &_rmeaps_deborder, 2},
-    {"_rmeaps_distribuer", (DL_FUNC) &_rmeaps_distribuer, 3},
     {"_rmeaps_meaps_oneshuf", (DL_FUNC) &_rmeaps_meaps_oneshuf, 11},
     {"_rmeaps_meaps_continu_cpp", (DL_FUNC) &_rmeaps_meaps_continu_cpp, 14},
     {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 13},

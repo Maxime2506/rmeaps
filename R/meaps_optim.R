@@ -42,7 +42,7 @@ meaps_optim <- function(dist, emplois, actifs, f, shuf,
   
   if (attraction == "logistique") {
     if (alpha <= 0) stop("alpha doit indiquer la distance où la logistique bascule (le point de symétrie).")
-    if (beta <= 0 | beta >= 1) stop("beta indique la force de l'effet (entre 0 et 1)")
+    if (beta <= 0 | beta >= 1) stop("beta indique la rapidité de la bascule.")
   }
   
   
