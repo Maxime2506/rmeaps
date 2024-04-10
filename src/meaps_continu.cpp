@@ -20,12 +20,12 @@ inline double marche(double x, const double rayon, const double decru) {
 }
 
 // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
-inline double logistique(double x, const double rayon, const double amplitude) {
+inline double logistique(double x, const double rayon, const double amplitude, const double seuil) {
   double ex = exp( (rayon-x)/amplitude );
-  return ex / (ex + 1);
+  return seuil + ex / (ex + 1);
 }
 
-//' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une row sparse matrix destructurée selon ses éléments.
+//' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
 //' @param j_dist Le vecteur des indices des colonnes non vides.
 //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
 //' @param x_dist Le vecteur des valeurs dans l'ordre de j_dist.
@@ -34,19 +34,28 @@ inline double logistique(double x, const double rayon, const double amplitude) {
 //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
 //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i 
 //' en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs. 
-//' @param attraction Choix de la fonction de pénalité appliquée à l'accessibilité.
-//' @param alpha Premier paramètre de la fonction de pénalité, si nécessaire.
-//' @param beta Second paramètre.
+//' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
+//' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
+//' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2 si x > p1.
+//' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
+//' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
+//' "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.
+//' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
+//' @param j_odds, p_odds et x_odds sont les vecteurs de la Row Sparse Matrix lorsque attraction = "odds".
 //' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto. 
 //' @param progress Ajoute une barre de progression. Default : true. 
 //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 //'
-//' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+//' @return renvoie un vecteur des estimations des flux de i vers j.
 // [[Rcpp::export]]
 NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois,
-                                NumericVector actifs, NumericVector f, IntegerMatrix shuf, std::string attraction = "constant",
-                                double alpha = 10, double beta = 1,
+                                NumericVector actifs, NumericVector f, IntegerMatrix shuf, 
+                                NumericVector param,
+                                NumericVector j_odds,
+                                NumericVector p_odds ,
+                                NumericVector x_odds,
+                                std::string attraction = "constant",
                                 int nthreads = 0, bool progress = true, bool normalisation = false, double fuite_min = 1e-3) {
   const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
 
@@ -75,7 +84,7 @@ NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, Nume
       }
     }
   }
-
+  
   // Choix d'une limite basse pour la fuite.
   f = ifelse(f > fuite_min, f, fuite_min);
 
@@ -109,6 +118,28 @@ NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, Nume
     }
   }
 
+  
+  // paramètres pour la fonction d'attraction choisi
+  std::vector<double> parametres = as< std::vector<double> >(param);
+  std::vector<double> xr_lor;
+  std::vector<int> jr_lor;
+  
+  if (attraction == "odds") {
+    // Il s'agit ici de garder la propriété sparse des odds en se replaçant dans l'ordre des rangs des distances.
+    for (std::size_t from = 0; from < N; ++from) {
+      std::size_t odds_debut = p_odds(from), odds_fin = p_odds(from + 1L);
+      for (std::size_t k = p_dist(from); k < p_dist(from + 1L); ++k) {
+        auto pos = std::lower_bound(j_odds.begin() + odds_debut, j_odds.begin() + odds_fin, jr_dist[k]);
+        if (pos != j_odds.begin() + odds_fin) {
+          auto ind = std::distance(j_odds.begin(), pos);
+          xr_lor.push_back(x_odds[ind]);
+          jr_lor.push_back(j_odds[ind]);
+          }
+      }
+    }
+  }
+  
+  
   // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
   // s'il fait repasser plusieurs fois la même ligne d'actifs. Dans ce cas, on
   // compte la fréquence de passage de chaque ligne et l'on divise le poids de
@@ -146,13 +177,21 @@ NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, Nume
       std::size_t k_valid = fin - debut;
 
       std::vector<double> facteur_attraction(k_valid), emplois_libres(k_valid), repartition(k_valid);
+      std::size_t odds_index = 0;
       for (std::size_t k = 0; k < k_valid; ++k) {
         if (attraction == "constant") { 
           facteur_attraction[k]  = 1;
         } else if (attraction == "marche") {
-          facteur_attraction[k]  = marche(xr_dist[debut + k], alpha, beta);
+          facteur_attraction[k]  = marche(xr_dist[debut + k], parametres[0], parametres[1]);
         } else if (attraction == "logistique") {
-          facteur_attraction[k] = logistique(xr_dist[debut + k], alpha, beta);
+          facteur_attraction[k] = logistique(xr_dist[debut + k], parametres[0], parametres[1], parametres[2]);
+        } else if (attraction == "odds") {
+          if (jr_lor[p_odds(from) + odds_index] == jr_dist[debut + k]) {
+            facteur_attraction[k] = exp( xr_lor[p_odds(from) + odds_index] );
+            odds_index++;
+          } else {
+            facteur_attraction[k] = 1;
+          }
         }
         emplois_libres[k] = emp[ jr_dist[ debut + k] ];
       }

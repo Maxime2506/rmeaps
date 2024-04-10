@@ -1,90 +1,86 @@
-#' La fonction meaps sur plusieurs shufs sur un format Sparse Row Matrix et un random des rangs sur les distances égales mélangées pour chacun des boot.
-#' @param dist Matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. Les NA's sont évacués au format sparse. Les distances zeros ont le 1er rang. Au format matrix ou sparse (R). Dans ce dernier cas, la matrice est passée telle quelle.
+#' La fonction meaps sur plusieurs shufs selon le mode de calcul continu.
+#' @param dist Soit un matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j (en ce cas les NAs deviendront sparses).
+#' Ou bien un objet de class dgRMatrix (Row Sparse Matrix du pkg Matrix).
+#' Ou bien un triplet au format list ou data.frame. Dans ce cas, les variables sont désignés par i, j et x pour les valeurs.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
-#' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
-#' @param plafond_odd détermine la valeur maximale (et minimale) des odds, ramenés entre 1/plafond et plafond.
-#' @param mode Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...
-#' @param odds_subjectifs Attractivité des sites proches des actifs, pour le mode defini. default : null.
+#' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
+#' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
+#' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param alpha) puis moins (param béta). f(x) = 1 si x < alpha, = béta si x > alpha.
+#' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param alpha), une vitesse de bascule (param béta) 
+#' et un seuil (param gamma). Si h(x) = exp( (x-alpha)/béta), f(x) = gamma + h(x) / (1 + h(x)).
+#' "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.
+#' @param param Dans les cas de "marche" et "logistique", un vecteur avec dans l'ordre les valeurs des paramètres alpha, béta et, si nécessaire, gamma.
+#' @param modds Dans le cas de "odds", une matrice des odds, un triplet au format list ou data.frame des odds ou une dgRMatrix des log(odds).
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
-#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+#' @return renvoie un triplet au format data.frame des estimations du nombre de trajets de i vers j.
 #' @import Matrix
 #' @export
 meaps_continu <- function(dist, emplois, actifs, f, shuf, 
-                         attraction = "constant",
-                         nthreads = 0,
-                         progress = TRUE,
-                         normalisation = FALSE,
-                         fuite_min = 1e-3,
-                         seuil_newton = 1e-6) {
+                          attraction = "constant",
+                          param = numeric(),
+                          modds = NULL,
+                          nthreads = 0,
+                          progress = TRUE,
+                          normalisation = FALSE,
+                          fuite_min = 1e-3,
+                          seuil_newton = 1e-6) {
   
   
-  dist_dgr <- if (inherits(dist, "matrix")) {
-    .transfom_matrix(dist) 
-  } else if (inherits(dist, "dgRMatrix")) {
-    .transform_triplet(dist)
-  } else {
-    stop("Format non reconnu")
+  if (actifs * (1 - f) != emplois) warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
+  
+  dist <- if (inherits(dist, "matrix")) {
+    .matrix2dgR(dist) 
+  } else if (is_triplet(dist) ) {
+    .triplet2dgR(dist)
+  } else if (!inherits(dist, "dgRMatrix")) {
+    stop("Format pour dist non reconnu.")
   }
   
-
-  dist_dgr@x <- meaps_continu_cpp(j_dist = dist_dgr@j,
-                                  p_dist = dist_dgr@p,
-                                  x_dist = dist_dgr@x,
-                                  emplois = emplois,
-                                  actifs = actifs,
-                                  f = f,
-                                  shuf = shuf,
-                                  attraction = attraction,
-                                  nthreads = nthreads,
-                                  progress = progress,
-                                  normalisation = normalisation,
-                                  fuite_min = fuite_min)
+  odds <- new("dgRMatrix")
+  if (attraction == "odds") {
+    odds <- if (inherits(modds, "matrix")) {
+      .matrix2dgR(log(modds), na2zero = FALSE)
+    } else if (is_triplet(modds)) {
+      colnames(modds)[colnames(modds) == "fromidINS"] <- "i"
+      colnames(modds)[colnames(modds) == "toidINS"] <- "j"
+      colnames(modds)[!colnames(modds) %in% c("i", "j")] <- "x"
+      sparseMatrix(i = modds$i, j = modds$j, x = modds$x, dims = dim(dist))
+    } else if (inherits(modds, "dgRMatrix")){
+      modds
+    } else {
+    stop("Format pour modds non reconnu.")
+    }
+    if (length(odds@x) == 0) attraction <- "constant"
+  }
   
-  dist_dgr
+  
+  
+  dist@x <- meaps_continu_cpp(j_dist = dist@j,
+                              p_dist = dist@p,
+                              x_dist = dist@x,
+                              emplois = emplois,
+                              actifs = actifs,
+                              f = f,
+                              shuf = shuf,
+                              attraction = attraction,
+                              param = param,
+                              j_odds = odds@j,
+                              p_odds = odds@p,
+                              x_odds = odds@x,
+                              nthreads = nthreads,
+                              progress = progress,
+                              normalisation = normalisation,
+                              fuite_min = fuite_min)
+  
+  dist <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
+  data.frame(i = dist@i, j = dist@j, flux = dist@x)
 }
 
-#' Fonction de choix d'une petite distance pour remplacer les zéros éventuels.
-#' Normalement il ne devrait pas y avoir de zéros. 
-#' Au sein d'un même carreau de dim a, la distance entre deux points est d'environ a/2.
-#' La distance retenue importe peu tant que les rangs sont respectés.
-.petite_distance <- function(d, facteur = 10) {
-  min(as.numeric(d[d != 0]), na.rm = TRUE) / facteur
-}
-
-
-#' Fonction de retraitement de la distance si elle est sous forme d'une matrice classique.
-#' Les NA doivent devenir sparses. Les zéros deviennent simplement des petites valeurs.
-#' 
-#' @import Matrix
-.transfom_matrix <- function(dist) {
-  dist[dist == 0] <- .petite_distance(dist)
-  dist[is.na(dist)] <- 0
-  as(dist, "RsparseMatrix")
-}
-
-#' Fonction de retraitement de la distance si elle est sous forme de triplet dans une liste.
-#' C'est en général la résultante de la fonction Matrix::mat2triplet.
-#' On suppose que max(j) donne le nombre de colonnes, ce qui est attendu dans les analyses meaps.
-#' Ici encore les valeurs x nulles deviennent des petites distances.
-#' Liste de trois vecteurs : i, j et x.
-#' @import Matrix
-.transform_triplet <- function(dist) {
-  if ( { setdiff(names(dist), c("i", "j", "x")) != character(0) } ||
-       { length(dist$i) != length(dist$j) } ||
-       { lenght(dist$i) != length(dist$x) } ||
-       { !is.integer(dist$i) || !is.integer(dist$j) || !is.numeric(dist$x)}
-      ) stop("Dist n'est pas une liste de triplets valide.")
-  
-  dist$x[dist$x == 0] <- .petite_distance(dist$x)
-  
-  spMatrix(nrow = length(dist$i), ncol = max(dist$j), i = dist$i, j = dist$j, x = dist$x)
-  
-}
 

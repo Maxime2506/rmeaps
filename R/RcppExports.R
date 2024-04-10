@@ -46,7 +46,7 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "conti
 #' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
 NULL
 
-#' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une row sparse matrix destructurée selon ses éléments.
+#' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
 #' @param j_dist Le vecteur des indices des colonnes non vides.
 #' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
 #' @param x_dist Le vecteur des valeurs dans l'ordre de j_dist.
@@ -55,17 +55,22 @@ NULL
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i 
 #' en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs. 
-#' @param attraction Choix de la fonction de pénalité appliquée à l'accessibilité.
-#' @param alpha Premier paramètre de la fonction de pénalité, si nécessaire.
-#' @param beta Second paramètre.
+#' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
+#' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
+#' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2 si x > p1.
+#' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
+#' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
+#' "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.
+#' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
+#' @param j_odds, p_odds et x_odds sont les vecteurs de la Row Sparse Matrix lorsque attraction = "odds".
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto. 
 #' @param progress Ajoute une barre de progression. Default : true. 
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #'
-#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
-meaps_continu_cpp <- function(j_dist, p_dist, x_dist, emplois, actifs, f, shuf, attraction = "constant", alpha = 10, beta = 1, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
-    .Call(`_rmeaps_meaps_continu_cpp`, j_dist, p_dist, x_dist, emplois, actifs, f, shuf, attraction, alpha, beta, nthreads, progress, normalisation, fuite_min)
+#' @return renvoie un vecteur des estimations des flux de i vers j.
+meaps_continu_cpp <- function(j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_meaps_continu_cpp`, j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction, nthreads, progress, normalisation, fuite_min)
 }
 
 #' La fonction MEAPS sur plusieurs shufs
@@ -75,11 +80,11 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "con
     .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton)
 }
 
-#' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et fattract au-delà.
+#' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
 NULL
 
-meaps_optim_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, attraction = "constant", alpha = 10, beta = 1, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
-    .Call(`_rmeaps_meaps_optim_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, attraction, alpha, beta, nthreads, progress, normalisation, fuite_min)
+meaps_optim_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_meaps_optim_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction, nthreads, progress, normalisation, fuite_min)
 }
 
 one_distrib_continu <- function(entrants, fuite, attractivite, distances, placeslibres) {
