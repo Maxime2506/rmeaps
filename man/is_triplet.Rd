@@ -7,7 +7,7 @@
 is_triplet(obj)
 }
 \description{
-Fonction de test de la validité d'un triplet sous forme de liste ou de data.frame.
-Nom de variables admises : i ou fromidINS, j ou toidINS.
+Fonction de test de la validité d'un triplet sous de data.frame.
+Nom de variables admises : fromidINS, toidINS.
 Le nom de la troisième variable est libre.
 }

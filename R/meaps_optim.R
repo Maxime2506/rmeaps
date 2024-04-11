@@ -1,53 +1,31 @@
 #' La fonction prep_meaps_dist prépare les données de distances pour traitement par meaps_optim
-#' @param dist Matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
+#' @param dist triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
 #' 
 #' @return renvoie une RankedRSMatrix des distances.
 #' @import Matrix
 #' @export
 prep_meaps_dist <- function(dist) {
   
-  mat <- if (inherits(dist, "matrix")) {
-    .transfom_matrix(dist) 
-  } else if (inherits(dist, "dgRMatrix")) {
-    .transform_triplet(dist)
-  } else if (class(dist) == "RankedRSMatrix") {
-    dist
-  } else {
-    stop("Format non reconnu")
-  }
+  if (!is_triplet(dist)) stop("Ce n'est pas un triplet valide.")
+  dist <- triplet2listij(dist)
   
-  new(RankedRSMatrix, mat)
+  list(RankedMat = new(RankedRSMatrix, dist$dgr), cle_from = dist$cle_from, cle_to = dist$cle_to) 
 }
 
 #' La fonction prep_meaps_odds prépare la matrice des odds pour traitement par meaps_optim.
-#' @param modds une matrice des odds, une dgRMatrix des log(odds) ou la RankedRSMatrix rangée selon dist.
-#' @param dist Matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
+#' @param modds un triplet des log odds.
+#' @param cle_from la clé_from issue de distance.
+#' @param cle_to la clé to 
 #' 
 #' @return renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.
 #' @import Matrix
 #' @export
-prep_meaps_odds <- function(modds, dist) {
+prep_meaps_odds <- function(modds, cle_from, cle_to) {
   
-  if (class(dist) != "RankedRSMatrix") stop("Utiliser prep_meaps_dist au préalable.")
-  if (inherits(modds, "matrix")) {
-    if (any(modds <= 0) | any(is.na(modds))) stop("La matrice des odds a des valeurs invalides.") 
-    lodds <- as(as(as(log(modds), "dMatrix"), "generalMatrix"), "RsparseMatrix")
-  }
+  lodds <- tripletlodds2dgr(modds, cle_from, cle_to)
+  if (length(lodds) == 0) stop("La matrice est vide.")
   
-  if (inherits(modds, "dgRMatrix")) {
-    if ( length(modds@x) == 0 ) {
-      attraction <- "constant"
-    } else {
-      attraction <- "odds" 
-      lodds <- new("RankedRSMatrix", modds)
-      lodds$rankby(mat)
-    }
-  }
-  if (class(modds) == "RankedRSMatzix") {
-    lodds <- modds
-  }
-  
-  list(lodds = lodds, attraction = attraction)
+  new(RankedRSMatrix, lodds)
 }
 
 #' La fonction meaps_optim sert pour la recherche des meilleurs paramètres ou odds lorsqu'un certain regroupement des flux est connu.
@@ -128,41 +106,4 @@ meaps_optim <- function(dist_prep, emplois, actifs, fuite, shuf,
   
 }
 
-#' Fonction de choix d'une petite distance pour remplacer les zéros éventuels.
-#' Normalement il ne devrait pas y avoir de zéros. 
-#' Au sein d'un même carreau de dim a, la distance entre deux points est d'environ a/2.
-#' La distance retenue importe peu tant que les rangs sont respectés.
-.petite_distance <- function(d, facteur = 10) {
-  min(as.numeric(d[d != 0]), na.rm = TRUE) / facteur
-}
-
-
-#' Fonction de retraitement de la distance si elle est sous forme d'une matrice classique.
-#' Les NA doivent devenir sparses. Les zéros deviennent simplement des petites valeurs.
-#' 
-#' @import Matrix
-.transfom_matrix <- function(dist) {
-  dist[dist == 0] <- .petite_distance(dist)
-  dist[is.na(dist)] <- 0
-  as(dist, "RsparseMatrix")
-}
-
-#' Fonction de retraitement de la distance si elle est sous forme de triplet dans une liste.
-#' C'est en général la résultante de la fonction Matrix::mat2triplet.
-#' On suppose que max(j) donne le nombre de colonnes, ce qui est attendu dans les analyses meaps.
-#' Ici encore les valeurs x nulles deviennent des petites distances.
-#' Liste de trois vecteurs : i, j et x.
-#' @import Matrix
-.transform_triplet <- function(dist) {
-  if ( { setdiff(names(dist), c("i", "j", "x")) != character(0) } ||
-       { length(dist$i) != length(dist$j) } ||
-       { lenght(dist$i) != length(dist$x) } ||
-       { !is.integer(dist$i) || !is.integer(dist$j) || !is.numeric(dist$x)}
-  ) stop("Dist n'est pas une liste de triplets valide.")
-  
-  dist$x[dist$x == 0] <- .petite_distance(dist$x)
-  
-  spMatrix(nrow = length(dist$i), ncol = max(dist$j), i = dist$i, j = dist$j, x = dist$x)
-  
-}
 

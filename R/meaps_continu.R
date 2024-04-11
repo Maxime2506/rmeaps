@@ -1,7 +1,5 @@
 #' La fonction meaps sur plusieurs shufs selon le mode de calcul continu.
-#' @param dist Soit un matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j (en ce cas les NAs deviendront sparses).
-#' Ou bien un objet de class dgRMatrix (Row Sparse Matrix du pkg Matrix).
-#' Ou bien un triplet au format list ou data.frame. Dans ce cas, les variables sont désignés par i, j et x pour les valeurs.
+#' @param dist un triplet sous forme de data.frame avec des colonnes fromidINS et toidINS.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
 #' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
@@ -13,7 +11,7 @@
 #' et un seuil (param gamma). Si h(x) = exp( (x-alpha)/béta), f(x) = gamma + h(x) / (1 + h(x)).
 #' "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.
 #' @param param Dans les cas de "marche" et "logistique", un vecteur avec dans l'ordre les valeurs des paramètres alpha, béta et, si nécessaire, gamma.
-#' @param modds Dans le cas de "odds", une matrice des odds, un triplet au format list ou data.frame des odds ou une dgRMatrix des log(odds).
+#' @param modds un triplet au format data.frame des log(odds).
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
@@ -32,36 +30,29 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                           fuite_min = 1e-3,
                           seuil_newton = 1e-6) {
   
-  
   if (sum(actifs * (1 - f)) != sum(emplois)) warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
   
-  dist <- if (inherits(dist, "matrix")) {
-    .matrix2dgR(dist) 
-  } else if (is_triplet(dist) ) {
-    .triplet2dgR(dist)
-  } else if (inherits(dist, "dgRMatrix")) {
-    dist
-  } else {
-    stop("Format pour dist non reconnu.")
-  }
+  if (!is_triplet(dist)) stop("Format pour dist non reconnu.")
+  dist <- triplet2listij(dist)
+  cle_from <- dist$cle_from
+  cle_to <- dist$cle_to
+  dist <- dist$dgr
   
-  odds <- new("dgRMatrix")
-  if (attraction == "odds") {
-    odds <- if (inherits(modds, "matrix")) {
-      .matrix2dgR(log(modds), na2zero = FALSE)
-    } else if (is_triplet(modds)) {
-      colnames(modds)[colnames(modds) == "fromidINS"] <- "i"
-      colnames(modds)[colnames(modds) == "toidINS"] <- "j"
-      colnames(modds)[!colnames(modds) %in% c("i", "j")] <- "x"
-      sparseMatrix(i = modds$i, j = modds$j, x = modds$x, dims = dim(dist))
-    } else if (inherits(modds, "dgRMatrix")){
-      modds
-    } else {
+  if (is.null(modds)) { 
+    if (attraction == "odds") stop("Il n'y a pas de odds définis.")
+    jodds = 1L ; podds = 1L ; xodds = 1.0 # valeurs sans importance mais ne doit pas être nulles.
+  } else if (!is_triplet(modds)) {
     stop("Format pour modds non reconnu.")
+  } else if (attraction != "odds") {
+      stop("Attention: modds est défini mais ne correspond pas à attraction.")
+  } else {
+    lodds <- tripletlodds2dgr(modds, cle_from, cle_to)
+    jodds <- lodds@j
+    podds <- lodds@p
+    xodds <- lodds@x
+    if (length(lodds) == 0) { attraction <- "constant" }
     }
-    if (length(odds@x) == 0) attraction <- "constant"
-  }
-  
+   
   dist@x <- .meaps_continu(j_dist = dist@j,
                            p_dist = dist@p,
                            x_dist = dist@x,
@@ -71,16 +62,20 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                            shuf = shuf,
                            attraction = attraction,
                            param = param,
-                           j_odds = odds@j,
-                           p_odds = odds@p,
-                           x_odds = odds@x,
+                           j_odds = jodds,
+                           p_odds = podds,
+                           x_odds = xodds,
                            nthreads = nthreads,
                            progress = progress,
                            normalisation = normalisation,
                            fuite_min = fuite_min)
   
   dist <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
-  data.frame(i = dist@i + 1L, j = dist@j + 1L, flux = dist@x)
+  data.frame(i = dist@i + 1L, j = dist@j + 1L, flux = dist@x) |> 
+    dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "i") |> 
+    dplyr::left_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "j") |> 
+    dplyr::select(fromidINS, toidINS, flux)
+  
 }
 
 

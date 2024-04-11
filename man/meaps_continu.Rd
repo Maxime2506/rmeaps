@@ -21,9 +21,7 @@ meaps_continu(
 )
 }
 \arguments{
-\item{dist}{Soit un matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j (en ce cas les NAs deviendront sparses).
-Ou bien un objet de class dgRMatrix (Row Sparse Matrix du pkg Matrix).
-Ou bien un triplet au format list ou data.frame. Dans ce cas, les variables sont désignés par i, j et x pour les valeurs.}
+\item{dist}{un triplet sous forme de data.frame avec des colonnes fromidINS et toidINS.}
 
 \item{emplois}{Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).}
 
@@ -42,7 +40,7 @@ et un seuil (param gamma). Si h(x) = exp( (x-alpha)/béta), f(x) = gamma + h(x) 
 
 \item{param}{Dans les cas de "marche" et "logistique", un vecteur avec dans l'ordre les valeurs des paramètres alpha, béta et, si nécessaire, gamma.}
 
-\item{modds}{Dans le cas de "odds", une matrice des odds, un triplet au format list ou data.frame des odds ou une dgRMatrix des log(odds).}
+\item{modds}{un triplet au format data.frame des log(odds).}
 
 \item{nthreads}{Nombre de threads pour OpenMP. Default : 0 = choix auto.}
 

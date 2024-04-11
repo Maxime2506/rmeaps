@@ -1,32 +1,52 @@
 #' utils
 #' 
-#' Fonction de test de la validité d'un triplet sous forme de liste ou de data.frame.
-#' Nom de variables admises : i ou fromidINS, j ou toidINS.
+
+#' Fonction de test de la validité d'un triplet sous de data.frame.
+#' Nom de variables admises : fromidINS, toidINS.
 #' Le nom de la troisième variable est libre.
 #' 
 is_triplet <- function(obj) {
-  if ( !inherits(obj, "data.frame") | !inherits(obj, "list") | length(obj) != 3) return(FALSE)
-  colnames(obj)[colnames(obj) == "fromidINS"] <- "i"
-  colnames(obj)[colnames(obj) == "toidINS"] <- "j"
-  colnames(obj)[!colnames(obj) %in% c("i", "j")] <- "x"
-  
-  if ( !setequal(names(obj), c("i", "j", "x")) ) return(FALSE)
-  if ( !(is.integer(obj$i) & is.integer(obj$j) & is.numeric(obj$x)) ) return(FALSE)
-  if ( length(obj$i) != length(obj$j) | length(obj$i) != length(obj$x)) return(FALSE)
+  if ( !inherits(obj, "data.frame") & length(obj) != 3) return(FALSE)
+  if ( length(setdiff(c("fromidINS", "toidINS"), names(obj))) != 0 ) return(FALSE)
+  if ( !is.numeric(obj[[setdiff(names(obj), c("fromidINS", "toidINS"))]]) ) return(FALSE)
   return(TRUE)
 }
 
-.make_triplet <- function(obj) {
-  colnames(obj)[colnames(obj) == "fromidINS"] <- "i"
-  colnames(obj)[colnames(obj) == "toidINS"] <- "j"
-  colnames(obj)[!colnames(obj) %in% c("i", "j")] <- "x"
+#' Fonction de transformation d'un triplet fromidINS toidINS value à une liste avec i j x et les clés de correspondances.
+triplet2listij <- function(data) {
+  if (!is_triplet(data)) stop("Ce n'est pas un triplet valide.")
+  colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
   
-  if (inherits(obj, "list")) {
-    as.data.frame(obj)
-  } else {
-    obj
-  }
+  cle_from <- unique(data$fromidINS) |> sort()
+  cle_to <- unique(data$toidINS) |> sort()
+  
+  data <- data[order(data$fromidINS, data$toidINS), ]
+  
+  data <- dplyr::inner_join(data, data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "fromidINS") |> 
+    dplyr::inner_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "toidINS") |> 
+    dplyr::select(i, j, x)
+  
+  data$x[data$x == 0] <- .petite_distance(data$x)
+  
+  list(dgr = sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(max(data$i), max(data$j)), repr = "R"), 
+       cle_from = cle_from, 
+       cle_to = cle_to)
 }
+
+#' Fonction de transformation d'un triplet de log(odds) avec fromidINS et toidINS en une matrice row sparse.
+#' Les cle_from et cle_to sont celles tirées du triplet des distances.
+#' @import Matrix
+tripletlodds2dgr <- function(data, cle_from, cle_to) {
+  if (!is_triplet(data)) stop("Ce n'est pas un triplet valide.")
+  colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
+  
+  data <- data[data$x != 0, ]
+  data <- dplyr::inner_join(data, data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "fromidINS") |> 
+    dplyr::inner_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "toidINS")
+  
+ sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(length(cle_from), length(cle_to)), repr = "R")
+}
+
 
 #' Fonction de choix d'une petite distance pour remplacer les zéros éventuels.
 #' Normalement il ne devrait pas y avoir de zéros. 
@@ -49,23 +69,4 @@ is_triplet <- function(obj) {
   as(as(as(x, "dMatrix"), "generalMatrix"), "RsparseMatrix")
 }
 
-#' Fonction de retraitement de la distance si elle est sous forme de triplet dans une liste.
-#' C'est en général la résultante de la fonction Matrix::mat2triplet.
-#' On suppose que max(j) donne le nombre de colonnes, ce qui est attendu dans les analyses meaps.
-#' On ne teste pas la validité du triplet.
-#' Ici encore les valeurs x nulles deviennent des petites distances.
-#' Liste de trois vecteurs : i, j et x.
-#' @import Matrix
-.triplet2dgR <- function(obj) {
-  
-  if ( setequal(names(obj), c("fromidINS", "toidINS", "distances")) ) {
-    obj <- obj[, c("fromidINS", "toidINS", "distances")]
-    names(obj) <- c("i", "j", "x")
-  }
-  
-  obj$x[obj$x == 0] <- .petite_distance(obj$x)
-  
-  spMatrix(nrow = length(dist$i), ncol = max(dist$j), i = dist$i, j = dist$j, x = dist$x)
-  
-}
 
