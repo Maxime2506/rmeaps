@@ -32,6 +32,24 @@ expect_equal(m3, mat)
 
 
 
+odds <- matrix(0, nrow = 2, ncol = 3)
+odds[, 2] <- 1
+odds <- as(as(as(odds, "dMatrix"), "generalMatrix"), "RsparseMatrix")
+
+modds <- new(RankedRSMatrix, odds@x, odds@j, odds@p, odds@Dim)
+
+modds$rankby(mat)
+
+odds <- matrix(0, nrow = 2, ncol = 3)
+odds[1, 2] <- 1
+odds[2,1] <- 3
+odds[2, 3] <- 5
+odds <- as(as(as(odds, "dMatrix"), "generalMatrix"), "RsparseMatrix")
+
+modds <- new(RankedRSMatrix, odds@x, odds@j, odds@p, odds@Dim)
+
+modds$rankby(mat)
+
 
 })
 

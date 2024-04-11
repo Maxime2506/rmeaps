@@ -33,13 +33,15 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                           seuil_newton = 1e-6) {
   
   
-  if (actifs * (1 - f) != emplois) warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
+  if (sum(actifs * (1 - f)) != sum(emplois)) warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
   
   dist <- if (inherits(dist, "matrix")) {
     .matrix2dgR(dist) 
   } else if (is_triplet(dist) ) {
     .triplet2dgR(dist)
-  } else if (!inherits(dist, "dgRMatrix")) {
+  } else if (inherits(dist, "dgRMatrix")) {
+    dist
+  } else {
     stop("Format pour dist non reconnu.")
   }
   
@@ -59,8 +61,6 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     }
     if (length(odds@x) == 0) attraction <- "constant"
   }
-  
-  
   
   dist@x <- meaps_continu_cpp(j_dist = dist@j,
                               p_dist = dist@p,

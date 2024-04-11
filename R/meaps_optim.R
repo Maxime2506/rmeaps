@@ -5,9 +5,10 @@
 #' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
 #' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
 #' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
-#' @param plafond_odd détermine la valeur maximale (et minimale) des odds, ramenés entre 1/plafond et plafond.
 #' @param mode Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...
-#' @param odds_subjectifs Attractivité des sites proches des actifs, pour le mode defini. default : null.
+#' @param param paramètres pour mode = "marche" (le 1er est la distance de la marche, le 2nd est le plancher après la marche).
+#' pour mode = "logistique" (le 1er est la distance du point de symétrie, le 2nd la raideur de la bascule, le 3ème le plancher).
+#' @param modds une matrice des odds, une dgRMatrix des log(odds) ou la RankedRSMatrix rangée selon dist.
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
 #' @param progress Ajoute une barre de progression. Default : true.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
@@ -16,59 +17,125 @@
 #' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
 #' @import Matrix
 #' @export
-meaps_optim <- function(dist, emplois, actifs, f, shuf, 
+#' 
+#' 
+#' 
+prep_meaps_dist <- function(dist) {
+  
+  mat <- if (inherits(dist, "matrix")) {
+    .transfom_matrix(dist) 
+  } else if (inherits(dist, "dgRMatrix")) {
+    .transform_triplet(dist)
+  } else if (class(dist) == "RankedRSMatrix") {
+    dist
+  } else {
+    stop("Format non reconnu")
+  }
+  
+  new(RankedRSMatrix, mat)
+}
+
+
+prep_meaps_odds <- function(modds, dist) {
+  
+  if (class(dist) != "RankedRSMatrix") stop("Utiliser prep_meaps_dist au préalable.")
+  if (inherits(modds, "matrix")) {
+    if (any(modds <= 0) | any(is.na(modds))) stop("La matrice des odds a des valeurs invalides.") 
+    lodds <- as(as(as(log(modds), "dMatrix"), "generalMatrix"), "RsparseMatrix")
+  }
+  
+  if (inherits(modds, "dgRMatrix")) {
+    if ( length(modds@x) == 0 ) {
+      attraction <- "constant"
+    } else {
+      attraction <- "odds" 
+      lodds <- new("RankedRSMatrix", modds)
+      lodds$rankby(mat)
+    }
+  }
+  if (class(modds) == "RankedRSMatzix") {
+    lodds <- modds
+  }
+  
+  list(lodds = lodds, attraction = attraction)
+}
+
+#' La fonction meaps version continue pour optimisation des paramètres ou odds.
+#' @param dist_prep Matrice des distances au format RankedRSMatrix (sortie de la fonction prep_meaps_dist).
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param group_from Le vecteur de regroupement des communes de départs (lignes).
+#' @param group_to Le vecteur de regroupement des communes de destinations (colonnes).
+#' @param attraction choix de la fonction d'attraction. Default = "constant". "marche", "logistique" ou "odds".
+#' @param param paramètres pour mode = "marche" (le 1er est la distance de la marche, le 2nd est le plancher après la marche).
+#' pour mode = "logistique" (le 1er est la distance du point de symétrie, le 2nd la raideur de la bascule, le 3ème le plancher).
+#' @param odds_prep les log(odds) au format RankedRSMatrix, mais rangé selon dist (résultat de prep_meaps_odds).
+#' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
+#' @param progress Ajoute une barre de progression. Default : true.
+#' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' 
+#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+#' @export
+meaps_optim <- function(dist_prep, emplois, actifs, fuite, shuf, 
                         groups_from, groups_to,
-                        objectif = NULL,
                         attraction = "constant",
-                        alpha = 10, beta = 1,
+                        param = 0.0,
+                        odds_prep = NULL,
                         nthreads = 0,
                         progress = TRUE,
                         normalisation = FALSE,
                         fuite_min = 1e-3) {
   
+  if (sum(actifs * (1 - fuite)) != sum(emplois)) warning("Les actifs et les emplois ne correspondent pas, à la fuite près.")
   
-  mat <- if (inherits(dist, "matrix")) {
-          .transfom_matrix(dist) 
-         } else if (inherits(dist, "dgRMatrix")) {
-          .transform_triplet(dist)
-         } else {
-             stop("Format non reconnu")
-           }
   # contraintes sur les paramètres.
   if (attraction == "marche") {
-    if (alpha <= 0) stop("alpha doit indiquer la distance où se situe la marche.")
-    if (beta <= 0) stop("beta doit représenter le facteur d'attractivité après la marche, (réf avant : 1")
+    if (param[1] <= 0) stop("Le 1er paramètre doit indiquer la distance où se situe la marche.")
+    if (param[2] <= 0) stop("Le 2nd paramètre doit représenter le facteur d'attractivité après la marche, (réf avant : 1")
   }
   
   if (attraction == "logistique") {
-    if (alpha <= 0) stop("alpha doit indiquer la distance où la logistique bascule (le point de symétrie).")
-    if (beta <= 0 | beta >= 1) stop("beta indique la rapidité de la bascule.")
+    if (param[1] <= 0) stop("Le 1er paramètre doit indiquer la distance où la logistique bascule (le point de symétrie).")
+    if (param[2] <= 0) stop("Le 2nd paramètre indique la raideur de la bascule.")
+    if (param[3] < 0) stop("Le 3ème paramètre indique un plancher (=limite pour x infini).")
   }
   
-  
-  
-  mat <- new(RankedRSMatrix, mat)
+  if (!is.null(odds_prep)) {
+    attraction <- odds_prep$attraction
+    jr_odds <- odds_prep$lodds$jr
+    p_odds <- odds_prep$lodds$p
+    xr_odds <- odds_prep$lodds$xr
+  } else {
+    jr_odds <- 0L
+    p_odds <- 0L
+    xr_odds <- 0.0
+  }
   
   row_group = groups_from - 1L # les indices c++ commencent à zéros.
   col_group = groups_to - 1L
-  
+
   meaps_optim_cpp(jr_dist = mat$jr,
                   p_dist = mat$p,
                   xr_dist = mat$xr,
                   emplois = emplois,
                   actifs = actifs,
-                  f = f,
+                  f = fuite,
                   shuf = shuf,
                   row_group = row_group,
                   col_group = col_group,
+                  param = param,
                   attraction = attraction,
-                  alpha = alpha, beta = beta,
+                  jr_odds = jr_odds,
+                  p_odds = p_odds,
+                  xr_odds = xr_odds,
                   nthreads = nthreads,
                   progress = progress,
                   normalisation = normalisation,
                   fuite_min = fuite_min)
   
-
 }
 
 #' Fonction de choix d'une petite distance pour remplacer les zéros éventuels.

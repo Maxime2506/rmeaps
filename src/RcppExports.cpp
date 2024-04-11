@@ -108,7 +108,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // meaps_optim_cpp
-NumericMatrix meaps_optim_cpp(IntegerVector jr_dist, IntegerVector p_dist, NumericVector xr_dist, NumericVector emplois, NumericVector actifs, NumericVector f, IntegerMatrix shuf, IntegerVector row_group, IntegerVector col_group, NumericVector param, NumericVector jr_odds, NumericVector p_odds, NumericVector xr_odds, std::string attraction, int nthreads, bool progress, bool normalisation, double fuite_min);
+NumericMatrix meaps_optim_cpp(IntegerVector jr_dist, IntegerVector p_dist, NumericVector xr_dist, NumericVector emplois, NumericVector actifs, NumericVector f, IntegerMatrix shuf, IntegerVector row_group, IntegerVector col_group, NumericVector param, IntegerVector jr_odds, IntegerVector p_odds, NumericVector xr_odds, std::string attraction, int nthreads, bool progress, bool normalisation, double fuite_min);
 RcppExport SEXP _rmeaps_meaps_optim_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP row_groupSEXP, SEXP col_groupSEXP, SEXP paramSEXP, SEXP jr_oddsSEXP, SEXP p_oddsSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -123,8 +123,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< IntegerVector >::type row_group(row_groupSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type col_group(col_groupSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type param(paramSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type jr_odds(jr_oddsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type p_odds(p_oddsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type jr_odds(jr_oddsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type p_odds(p_oddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type xr_odds(xr_oddsSEXP);
     Rcpp::traits::input_parameter< std::string >::type attraction(attractionSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
