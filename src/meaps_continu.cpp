@@ -14,15 +14,26 @@ using namespace Rcpp;
 
 // Remarque pour les fonctions pénalités: multiplier la fonction par un facteur arbitraire ne change pas le résultat de meaps.
 //' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
-inline double marche(double x, const double rayon, const double decru) {
+//' @param x distance.
+//' @param rayon distance de la marche.
+//' @param plancher point bas après la marche.
+//' 
+//' @return un facteur d'atraction
+inline double marche(double x, const double rayon, const double plancher) {
   if (x < rayon) return 1;
-  return decru;
+  return plancher;
 }
 
 // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
-inline double logistique(double x, const double rayon, const double amplitude, const double seuil) {
+//' @param x distance.
+ //' @param rayon distance de la bascule.
+ //' @param amplitude raideur de la bascule.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'atraction
+inline double logistique(double x, const double rayon, const double amplitude, const double plancher) {
   double ex = exp( (rayon-x)/amplitude );
-  return seuil + ex / (ex + 1);
+  return plancher + ex / (ex + 1);
 }
 
 //' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
@@ -48,7 +59,7 @@ inline double logistique(double x, const double rayon, const double amplitude, c
 //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 //'
 //' @return renvoie un vecteur des estimations des flux de i vers j.
-// [[Rcpp::export]]
+// [[Rcpp::export(.meaps_continu)]]
 NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois,
                                 NumericVector actifs, NumericVector f, IntegerMatrix shuf, 
                                 NumericVector param,

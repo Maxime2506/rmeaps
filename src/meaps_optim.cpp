@@ -14,15 +14,26 @@ using namespace Rcpp;
 
 // Remarque pour les fonctions pénalités: multiplier la fonction par un facteur arbitraire ne change pas le résultat de meaps.
 //' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
- inline double marche(double x, const double rayon, const double decru) {
+ //' @param x distance.
+ //' @param rayon distance de la marche.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'atraction
+ inline double marche(double x, const double rayon, const double plancher) {
    if (x < rayon) return 1;
-   return decru;
+   return plancher;
  }
  
  // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
- inline double logistique(double x, const double rayon, const double amplitude, const double seuil) {
+ //' @param x distance.
+ //' @param rayon distance de la bascule.
+ //' @param amplitude raideur de la bascule.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'atraction
+ inline double logistique(double x, const double rayon, const double amplitude, const double plancher) {
    double ex = exp( (rayon-x)/amplitude );
-   return seuil + ex / (ex + 1);
+   return plancher + ex / (ex + 1);
  }
  
  //' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
@@ -50,7 +61,7 @@ using namespace Rcpp;
  //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
  //'
  //' @return renvoie une matrice avec les estimations des flux regroupés.
- // [[Rcpp::export]]
+ // [[Rcpp::export(.meaps_optim)]]
  NumericMatrix meaps_optim_cpp(IntegerVector jr_dist, 
                                IntegerVector p_dist, 
                                NumericVector xr_dist, 

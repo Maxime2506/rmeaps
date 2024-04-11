@@ -62,25 +62,25 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     if (length(odds@x) == 0) attraction <- "constant"
   }
   
-  dist@x <- meaps_continu_cpp(j_dist = dist@j,
-                              p_dist = dist@p,
-                              x_dist = dist@x,
-                              emplois = emplois,
-                              actifs = actifs,
-                              f = f,
-                              shuf = shuf,
-                              attraction = attraction,
-                              param = param,
-                              j_odds = odds@j,
-                              p_odds = odds@p,
-                              x_odds = odds@x,
-                              nthreads = nthreads,
-                              progress = progress,
-                              normalisation = normalisation,
-                              fuite_min = fuite_min)
+  dist@x <- .meaps_continu(j_dist = dist@j,
+                           p_dist = dist@p,
+                           x_dist = dist@x,
+                           emplois = emplois,
+                           actifs = actifs,
+                           f = f,
+                           shuf = shuf,
+                           attraction = attraction,
+                           param = param,
+                           j_odds = odds@j,
+                           p_odds = odds@p,
+                           x_odds = odds@x,
+                           nthreads = nthreads,
+                           progress = progress,
+                           normalisation = normalisation,
+                           fuite_min = fuite_min)
   
   dist <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
-  data.frame(i = dist@i, j = dist@j, flux = dist@x)
+  data.frame(i = dist@i + 1L, j = dist@j + 1L, flux = dist@x)
 }
 
 
