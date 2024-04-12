@@ -123,6 +123,7 @@ meaps_optim <- function(prep,
                progress = FALSE,
                normalisation = normalisation,
                fuite_min = fuite_min)
+  
   coms <- tibble(COMMUNE = names(prep$row_group), ic = prep$row_group) |> 
     group_by(COMMUNE) |> 
     summarise(ic = as.character(first(ic)+1))

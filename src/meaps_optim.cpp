@@ -84,8 +84,6 @@ Nref = Nref + 1L;
 auto Kref = *std::max_element(col_group.begin(), col_group.end());
 Kref = Kref + 1L;
 
-
-
 #ifdef _OPENMP
    int ntr = nthreads;
    if (ntr == 0) {
