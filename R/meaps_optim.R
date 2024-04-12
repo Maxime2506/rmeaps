@@ -120,7 +120,7 @@ meaps_optim <- function(prep,
                p_odds = p_odds,
                xr_odds = xr_odds,
                nthreads = nthreads,
-               progress = FAS+KS,
+               progress = FALSE,
                normalisation = normalisation,
                fuite_min = fuite_min)
   coms <- tibble(COMMUNE = names(prep$row_group), ic = prep$row_group) |> 
