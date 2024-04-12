@@ -19,9 +19,9 @@ using namespace Rcpp;
  //' @param plancher point bas après la marche.
  //' 
  //' @return un facteur d'atraction
- inline double marche(double x, const double rayon, const double plancher) {
-   if (x < rayon) return 1;
-   return plancher;
+ inline double marche(double x, const double rayon, const double plafond) {
+   if (x > rayon) return 1;
+   return plafond;
  }
  
  // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
@@ -161,7 +161,7 @@ Kref = Kref + 1L;
 #endif
 
      for (int iboot = 0; iboot < Nboot; ++iboot) {
-       // Initialisation de de l'ordre de départ des actifs et de l'emploi
+       // Initialisation de l'ordre de départ des actifs et de l'emploi
        // disponible au début.
        std::vector<int> theshuf = ishuf[iboot];  // deep copy pour un boot.
        std::vector<double> emp(emploisinitial);  // deep copy.

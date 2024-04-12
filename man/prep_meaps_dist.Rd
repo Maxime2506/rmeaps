@@ -7,7 +7,7 @@
 prep_meaps_dist(dist)
 }
 \arguments{
-\item{dist}{Matrice des distances où des résidents en ligne i rejoignent des opportunités en colonnes j.}
+\item{dist}{triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j.}
 }
 \value{
 renvoie une RankedRSMatrix des distances.

@@ -7,7 +7,7 @@
 emiette(les_actifs, nshuf = 256, seuil = 40, var = "actifs", weighted = TRUE)
 }
 \arguments{
-\item{les_actifs}{le tibble ou le vecteur des actifs}
+\item{les_actifs}{le tibble ou le vecteur des actifs (nommé par idINS)}
 
 \item{nshuf}{le nombre de tirages}
 
@@ -18,7 +18,7 @@ emiette(les_actifs, nshuf = 256, seuil = 40, var = "actifs", weighted = TRUE)
 \item{weighted}{si TRUE, les actifs sont pondérés par leur fréquence (TRUE par défaut)}
 }
 \value{
-une matrice d'arrangement (autant de lignes que nshuf, autant de colonnes que d'actifs)
+une matrice d'arrangement (autant de lignes que nshuf, autant de colonnes que d'actifs, dont les colonnes sont l'idINS)
 }
 \description{
 Emiette les actifs et produit un jeu d'arrangements (shuffles) des actifs

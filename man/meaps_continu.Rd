@@ -17,7 +17,8 @@ meaps_continu(
   progress = TRUE,
   normalisation = FALSE,
   fuite_min = 0.001,
-  seuil_newton = 1e-06
+  seuil_newton = 1e-06,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -33,7 +34,7 @@ meaps_continu(
 
 \item{attraction}{Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
 Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
-"marche" où l'attrait vaut 1 jusqu'à une certaine distance (param alpha) puis moins (param béta). f(x) = 1 si x < alpha, = béta si x > alpha.
+"marche" où l'attrait vaut béta jusqu'à une certaine distance (param alpha) puis 1. f(x) = béta si x < alpha, = 1 si x > alpha.
 "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param alpha), une vitesse de bascule (param béta) 
 et un seuil (param gamma). Si h(x) = exp( (x-alpha)/béta), f(x) = gamma + h(x) / (1 + h(x)).
 "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.}
