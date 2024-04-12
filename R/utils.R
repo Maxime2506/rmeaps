@@ -42,7 +42,7 @@ tripletlodds2dgr <- function(data, cle_from, cle_to) {
   setDT(data)
   colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
   
-  data <- data[x != 0, ]
+  data <- data[data$x != 0]
   data <- data |>
     merge(data.table(fromidINS = cle_from, i = 1:length(cle_from)), by = "fromidINS") |>
     merge(data.table(toidINS = cle_to, j = 1:length(cle_to)), by = "toidINS")
