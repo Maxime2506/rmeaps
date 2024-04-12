@@ -13,38 +13,41 @@ is_triplet <- function(obj) {
 }
 
 #' Fonction de transformation d'un triplet fromidINS toidINS value à une liste avec i j x et les clés de correspondances.
+#' @import data.table
 triplet2listij <- function(data) {
   if (!is_triplet(data)) stop("Ce n'est pas un triplet valide.")
+  setDT(data)
   colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
   
-  cle_from <- unique(data$fromidINS) |> sort()
-  cle_to <- unique(data$toidINS) |> sort()
+  setorder(data, fromidINS, toidINS)
+  cle_from <- unique(data$fromidINS)
+  cle_to <- unique(data$toidINS)
   
-  data <- data[order(data$fromidINS, data$toidINS), ]
+  data <- data |>
+    merge(data.table(fromidINS = cle_from, i = 1:length(cle_from)), by = "fromidINS") |>
+    merge(data.table(toidINS = cle_to, j = 1:length(cle_to)), by = "toidINS")
+    
+  data.table::set(data, j = "x", value = fifelse(data$x==0, .petite_distance(data$x), data$x))
   
-  data <- dplyr::inner_join(data, data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "fromidINS") |> 
-    dplyr::inner_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "toidINS") |> 
-    dplyr::select(i, j, x)
-  
-  data$x[data$x == 0] <- .petite_distance(data$x)
-  
-  list(dgr = sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(max(data$i), max(data$j)), repr = "R"), 
+  list(dgr = Matrix::sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(max(data$i), max(data$j)), repr = "R"), 
        cle_from = cle_from, 
        cle_to = cle_to)
 }
 
 #' Fonction de transformation d'un triplet de log(odds) avec fromidINS et toidINS en une matrice row sparse.
 #' Les cle_from et cle_to sont celles tirées du triplet des distances.
-#' @import Matrix
+#' @import Matrix, data.table
 tripletlodds2dgr <- function(data, cle_from, cle_to) {
   if (!is_triplet(data)) stop("Ce n'est pas un triplet valide.")
+  setDT(data)
   colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
   
-  data <- data[data$x != 0, ]
-  data <- dplyr::inner_join(data, data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "fromidINS") |> 
-    dplyr::inner_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "toidINS")
+  data <- data[x != 0, ]
+  data <- data |>
+    merge(data.table(fromidINS = cle_from, i = 1:length(cle_from)), by = "fromidINS") |>
+    merge(data.table(toidINS = cle_to, j = 1:length(cle_to)), by = "toidINS")
   
- sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(length(cle_from), length(cle_to)), repr = "R")
+  Matrix::sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(length(cle_from), length(cle_to)), repr = "R")
 }
 
 

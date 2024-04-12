@@ -56,7 +56,6 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     xodds <- lodds@x
     if (length(lodds) == 0) { attraction <- "constant" }
     }
-   
   dist@x <- .meaps_continu(j_dist = dist@j,
                            p_dist = dist@p,
                            x_dist = dist@x,
