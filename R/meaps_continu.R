@@ -30,13 +30,17 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                           fuite_min = 1e-3,
                           seuil_newton = 1e-6) {
   
-  if (sum(actifs * (1 - f)) != sum(emplois)) warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
+  delta <- (sum(actifs * (1 - f)) - sum(emplois))/sum(emplois)
+  if (delta>10^(-5)) warning(glue("Les actifs restant dans la zone et les emplois ne correspondent pas à {round(delta*100,1)}% près."))
   
   if (!is_triplet(dist)) stop("Format pour dist non reconnu.")
   dist <- triplet2listij(dist)
   cle_from <- dist$cle_from
   cle_to <- dist$cle_to
   dist <- dist$dgr
+  actifs <- actifs[as.character(cle_from)]
+  f <- f[as.character(cle_from)]
+  emplois <- emplois[as.character(cle_to)]
   
   if (is.null(modds)) { 
     if (attraction == "odds") stop("Il n'y a pas de odds définis.")
