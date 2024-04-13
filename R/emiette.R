@@ -37,3 +37,27 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=
   colnames(shuf) <- noms
   return(shuf)
 }
+
+#' Recalcule la matrice shuf sur un nouvel ordre d'actifs (l'initial est dans les colnames)
+#'
+#' @param shuf le tri initial, avec les noms des actifs ordonnés dans les colonnes
+#' @param actifs Un vecteur d'actifs dans un autre ordre
+#'
+#' @return une matrice d'arrangement (autant de lignes que nshuf, autant de colonnes que d'actifs, dont les colonnes sont l'idINS)
+#' @export
+#'
+reordonne_shuf <- function(shuf, actifs) {
+  ori <- unique(colnames(shuf))
+  dest <- unique(names(actifs))
+  
+  if(!setequal(ori, dest))
+    stop("Les actifs ne correspondent pas à la matrice shuf.")
+  dest2ori <- set_names(dest, ori)
+  
+  n_act <- length(ori) 
+  dest <- set_names(1:n_act, dest)
+  shuf_names <- ori[shuf]
+  new_shuf <- dest[shuf_names] |> matrix(nrow = nrow(shuf), ncol = ncol(shuf))
+  colnames(new_shuf) <- dest2ori[colnames(shuf)]
+  return(new_shuf)
+}

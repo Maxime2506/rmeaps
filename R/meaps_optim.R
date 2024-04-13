@@ -106,23 +106,23 @@ meaps_optim <- function(prep,
   }
   
   res <- .meaps_optim(jr_dist = mat$jr,
-               p_dist = mat$p,
-               xr_dist = mat$xr,
-               emplois = emplois,
-               actifs = actifs,
-               f = fuite,
-               shuf = shuf,
-               row_group = prep$row_group,
-               col_group = prep$col_group,
-               param = param,
-               attraction = attraction,
-               jr_odds = jr_odds,
-               p_odds = p_odds,
-               xr_odds = xr_odds,
-               nthreads = nthreads,
-               progress = FALSE,
-               normalisation = normalisation,
-               fuite_min = fuite_min)
+                      p_dist = mat$p,
+                      xr_dist = mat$xr,
+                      emplois = emplois,
+                      actifs = actifs,
+                      f = fuite,
+                      shuf = shuf,
+                      row_group = prep$row_group,
+                      col_group = prep$col_group,
+                      param = param,
+                      attraction = attraction,
+                      jr_odds = jr_odds,
+                      p_odds = p_odds,
+                      xr_odds = xr_odds,
+                      nthreads = nthreads,
+                      progress = FALSE,
+                      normalisation = normalisation,
+                      fuite_min = fuite_min)
   
   coms <- tibble(COMMUNE = names(prep$row_group), ic = prep$row_group) |> 
     group_by(COMMUNE) |> 
@@ -130,12 +130,13 @@ meaps_optim <- function(prep,
   dclts <- tibble(DCLT = names(prep$col_group), id = prep$col_group) |> 
     group_by(DCLT) |> 
     summarise(id = as.character(first(id)+1))
+  colnames(res) <- stringr::str_c("ic", 1:ncol(res))
   res |> 
-    as_tibble() |> 
+    as_tibble(.name_repair = "unique") |> 
     mutate(ic = as.character(1:nrow(res))) |> 
     pivot_longer(cols = -ic, names_to = "id", values_to = "flux") |> 
     filter(flux>0) |> 
-    mutate(id = str_sub(id,2,-1)) |>
+    mutate(id = str_sub(id,3,-1)) |>
     left_join(coms, by = "ic") |>
     left_join(dclts, by = "id") |>
     select(-id,-ic) |> 

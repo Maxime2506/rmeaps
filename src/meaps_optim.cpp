@@ -118,6 +118,9 @@ Kref = Kref + 1L;
 
    std::vector<double> parametres = as< std::vector<double> >(param);
 
+   std::vector<int> _row_group = as< std::vector<int> >(row_group);
+   std::vector<int> _col_group = as< std::vector<int> >(col_group);
+   
    std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
    std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
    std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
@@ -198,13 +201,13 @@ Kref = Kref + 1L;
          repartition = repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
 
          // Impact sur l'emploi disponible total et sommation sur les emplois pris.
-         std::size_t curseur_ligne = row_group[from] * Nref;
+         std::size_t curseur_ligne = _row_group[from] * Nref;
          for (std::size_t k = 0; k < k_valid; ++k) {
            emp[ _jr_dist[debut + k] ] -= repartition[k];
 
-           liaisons[ curseur_ligne + col_group[_jr_dist[debut + k]] ] += repartition[k];
+           liaisons[ curseur_ligne + _col_group[_jr_dist[debut + k]] ] += repartition[k];
          }
-       }
+       } 
      }
 
      NumericMatrix resultat(Nref, Kref);
