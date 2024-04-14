@@ -42,8 +42,7 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
   cle_to <- dist$cle_to
   dist <- dist$dgr
   actifs <- actifs[froms]
-  shuf <- shuf[, froms]
-  f <- f[froms]
+  shuf <- reordonne_shuf(shuf, actifs)
   emplois <- emplois[as.character(cle_to)]
   jodds <- podds <- xodds <- 1L
   if (is.null(modds)) { 

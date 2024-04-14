@@ -19,14 +19,16 @@ prep_meaps_dist <- function(dist, emplois, actifs, fuite, shuf, groups_from, gro
   gg <- unique(col_group)
   gg <- set_names(1:length(gg), gg)
   col_group <- gg[as.character(col_group)] -1L
-  
+  actifs <- actifs[froms]
+  fuite <- fuite[froms]
+  emplois <- emplois[tos]
   list(RankedMat = new(RankedRSMatrix, dist$dgr), 
        cle_from = dist$cle_from, 
        cle_to = dist$cle_to,
-       emplois = emplois[tos],
-       actifs = actifs[froms],
-       fuite = fuite[froms],
-       shuf = shuf[, froms],
+       emplois = emplois,
+       actifs = actifs,
+       fuite = fuite,
+       shuf = reordonne_shuf(shuf, actifs),
        row_group = row_group,
        col_group = col_group) 
 }
