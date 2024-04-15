@@ -25,7 +25,7 @@ noshuf <- matrix(1:5, nrow =1, ncol=N, dimnames = list(NULL, names(actifs)))
 modds <- matrix(1, ncol = K, nrow = N)
 dimnames(modds) <- dimnames(distances)
 
-meaps_multishuf(rkdist = rowRanks(distances, ties="random"),
+c0 <- meaps_multishuf(rkdist = rowRanks(distances, ties="random"),
                 emplois = emplois,
                 actifs = actifs,
                 modds = modds,
@@ -57,3 +57,4 @@ sum(o1$flux)
 sum(o2$flux)
 sum(o3$flux)
 sum(c1$flux)  
+sum(c0)

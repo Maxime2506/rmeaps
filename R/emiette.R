@@ -13,7 +13,7 @@
 emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=TRUE) {
   if(tibble::is_tibble(les_actifs))
     act <- les_actifs |> 
-      pull(var, name = idINS)
+      dplyr::pull(var, name = idINS)
   if(rlang::is_vector(les_actifs))
     act <- les_actifs
   freq <- act %/% seuil + 1
@@ -55,7 +55,7 @@ reordonne_shuf <- function(shuf, actifs) {
   dest2ori <- set_names(dest, ori)
   
   n_act <- length(ori) 
-  dest <- set_names(1:n_act, dest)
+  dest <- rlang::set_names(1:n_act, dest)
   shuf_names <- ori[shuf]
   new_shuf <- dest[shuf_names] |> matrix(nrow = nrow(shuf), ncol = ncol(shuf))
   colnames(new_shuf) <- dest2ori[colnames(shuf)]

@@ -13,11 +13,11 @@ prep_meaps_dist <- function(dist, emplois, actifs, fuite, shuf, groups_from, gro
   
   row_group <- groups_from[froms]
   gg <- unique(row_group)
-  gg <- set_names(1:length(gg), gg)
+  gg <- rlang::set_names(1:length(gg), gg)
   row_group <- gg[as.character(row_group)] - 1L
   col_group <- groups_to[tos]
   gg <- unique(col_group)
-  gg <- set_names(1:length(gg), gg)
+  gg <- rlang::set_names(1:length(gg), gg)
   col_group <- gg[as.character(col_group)] -1L
   actifs <- actifs[froms]
   fuite <- fuite[froms]
@@ -126,23 +126,23 @@ meaps_optim <- function(prep,
                       normalisation = normalisation,
                       fuite_min = fuite_min)
   
-  coms <- tibble(COMMUNE = names(prep$row_group), ic = prep$row_group) |> 
-    group_by(COMMUNE) |> 
-    summarise(ic = as.character(first(ic)+1))
+  coms <- tibble::tibble(COMMUNE = names(prep$row_group), ic = prep$row_group) |> 
+    dplyr::group_by(COMMUNE) |> 
+    dplyr::summarise(ic = as.character(dplyr::first(ic)+1))
   dclts <- tibble(DCLT = names(prep$col_group), id = prep$col_group) |> 
-    group_by(DCLT) |> 
-    summarise(id = as.character(first(id)+1))
+    dplyr::group_by(DCLT) |> 
+    dplyr::summarise(id = as.character(dplyr::first(id)+1))
   colnames(res) <- stringr::str_c("id", 1:ncol(res))
   res |> 
-    as_tibble(.name_repair = "unique") |> 
-    mutate(ic = as.character(1:nrow(res))) |> 
-    pivot_longer(cols = -ic, names_to = "id", values_to = "flux") |> 
-    filter(flux>0) |> 
-    mutate(id = str_sub(id,3,-1)) |>
-    left_join(coms, by = "ic") |>
-    left_join(dclts, by = "id") |>
-    select(-id,-ic) |>
-    arrange(desc(flux))
+    tibble::as_tibble(.name_repair = "unique") |> 
+    dplyr::mutate(ic = as.character(1:nrow(res))) |> 
+    dplyr::pivot_longer(cols = -ic, names_to = "id", values_to = "flux") |> 
+    dplyr::filter(flux>0) |> 
+    dplyr::mutate(id = stringr::str_sub(id,3,-1)) |>
+    dplyr::left_join(coms, by = "ic") |>
+    dplyr::left_join(dclts, by = "id") |>
+    dplyr::select(-id,-ic) |>
+    dplyr::arrange(dplyr::desc(flux))
 }
 
 

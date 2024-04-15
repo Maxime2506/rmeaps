@@ -1,4 +1,3 @@
-library(conflicted)
 library(data.table)
 library(matrixStats)
 library(r3035)
@@ -45,9 +44,6 @@ K <- length(tos)
 
 noshuf <- matrix(1:N, ncol = N, nrow = 1, dimnames = list(NULL, froms))
 shufs <- emiette(les_actifs = actifs, nshuf = 64, seuil = 200) # ordre correct !
-shufs_256 <- emiette(les_actifs = actifs, nshuf = 256, seuil = 200) # ordre correct !
-shufs_1024 <- emiette(les_actifs = actifs, nshuf = 1024, seuil = 200) # ordre correct !
-shufs_4096 <- emiette(les_actifs = actifs, nshuf = 4096, seuil = 200) # ordre correct !
 
 pp <- list(
   rkdist = matrixStats::rowRanks(mat_distance_na[froms, tos], ties = "random"), 
@@ -115,45 +111,6 @@ tic();MOD3 <- rmeaps::meaps_continu(
   filter(flux > 0) |>
   arrange(desc(flux));toc()
 
-tic();MOD256 <- rmeaps::meaps_continu(
-  dist = time_triplet,
-  emplois = emplois,
-  actifs = actifs,
-  f = fuite,
-  shuf = shufs_256,
-  nthreads = 16L) |>
-  mutate(COMMUNE = coms[fromidINS], DCLT = dclts[toidINS]) |> 
-  group_by(COMMUNE, DCLT) |>
-  summarize(flux = sum(flux), .groups = "drop") |>
-  filter(flux > 0) |>
-  arrange(desc(flux));toc()
-
-tic();MOD1024 <- rmeaps::meaps_continu(
-  dist = time_triplet,
-  emplois = emplois,
-  actifs = actifs,
-  f = fuite,
-  shuf = shufs_1024,
-  nthreads = 16L) |>
-  mutate(COMMUNE = coms[fromidINS], DCLT = dclts[toidINS]) |> 
-  group_by(COMMUNE, DCLT) |>
-  summarize(flux = sum(flux), .groups = "drop") |>
-  filter(flux > 0) |>
-  arrange(desc(flux));toc()
-
-tic();MOD4096 <- rmeaps::meaps_continu(
-  dist = time_triplet,
-  emplois = emplois,
-  actifs = actifs,
-  f = fuite,
-  shuf = shufs_4096,
-  nthreads = 16L) |>
-  mutate(COMMUNE = coms[fromidINS], DCLT = dclts[toidINS]) |> 
-  group_by(COMMUNE, DCLT) |>
-  summarize(flux = sum(flux), .groups = "drop") |>
-  filter(flux > 0) |>
-  arrange(desc(flux));toc()
-
 
 dpns <- rmeaps::prep_meaps_dist(time_triplet, emplois, actifs, fuite, noshuf, coms, dclts)
 dps <- rmeaps::prep_meaps_dist(time_triplet, emplois, actifs, fuite, shufs, coms, dclts)
@@ -166,21 +123,14 @@ tic();modosm <- rmeaps::meaps_optim(prep = dps, attraction="marche", param = c(1
 tic();modonsm <- rmeaps::meaps_optim(prep = dpns, attraction="marche", param = c(10,1));toc()
 
 fluxs <- ref_ms |> rename(flux.ms.ns = flux) |> 
-  full_join(ref_ms_shufs |> rename(flux.ms.s= flux), by = c("COMMUNE", "DCLT")) |>
   full_join(MOD2 |> rename(flux.c.ns = flux), by = c("COMMUNE", "DCLT")) |> 
-  full_join(MOD3 |> rename(flux.c.s = flux), by = c("COMMUNE", "DCLT")) |> 
   full_join(modons |> rename(flux.o.ns = flux), by = c("COMMUNE", "DCLT")) |>
+  full_join(modonsm |> rename(flux.o.ns.m = flux), by = c("COMMUNE", "DCLT")) |>
+  full_join(ref_ms_shufs |> rename(flux.ms.s= flux), by = c("COMMUNE", "DCLT")) |>
+  full_join(MOD3 |> rename(flux.c.s = flux), by = c("COMMUNE", "DCLT")) |> 
   full_join(modos |> rename(flux.o.s = flux), by = c("COMMUNE", "DCLT")) |>
   full_join(modosm |> rename(flux.o.s.m = flux), by = c("COMMUNE", "DCLT")) |>
-  full_join(modonsm |> rename(flux.o.ns.m = flux), by = c("COMMUNE", "DCLT")) |>
   full_join(mobpro, by = c("COMMUNE", "DCLT"))
-
-flux_bs <- MOD2 |> rename(flux.1 = flux) |> 
-  full_join(MOD3 |> rename(flux.64 = flux), by = c("COMMUNE", "DCLT")) |> 
-  full_join(MOD256 |> rename(flux.256 = flux), by = c("COMMUNE", "DCLT")) |> 
-  full_join(MOD1024 |> rename(flux.1024 = flux), by = c("COMMUNE", "DCLT")) |> 
-  full_join(MOD4096 |> rename(flux.4096 = flux), by = c("COMMUNE", "DCLT")) 
-  
 
 bootstrap <- map_dfr(0:48/4, ~{
   shuf <- emiette(les_actifs = actifs, nshuf = round(2^.x), seuil = 200) 
