@@ -141,7 +141,7 @@ meaps_optim <- function(prep,
     mutate(id = str_sub(id,3,-1)) |>
     left_join(coms, by = "ic") |>
     left_join(dclts, by = "id") |>
-    select(-id,-ic) |> 
+    select(-id,-ic) |>
     arrange(desc(flux))
 }
 

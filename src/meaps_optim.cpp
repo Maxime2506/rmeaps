@@ -201,10 +201,10 @@ Kref = Kref + 1L;
          repartition = repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
 
          // Impact sur l'emploi disponible total et sommation sur les emplois pris.
-         std::size_t curseur_ligne = _row_group[from] * Nref;
+         std::size_t curseur_ligne = _row_group[from] * Kref;
+
          for (std::size_t k = 0; k < k_valid; ++k) {
            emp[ _jr_dist[debut + k] ] -= repartition[k];
-
            liaisons[ curseur_ligne + _col_group[_jr_dist[debut + k]] ] += repartition[k];
          }
        } 
@@ -213,7 +213,7 @@ Kref = Kref + 1L;
      NumericMatrix resultat(Nref, Kref);
      for (std::size_t i = 0; i < Nref; ++i) {
        for (std::size_t j = 0; j < Kref; ++j) {
-         resultat(i,j) = liaisons[Nref * i + j] / Nboot;
+         resultat(i,j) = liaisons[i* Kref + j ] / Nboot;
        }
      }
 

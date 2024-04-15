@@ -46,9 +46,14 @@ prep1 <- prep_meaps_dist(dist = triplet, emplois = emplois, actifs = actifs, fui
 prep2 <- prep_meaps_dist(dist = triplet, emplois = emplois, actifs = actifs, fuite = fuite, shuf = noshuf, 
                          groups_from = set_names(c(1,1,2,2,2), names(actifs)),
                          groups_to = set_names(1:5, names(emplois)))
+prep3 <- prep_meaps_dist(dist = triplet, emplois = emplois, actifs = actifs, fuite = fuite, shuf = noshuf, 
+                         groups_from = set_names(1:5, names(actifs)),
+                         groups_to = set_names(c(1,1,1,2,2), names(emplois)))
 
 o1 <- meaps_optim(prep1)
 o2 <- meaps_optim(prep2)
+o3 <- meaps_optim(prep3)
 sum(o1$flux)
 sum(o2$flux)
+sum(o3$flux)
 sum(c1$flux)  
