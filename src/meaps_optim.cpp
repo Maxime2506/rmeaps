@@ -158,7 +158,7 @@ Kref = Kref + 1L;
    omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>()))      \
      initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 #pragma omp parallel for num_threads(ntr) \
-     shared(Nboot, N, ishuf, emploisinitial, fcpp, actifscpp, _xr_dist, _jr_dist, _p_dist, _xr_odds, _p_odds, _jr_odds) reduction(vsum : liaisons)
+     shared(Nboot, N, ishuf, emploisinitial, fcpp, actifscpp, _xr_dist, _jr_dist, _p_dist, _xr_odds, _p_odds, _jr_odds, _row_group, _col_group) reduction(vsum : liaisons)
 #endif
 
      for (int iboot = 0; iboot < Nboot; ++iboot) {

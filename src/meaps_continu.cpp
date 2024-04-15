@@ -128,7 +128,6 @@ NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, Nume
       ++index;
     }
   }
-
   
   // paramètres pour la fonction d'attraction choisi
   std::vector<double> parametres = as< std::vector<double> >(param);

@@ -132,7 +132,7 @@ meaps_optim <- function(prep,
   dclts <- tibble(DCLT = names(prep$col_group), id = prep$col_group) |> 
     group_by(DCLT) |> 
     summarise(id = as.character(first(id)+1))
-  colnames(res) <- stringr::str_c("ic", 1:ncol(res))
+  colnames(res) <- stringr::str_c("id", 1:ncol(res))
   res |> 
     as_tibble(.name_repair = "unique") |> 
     mutate(ic = as.character(1:nrow(res))) |> 
