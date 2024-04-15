@@ -136,7 +136,7 @@ meaps_optim <- function(prep,
   res |> 
     tibble::as_tibble(.name_repair = "unique") |> 
     dplyr::mutate(ic = as.character(1:nrow(res))) |> 
-    dplyr::pivot_longer(cols = -ic, names_to = "id", values_to = "flux") |> 
+    tidyr::pivot_longer(cols = -ic, names_to = "id", values_to = "flux") |> 
     dplyr::filter(flux>0) |> 
     dplyr::mutate(id = stringr::str_sub(id,3,-1)) |>
     dplyr::left_join(coms, by = "ic") |>

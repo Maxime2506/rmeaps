@@ -115,7 +115,7 @@ tic();MOD3 <- rmeaps::meaps_continu(
 dpns <- rmeaps::prep_meaps_dist(time_triplet, emplois, actifs, fuite, noshuf, coms, dclts)
 dps <- rmeaps::prep_meaps_dist(time_triplet, emplois, actifs, fuite, shufs, coms, dclts)
 
-tic();modons <- rmeaps::meaps_optim(prep = dpns, nthreads = 1L);toc()
+tic();modons <- rmeaps::meaps_optim(prep = dpns);toc()
 tic();modos <- rmeaps::meaps_optim(prep = dps);toc()
 tic();modons <- rmeaps::meaps_optim(prep = dpns);toc()
 tic();modos <- rmeaps::meaps_optim(prep = dps);toc()
@@ -131,6 +131,8 @@ fluxs <- ref_ms |> rename(flux.ms.ns = flux) |>
   full_join(modos |> rename(flux.o.s = flux), by = c("COMMUNE", "DCLT")) |>
   full_join(modosm |> rename(flux.o.s.m = flux), by = c("COMMUNE", "DCLT")) |>
   full_join(mobpro, by = c("COMMUNE", "DCLT"))
+
+fluxs |> summarize(across(starts_with("flux"), sum))
 
 bootstrap <- map_dfr(0:48/4, ~{
   shuf <- emiette(les_actifs = actifs, nshuf = round(2^.x), seuil = 200) 
