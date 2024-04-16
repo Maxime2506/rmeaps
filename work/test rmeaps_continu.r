@@ -132,7 +132,7 @@ fluxs <- ref_ms |> rename(flux.ms.ns = flux) |>
   full_join(modosm |> rename(flux.o.s.m = flux), by = c("COMMUNE", "DCLT")) |>
   full_join(mobpro, by = c("COMMUNE", "DCLT"))
 
-fluxs |> summarize(across(starts_with("flux"), sum))
+fluxs |> summarize(across(starts_with("flux"), ~sum(.x, na.rm=TRUE)))
 
 bootstrap <- map_dfr(0:48/4, ~{
   shuf <- emiette(les_actifs = actifs, nshuf = round(2^.x), seuil = 200) 

@@ -93,7 +93,7 @@ meaps_optim <- function(prep,
   if (attraction == "logistique") {
     if (param[1] <= 0) stop("Le 1er paramètre doit indiquer la distance où la logistique bascule (le point de symétrie).")
     if (param[2] <= 0) stop("Le 2nd paramètre indique la raideur de la bascule.")
-    if (param[3] < 0) stop("Le 3ème paramètre indique un plancher (=limite pour x infini).")
+    if (param[3] <= 0) stop("Le 3ème paramètre indique un plancher (=limite pour x infini).")
   }
   
   if (!is.null(odds_prep)) {
