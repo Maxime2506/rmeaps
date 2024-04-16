@@ -86,27 +86,26 @@ meaps_optim <- function(prep,
   
   # contraintes sur les paramètres.
   if (attraction == "marche") {
-    if (param[1] <= 0) stop("Le 1er paramètre doit indiquer la distance où se situe la marche.")
-    if (param[2] <= 0) stop("Le 2nd paramètre doit représenter le facteur d'attractivité après la marche, (réf avant : 1")
+    if (param[1] <= 0) param[[1]] <- 0
+    if (param[2] <= 0) param[[2]] <- 0
   }
   
   if (attraction == "logistique") {
-    if (param[1] <= 0) stop("Le 1er paramètre doit indiquer la distance où la logistique bascule (le point de symétrie).")
-    if (param[2] <= 0) stop("Le 2nd paramètre indique la raideur de la bascule.")
-    if (param[3] <= 0) stop("Le 3ème paramètre indique un plancher (=limite pour x infini).")
+    if (param[1] <= 0) param[[1]] <- 0
+    if (param[2] <= 0) param[[2]] <- 0
+    if (param[3] <= 0) param[[3]] <- 0
   }
   
   if (!is.null(odds_prep)) {
-    attraction <- odds_prep$attraction
-    jr_odds <- odds_prep$lodds$jr
-    p_odds <- odds_prep$lodds$p
-    xr_odds <- odds_prep$lodds$xr
+    attraction <- "odds"
+    jr_odds <- odds_prep$jr
+    p_odds <- odds_prep$p
+    xr_odds <- odds_prep$xr
   } else {
     jr_odds <- 0L
     p_odds <- 0L
     xr_odds <- 0.0
   }
-  
   res <- .meaps_optim(jr_dist = mat$jr,
                       p_dist = mat$p,
                       xr_dist = mat$xr,

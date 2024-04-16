@@ -174,7 +174,6 @@ Kref = Kref + 1L;
          // Construction de l'accessibilité dite pénalisée.
          std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
          std::size_t k_valid = fin - debut;
-
          std::vector<double> facteur_attraction(k_valid), emplois_libres(k_valid), repartition(k_valid);
          std::size_t odds_index = 0;
          for (std::size_t k = 0; k < k_valid; ++k) {
@@ -194,7 +193,6 @@ Kref = Kref + 1L;
            }
            emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
          }
-
          double actifspartant = actifscpp[from] / freq_actifs[from];
 
          std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
