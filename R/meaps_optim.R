@@ -2,7 +2,7 @@
 #' @param dist triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
 #' @param emplois vecteur des emplois par opportunité.
 #' @param actifs vecteur des actifs par résident.
-#' @fuite vecteur des fuites par résident.
+#' @param fuite vecteur des fuites par résident.
 #' @param shuf vecteur des permutations des résidents.
 #' @param groups_from vecteur des groupes des résidents.
 #' @param groups_to vecteur des groupes des opportunités.

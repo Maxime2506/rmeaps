@@ -13,6 +13,8 @@ prep_meaps_dist(dist, emplois, actifs, fuite, shuf, groups_from, groups_to)
 
 \item{actifs}{vecteur des actifs par résident.}
 
+\item{fuite}{vecteur des fuites par résident.}
+
 \item{shuf}{vecteur des permutations des résidents.}
 
 \item{groups_from}{vecteur des groupes des résidents.}
