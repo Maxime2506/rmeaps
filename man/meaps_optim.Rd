@@ -5,13 +5,7 @@
 \title{La fonction meaps_optim sert pour la recherche des meilleurs paramètres ou odds lorsqu'un certain regroupement des flux est connu.}
 \usage{
 meaps_optim(
-  dist_prep,
-  emplois,
-  actifs,
-  fuite,
-  shuf,
-  groups_from,
-  groups_to,
+  prep,
   attraction = "constant",
   param = 0,
   odds_prep = NULL,
@@ -22,13 +16,7 @@ meaps_optim(
 )
 }
 \arguments{
-\item{dist_prep}{Matrice des distances au format RankedRSMatrix (sortie de la fonction prep_meaps_dist).}
-
-\item{emplois}{Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).}
-
-\item{actifs}{Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.}
-
-\item{shuf}{Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.}
+\item{prep}{liste, issue de prep_meaps_dist, qui contient plusieurs éléments précalculés.}
 
 \item{attraction}{choix de la fonction d'attraction. Default = "constant". "marche", "logistique" ou "odds".}
 
@@ -44,12 +32,6 @@ pour mode = "logistique" (le 1er est la distance du point de symétrie, le 2nd l
 \item{normalisation}{Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.}
 
 \item{fuite_min}{Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.}
-
-\item{f}{Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.}
-
-\item{group_from}{Le vecteur de regroupement des communes de départs (lignes).}
-
-\item{group_to}{Le vecteur de regroupement des communes de destinations (colonnes).}
 }
 \value{
 renvoie une matrice avec les estimations des flux regroupés.

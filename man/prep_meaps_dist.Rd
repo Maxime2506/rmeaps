@@ -4,7 +4,7 @@
 \alias{prep_meaps_dist}
 \title{La fonction prep_meaps_dist prépare les données de distances pour traitement par meaps_optim}
 \usage{
-prep_meaps_dist(dist)
+prep_meaps_dist(dist, emplois, actifs, fuite, shuf, groups_from, groups_to)
 }
 \arguments{
 \item{dist}{triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j.}
