@@ -49,6 +49,49 @@ prep_meaps_odds <- function(modds, cle_from, cle_to) {
   new(RankedRSMatrix, lodds)
 }
 
+#' La fonction prep_meaps_odds_on_dist prépare la matrice des odds pour traitement par meaps_optim.
+#' c'est une matrice ranké, mais selon les distances
+#' @param odds un triplet des odds.
+#' @param dist un triplet des distances.
+#' 
+#' @return renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.
+#' @import Matrix, data.table
+#' @export
+prep_meaps_odds_on_dist <- function(odds, prep) {
+  if (!is_triplet(odds)) stop("Ce n'est pas un triplet d'odds valide.")
+  colnames(odds)[!colnames(odds) %in% c("fromidINS", "toidINS")] <- "o"
+  setDT(odds)
+  lodds <- data.table(toidINS = prep$cle_to, j = 1:length(prep$cle_to)) |> 
+    merge(odds, by = c("toidINS"), all.x = TRUE, all.y = FALSE)  
+  lodds <- data.table(fromidINS = prep$cle_from, i = 1:length(prep$cle_from)) |> 
+    merge(lodds, by = c("fromidINS"), all.x = TRUE, all.y = FALSE)
+  oo <- set_names(lodds$o, lodds$j)
+  p <- prep$RankedMat$p
+  roo <- vector("numeric", length(prep$RankedMat$xr))
+  for (i_p in 1:(length(p)-1)) {
+    d <- p[i_p]+1
+    f <- p[i_p+1]
+    js <- as.character(prep$RankedMat$jr[d:f]+1)
+    roo[d:f] <- oo[d:f][js]
+  }
+  res <- new(RankedRSMatrix, roo, prep$RankedMat$jr, p, prep$RankedMat$dim)
+  return(res)
+}
+
+
+#' La fonction prep_meaps_odds_on_dist prépare la matrice des odds pour traitement par meaps_optim.
+#' c'est une matrice ranké, mais selon les distances
+#' @param prep une liste issue de prep_meaps_dist.
+#' 
+#' @return renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.
+#' @import Matrix, data.table
+#' @export
+prep_0lodds_on_dist <- function(prep) {
+  roo <- numeric(length(prep$RankedMat$xr))
+  res <- new(RankedRSMatrix, roo, prep$RankedMat$jr, p, prep$RankedMat$dim)
+  return(res)
+}
+
 
 #' La fonction meaps_optim sert pour la recherche des meilleurs paramètres ou odds lorsqu'un certain regroupement des flux est connu.
 #' @param dist_prep Matrice des distances au format RankedRSMatrix (sortie de la fonction prep_meaps_dist).
@@ -85,7 +128,7 @@ meaps_optim <- function(prep,
   jr_odds <- p_odds <- xr_odds <- 1L
   
   # contraintes sur les paramètres.
-  if (attraction == "marche") {
+  if (attraction %in% c("marche", "marche_liss")) {
     if (param[1] <= 0) param[[1]] <- 0
     if (param[2] <= 0) param[[2]] <- 0
   }
