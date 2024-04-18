@@ -10,7 +10,7 @@ prep_meaps_odds_on_dist(odds, prep)
 \arguments{
 \item{odds}{un triplet des odds.}
 
-\item{dist}{un triplet des distances.}
+\item{prep}{une liste de préparation issue de prep_meaps_dist.}
 }
 \value{
 renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.

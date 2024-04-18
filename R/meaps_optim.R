@@ -1,5 +1,11 @@
 #' La fonction prep_meaps_dist prépare les données de distances pour traitement par meaps_optim
 #' @param dist triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
+#' @param emplois vecteur des emplois par opportunité.
+#' @param actifs vecteur des actifs par résident.
+#' @fuite vecteur des fuites par résident.
+#' @param shuf vecteur des permutations des résidents.
+#' @param groups_from vecteur des groupes des résidents.
+#' @param groups_to vecteur des groupes des opportunités.
 #' 
 #' @return renvoie une RankedRSMatrix des distances.
 #' @import Matrix
@@ -52,7 +58,7 @@ prep_meaps_odds <- function(modds, cle_from, cle_to) {
 #' La fonction prep_meaps_odds_on_dist prépare la matrice des odds pour traitement par meaps_optim.
 #' c'est une matrice ranké, mais selon les distances
 #' @param odds un triplet des odds.
-#' @param dist un triplet des distances.
+#' @param prep une liste de préparation issue de prep_meaps_dist.
 #' 
 #' @return renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.
 #' @import Matrix, data.table

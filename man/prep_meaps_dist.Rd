@@ -8,6 +8,16 @@ prep_meaps_dist(dist, emplois, actifs, fuite, shuf, groups_from, groups_to)
 }
 \arguments{
 \item{dist}{triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j.}
+
+\item{emplois}{vecteur des emplois par opportunité.}
+
+\item{actifs}{vecteur des actifs par résident.}
+
+\item{shuf}{vecteur des permutations des résidents.}
+
+\item{groups_from}{vecteur des groupes des résidents.}
+
+\item{groups_to}{vecteur des groupes des opportunités.}
 }
 \value{
 renvoie une RankedRSMatrix des distances.
