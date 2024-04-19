@@ -36,13 +36,13 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     warning(glue("Les actifs restant dans la zone et les emplois ne correspondent pas à {round(delta*100,1)}% près."))
   
   if (!is_triplet(dist)) stop("Format pour dist non reconnu.")
-  if(!quiet) cli::cli_alert_info("Préparation des distances, {nrow(dist)} lignes à traiter.")
+  if(!quiet) cli::cli_alert_info("Préparation des distances, {ofce::f2si2(nrow(dist))} lignes à traiter.")
   dist <- triplet2listij(dist)
   cle_from <- dist$cle_from
-  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {length(cle_from)} origines")
+  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {ofce::f2si2(length(cle_from))} origines")
   froms <- as.character(cle_from)
   cle_to <- dist$cle_to
-  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {length(cle_to)} destinations")
+  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {ofce::f2si2(length(cle_to))} destinations")
   dist <- dist$dgr
   actifs <- actifs[froms]
   if(!quiet) cli::cli_alert_info("Réordonnancement des shufs, {nrow(shuf)} permutations à traiter.")
@@ -69,7 +69,6 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
       if (length(xodds) == 0) { attraction <- "constant" }
     }
   }
-  if(!quiet) cli::cli_alert_info("Calcul")
   dist@x <- .meaps_continu(j_dist = dist@j,
                            p_dist = dist@p,
                            x_dist = dist@x,
@@ -92,7 +91,7 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     merge(data.table(fromidINS = cle_from, i = seq_along(cle_from)), by = "i", all.x=TRUE, all.y=FALSE) |> 
     merge(data.table(toidINS = cle_to, j = seq_along(cle_to)), by = "j", all.x=TRUE, all.y=FALSE)
   
-  return(res[, c(fromidINS, toidINS, flux):=NULL])
+  return(res[, c("i", "j"):=NULL])
 }
 
 
