@@ -88,7 +88,7 @@ prep_meaps_odds_on_dist <- function(odds, prep) {
 #' @export
 prep_0lodds_on_dist <- function(prep) {
   roo <- numeric(length(prep$RankedMat$xr))
-  res <- new(RankedRSMatrix, roo, prep$RankedMat$jr, p, prep$RankedMat$dim)
+  res <- new(RankedRSMatrix, roo, prep$RankedMat$jr, prep$RankedMat$p, prep$RankedMat$dim)
   return(res)
 }
 

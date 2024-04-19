@@ -176,6 +176,7 @@ using namespace Rcpp;
    
    // Lancement du bootstrap.
    Progress p(Nboot * Ns, progress);
+   
 #ifdef _OPENMP
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(                     \
    omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>()))      \
@@ -191,9 +192,9 @@ using namespace Rcpp;
        std::vector<double> emp(emploisinitial);  // deep copy.
        
        for (auto from : theshuf) {
-         // Increment progress_bar.
-         p.increment();
-         
+         // check interrupt & progress
+         if (! Progress::check_abort() )
+           p.increment();
          // Construction de l'accessibilité dite pénalisée.
          std::size_t debut = p_dist(from), fin = p_dist(from + 1L);
          std::size_t k_valid = fin - debut;

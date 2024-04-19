@@ -37,6 +37,25 @@ using namespace Rcpp;
    return plafond + (1 - plafond) *  (ceil(rayon) - rayon);
  }
  
+ 
+ //' Fonction de pénalité "double_marche_liss" : vaut 1 au delà de r1+r2+1, et prend deux valeurs (o1, o2),
+ //' lorsque x<=r1 et r1<x<=r2+r1,
+ //' en lissant le passage pour les distances fractionaires
+ //' @param x distance.
+ //' @param rayon distance de la marche.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'atraction
+ inline double marche_liss(double x, const double r1, const double r2,
+                           const double o1, const double o2) {
+   if (x >= floor(r1+r2+1)) return 1;
+   if (x <= floor(r1)) return o1;
+   if (x <= ceil(r1)) return o1 + (o2 - o1) *  (ceil(r1) - r1);
+   if (x <= floor(r1+r2)) return o2;
+   return o2 + (1 - o2) *  (ceil(r1+r2) - r1 - r2);
+ }
+ 
+ 
  // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
  //' @param x distance.
  //' @param rayon distance de la bascule.
@@ -179,8 +198,9 @@ using namespace Rcpp;
        std::vector<double> emp(emploisinitial);  // deep copy.
        
        for (auto from : theshuf) {
-         // Increment progress_bar.
-         p.increment();
+         // check interrupt & progress
+         if (! Progress::check_abort() )
+           p.increment();
          
          // Construction de l'accessibilité dite pénalisée.
          std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
@@ -197,6 +217,11 @@ using namespace Rcpp;
              facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], parametres[0], parametres[1]);
            }}
          
+         if (attraction == "double_marche_liss") {
+           for (std::size_t k = 0; k < k_valid; ++k) {
+             facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2], parametres[3]);
+           }}
+         
          if (attraction == "logistique") {
            for (std::size_t k = 0; k < k_valid; ++k) {
              facteur_attraction[k] = logistique(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2]);
@@ -205,10 +230,10 @@ using namespace Rcpp;
          if (attraction == "odds") {
            std::size_t odds_index = 0;
            for (std::size_t k = 0; k < k_valid; ++k) {
-               facteur_attraction[k] = exp( xr_odds[debut + k] );
-               odds_index++;
-             } 
-           }
+             facteur_attraction[k] = exp( xr_odds[debut + k] );
+             odds_index++;
+           } 
+         }
          
          for (std::size_t k = 0; k < k_valid; ++k) {
            emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
