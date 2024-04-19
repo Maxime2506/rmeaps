@@ -18,7 +18,7 @@
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
 #' @return renvoie un triplet au format data.frame des estimations du nombre de trajets de i vers j.
-#' @import Matrix
+#' @import Matrix, data.table
 #' @export
 meaps_continu <- function(dist, emplois, actifs, f, shuf, 
                           attraction = "constant",
@@ -86,13 +86,13 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                            progress = progress,
                            normalisation = normalisation,
                            fuite_min = fuite_min)
-  
+  if(!quiet) cli::cli_alert_info("Préparation des résultats")
   dist <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
-  data.frame(i = dist@i + 1L, j = dist@j + 1L, flux = dist@x) |> 
-    dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "i") |> 
-    dplyr::left_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "j") |> 
-    dplyr::select(fromidINS, toidINS, flux)
+  res <- data.table(i = dist@i + 1L, j = dist@j + 1L, flux = dist@x) |> 
+    merge(data.table(fromidINS = cle_from, i = seq_along(cle_from)), by = "i", all.x=TRUE, all.y=FALSE) |> 
+    merge(data.table(toidINS = cle_to, j = seq_along(cle_to)), by = "j", all.x=TRUE, all.y=FALSE)
   
+  return(res[, c(fromidINS, toidINS, flux):=NULL])
 }
 
 
