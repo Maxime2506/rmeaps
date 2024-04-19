@@ -1,5 +1,11 @@
 #' La fonction prep_meaps_dist prépare les données de distances pour traitement par meaps_optim
 #' @param dist triplet des distances où des résidents en ligne i rejoignent des opportunités en colonnes j. 
+#' @param emplois vecteur des emplois par opportunité.
+#' @param actifs vecteur des actifs par résident.
+#' @param fuite vecteur des fuites par résident.
+#' @param shuf vecteur des permutations des résidents.
+#' @param groups_from vecteur des groupes des résidents.
+#' @param groups_to vecteur des groupes des opportunités.
 #' 
 #' @return renvoie une RankedRSMatrix des distances.
 #' @import Matrix
@@ -52,7 +58,7 @@ prep_meaps_odds <- function(modds, cle_from, cle_to) {
 #' La fonction prep_meaps_odds_on_dist prépare la matrice des odds pour traitement par meaps_optim.
 #' c'est une matrice ranké, mais selon les distances
 #' @param odds un triplet des odds.
-#' @param dist un triplet des distances.
+#' @param prep une liste de préparation issue de prep_meaps_dist.
 #' 
 #' @return renvoie une RankedRSMatrix des odds, rangés selon le rang des distances.
 #' @import Matrix, data.table
@@ -94,13 +100,7 @@ prep_0lodds_on_dist <- function(prep) {
 
 
 #' La fonction meaps_optim sert pour la recherche des meilleurs paramètres ou odds lorsqu'un certain regroupement des flux est connu.
-#' @param dist_prep Matrice des distances au format RankedRSMatrix (sortie de la fonction prep_meaps_dist).
-#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
-#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
-#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
-#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
-#' @param group_from Le vecteur de regroupement des communes de départs (lignes).
-#' @param group_to Le vecteur de regroupement des communes de destinations (colonnes).
+#' @param prep liste, issue de prep_meaps_dist, qui contient plusieurs éléments précalculés.
 #' @param attraction choix de la fonction d'attraction. Default = "constant". "marche", "logistique" ou "odds".
 #' @param param paramètres pour mode = "marche" (le 1er est la distance de la marche, le 2nd est le plancher après la marche).
 #' pour mode = "logistique" (le 1er est la distance du point de symétrie, le 2nd la raideur de la bascule, le 3ème le plancher).

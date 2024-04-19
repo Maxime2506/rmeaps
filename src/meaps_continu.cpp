@@ -37,6 +37,16 @@ using namespace Rcpp;
    return plafond + (1 - plafond) *  (ceil(rayon) - rayon);
  }
  
+ //' Fonction de pénalité "decay" : odd = 1/d^delta + plancher,
+ //' @param x distance.
+ //' @param delta, exposant de la distance.
+ //' @param plancher valeur pour les distances infinies.
+ //' 
+ //' @return un facteur d'atraction
+ inline double decay(double x, const double delta, const double plancher) {
+   return exp(-delta * log(x)) + plancher;
+ }
+ 
  // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
  //' @param x distance.
  //' @param rayon distance de la bascule.
@@ -210,6 +220,11 @@ using namespace Rcpp;
          if (attraction == "marche_liss") {
            for (std::size_t k = 0; k < k_valid; ++k) {
              facteur_attraction[k]  = marche_liss(xr_dist[debut + k], parametres[0], parametres[1]);
+           }}
+         
+         if (attraction == "decay") {
+           for (std::size_t k = 0; k < k_valid; ++k) {
+             facteur_attraction[k]  = decay( xr_dist[debut + k], parametres[0], parametres[1]);
            }}
          
          if (attraction == "logistique") {
