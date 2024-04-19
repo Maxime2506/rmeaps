@@ -36,12 +36,16 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
     warning(glue("Les actifs restant dans la zone et les emplois ne correspondent pas à {round(delta*100,1)}% près."))
   
   if (!is_triplet(dist)) stop("Format pour dist non reconnu.")
+  if(!quiet) cli::cli_alert_info("Préparation des distances, {nrow(dist)} lignes à traiter.")
   dist <- triplet2listij(dist)
   cle_from <- dist$cle_from
+  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {length(cle_from)} origines")
   froms <- as.character(cle_from)
   cle_to <- dist$cle_to
+  if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {length(cle_to)} destinations")
   dist <- dist$dgr
   actifs <- actifs[froms]
+  if(!quiet) cli::cli_alert_info("Réordonnancement des shufs, {nrow(shuf)} permutations à traiter.")
   shuf <- reordonne_shuf(shuf, actifs)
   emplois <- emplois[as.character(cle_to)]
   jodds <- podds <- xodds <- 1L
@@ -57,6 +61,7 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
       warning("Attention: modds est défini mais ne correspond pas à attraction.")
     } 
     if(attraction == "odds") {
+      if(!quiet) cli::cli_alert_info("Tripletisation des odds")
       lodds <- tripletlodds2dgr(modds, cle_from, cle_to)
       jodds <- lodds@j
       podds <- lodds@p
@@ -64,7 +69,7 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
       if (length(xodds) == 0) { attraction <- "constant" }
     }
   }
-  
+  if(!quiet) cli::cli_alert_info("Calcul")
   dist@x <- .meaps_continu(j_dist = dist@j,
                            p_dist = dist@p,
                            x_dist = dist@x,
