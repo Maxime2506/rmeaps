@@ -189,7 +189,6 @@ using namespace Rcpp;
    // Initialisation du résultat.
    // Un vecteur représentant la matrice des flux groupés.
    std::vector<double> liaisons(Nref * Kref, 0.0);
-   
    // Lancement du bootstrap.
    Progress p(Nboot * Ns, progress);
 #ifdef _OPENMP
@@ -244,11 +243,11 @@ using namespace Rcpp;
          if (attraction == "odds") {
            std::size_t odds_index = 0;
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k] = exp( xr_odds[debut + k] );
-             odds_index++;
-           } 
-         }
-         
+               facteur_attraction[k] = exp( xr_odds[debut + k] );
+               odds_index++;
+             } 
+           }
+   
          for (std::size_t k = 0; k < k_valid; ++k) {
            emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
          }

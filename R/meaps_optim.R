@@ -13,6 +13,13 @@
 prep_meaps_dist <- function(dist, emplois, actifs, fuite, shuf, groups_from, groups_to) {
   
   if (!is_triplet(dist)) stop("Ce n'est pas un triplet valide.")
+  # quelques verifs
+  if(length(names(actifs))==0) stop("Les actifs doivent être nommés par les idINS")
+  if(length(names(emplois))==0) stop("Les emplois doivent être nommés par les idINS")
+  if(length(names(fuite))==0) stop("La fuite doit être nommée par les idINS")
+  if(length(names(groups_from))==0) stop("Les groupes d'origines doivent être nommés par les idINS")
+  if(length(names(groups_to))==0) stop("Les groupes de destination doivent être nommés par les idINS")
+  
   dist <- triplet2listij(dist)
   froms <- as.character(dist$cle_from)
   tos <- as.character(dist$cle_to)
@@ -117,7 +124,7 @@ meaps_optim <- function(prep,
                         param = 0.0,
                         odds_prep = NULL,
                         nthreads = 0,
-                        progress = TRUE,
+                        progress = FALSE,
                         normalisation = FALSE,
                         fuite_min = 1e-3) {
   actifs <- prep$actifs
@@ -164,7 +171,7 @@ meaps_optim <- function(prep,
                       p_odds = p_odds,
                       xr_odds = xr_odds,
                       nthreads = nthreads,
-                      progress = FALSE,
+                      progress = progress,
                       normalisation = normalisation,
                       fuite_min = fuite_min)
   
