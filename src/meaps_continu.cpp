@@ -138,7 +138,9 @@ using namespace Rcpp;
    int Ndata = x_dist.size();
    std::vector<double> xr_dist(Ndata);
    std::vector<int> jr_dist(Ndata);
-   
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(omp_get_max_threads()) shared(xr_dist, jr_dist)
+#endif
    for (std::size_t from = 0; from < N; ++from) {
      std::multimap<double, int> arrangement;
      for (std::size_t k = p_dist(from); k < p_dist(from + 1L); ++k) {
@@ -191,8 +193,9 @@ using namespace Rcpp;
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(                     \
    omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>()))      \
      initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-#pragma omp parallel for num_threads(ntr) \
-     shared(Nboot, N, ishuf, emploisinitial, fcpp, actifscpp, xr_dist, jr_dist, p_dist) reduction(vsum : liaisons)
+#pragma omp parallel for num_threads(ntr)                                               \
+     shared(Nboot, N, ishuf, emploisinitial, fcpp, actifscpp, xr_dist, jr_dist, p_dist) \
+     reduction(vsum : liaisons)
 #endif
      
      for (int iboot = 0; iboot < Nboot; ++iboot) {
@@ -261,10 +264,15 @@ using namespace Rcpp;
      
      // Il faut ressortir le résultat au format classic de Sparse Matrix en
      // réordonnant les valeurs par l'ordre des colonnes.
-     NumericVector resultat(liaisons.size());
+     // je pense qu'on peut réduire la consommation de mémoire en
+     // réordonant liaisons ligne par ligne et en faisant la convertion à la fin
+     // on peut aussi paralléliser cette partie
+     std::vector<double> resultat(liaisons.size());
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(omp_get_max_threads()) shared(resultat, liaisons, j_dist, jr_dist)
+#endif
    for (std::size_t from = 0; from < N; ++from) {
-     int debut = p_dist[from], 
-                       fin = p_dist[from + 1L];
+     int debut = p_dist[from], fin = p_dist[from + 1L];
      for (std::size_t k = debut; k < fin; ++k) {
        auto pos = std::lower_bound(j_dist.begin() + debut, j_dist.begin() + fin, jr_dist[k]);
        auto ind = std::distance(j_dist.begin(), pos);
@@ -272,7 +280,7 @@ using namespace Rcpp;
      }
    }
    
-   return resultat;
+   return(wrap(resultat));
  }
  
  

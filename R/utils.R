@@ -18,7 +18,7 @@ triplet2listij <- function(data) {
   if (!is_triplet(data)) stop("Ce n'est pas un triplet valide.")
   setDT(data)
   colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS")] <- "x"
-  
+  setkey(data, fromidINS, toidINS)
   setorder(data, fromidINS, toidINS)
   cle_from <- unique(data$fromidINS)
   cle_to <- unique(data$toidINS)
