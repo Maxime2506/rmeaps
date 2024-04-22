@@ -1,0 +1,24 @@
+2{
+  "configurations": [
+    {
+      "name": "Mac",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
+        "/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
+        "/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppProgress/include",
+        "/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Matrix/include",
+        "/Library/Frameworks/R.framework/Resources/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
+        "/usr/local/include"
+      ],
+      "macFrameworkPath": [
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+      ],
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c99",
+      "cppStandard": "c++11"
+    }
+  ],
+  "version": 4
+}
