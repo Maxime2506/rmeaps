@@ -46,7 +46,7 @@ cas <- cas |>
 #is_triplet(dist2)
 
 
-res_cont <- meaps_continu(dist = dist_cas, emplois = ze$emplois, actifs = loc$emplois, f = rep(.125, 9), shuf =shuf_cas, 
+res_cont <- meaps_continu(dist = dist_cas, emplois = ze$emplois, actifs = loc$actifs, f = rep(.125, 9), shuf =shuf_cas, 
                         attraction = "constant")
 
 
