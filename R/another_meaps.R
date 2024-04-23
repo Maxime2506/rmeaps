@@ -25,7 +25,7 @@ another_meaps <- function(dist, emplois, actifs, f,
                           param = numeric(),
                           modds = NULL,
                           nthreads = 0,
-                          progress = TRUE,
+                          verbose = TRUE,
                           normalisation = FALSE,
                           fuite_min = 1e-3,
                           quiet = FALSE) {
@@ -82,7 +82,7 @@ another_meaps <- function(dist, emplois, actifs, f,
                  p_odds = p_odds,
                  xr_odds = xr_odds,
                  nthreads = nthreads,
-                 progress = progress,
+                 verbose = verbose,
                  normalisation = normalisation,
                  fuite_min = fuite_min) |> 
     dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "i") |> 

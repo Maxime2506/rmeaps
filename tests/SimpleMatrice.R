@@ -35,7 +35,7 @@ emplois_points <- tribble(
 dist <- st_distance(actifs_points, emplois_points) 
 
 # Introduction de NA sur des distances longues.
-dist[dist > 22] <- NA
+#dist[dist > 22] <- NA
 dist[dist == 0] <- .5
 
 temp <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
@@ -50,52 +50,26 @@ fuites <- rep(f, 9)
 
 shuf <- matrix(NA, ncol = 9, nrow = 64)
 for (i in 1:64) shuf[i, ] <- sample(1:9)
-
+colnames(shuf) <- actifs_points$fromidINS - 1L
+names(marges_actifs) <- actifs_points$fromidINS -1L
 #----
 
-res_another <- another_meaps(dist_triplet, marges_emplois, marges_actifs, fuites, attraction = "constant")
+res_another <- another_meaps(dist_triplet, marges_emplois, marges_actifs, fuites, attraction = "constant", nthreads = 1L)
 res_continu <- meaps_continu(dist_triplet, marges_emplois, marges_actifs, fuites, shuf, attraction = "constant")
 
 
+res_another |> summarise(flux = sum(flux))
+sum(marges_emplois)
+sum(marges_actifs)
+sum(marges_actifs * (1-fuites))
+
+res_another |> group_by(fromidINS) |> summarise(flux = sum(flux)) |> mutate(actifs_occ = marges_actifs * (1-fuites) ) 
+res_another |> group_by(toidINS) |> summarise(flux = sum(flux)) |> mutate(emplois = marges_emplois)
 
 
-x <- c(1.2, 2.9, 2.0) ; xr <- c(1.2, 2.0, 2.9) 
-j <- c(1L, 0L, 2L) ; jr <- c(1L, 2L, 0L)
-p <- c(0L, 1L, 3L)
-dim <- c(2L,3L)
+m_another <- sparseMatrix(i = res_another$fromidINS + 1L, j = res_another$toidINS + 1L, x = res_another$flux)
+m_another |> as.matrix() |> rowSums()
+m_another |> as.matrix() |> colSums()
 
-mat <- new(RankedRSMatrix, xr, jr, p, dim) # constructeur sur des données rangées.
-dg <- mat$unrank()
-
-
-tripl <- data.frame(fromidINS = c("a", "b", "b"), toidINS = c("1", "2", "3"), dist = xr)
-
-odds <- matrix(0, nrow = 2, ncol = 3)
-odds[1, 2] <- 1
-odds[2,1] <- 3
-odds[2, 3] <- 5
-triodds <- data.frame(fromidINS = c("a", "b", "b"), toidINS = c("1", "2", "3"), dist = c(0,2,2))
-
-
-modds$rankby(mat)
-
-meaps_continu(tripl, emplois = c(4,9,5), actifs = c(10, 10), f = c(.1, .1), shuf = matrix(1:2, nrow = 1), attraction = "odds", 
-            modds = triodds)
-
-gfrom <- 1:2
-gto <- c(1L,1L,2L)
-
-meaps_optim(mat, emplois = c(4,9,5), actifs = c(10, 10), fuite = c(.1, .1), shuf = matrix(1:2, nrow = 1), groups_from = gfrom, groups_to = gto, attraction = "odds", 
-            odds_prep = list(attraction = "odds", lodds = mat))
-
-
-
-matrix(0:5, nrow = 2) ->z
-z
-as(as(as(z, "dMatrix"), "generalMatrix"), "RsparseMatrix") -> w
-
-new(RankedRSMatrix, w) -> ww 
-ww$at(0,0)
-ww$unrank()
-ww$rankby(w)
+another_meaps(dist_triplet, marges_emplois, marges_actifs, fuites, attraction = "logistique", param = c(1, 1, .1)) |> summarise(sum(flux))
 

@@ -10,55 +10,9 @@
 #include <progress_bar.hpp>
 #include "repartir_continu.h"
 
+#include "fcts_penal.h"
 using namespace Rcpp;
 
-// Remarque pour les fonctions pénalités: multiplier la fonction par un facteur arbitraire ne change pas le résultat de meaps.
-//' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
- //' @param x distance.
- //' @param rayon distance de la marche.
- //' @param plancher point bas après la marche.
- //' 
- //' @return un facteur d'atraction
- inline double marche(double x, const double rayon, const double plafond) {
-   if (x > rayon) return 1;
-   return plafond;
- }
- 
- //' Fonction de pénalité "marche_liss" : vaut 1 sur un rayon fixé, et décroit au-delà,
- //' en lissant le passge pour les distances fractionaires
- //' @param x distance.
- //' @param rayon distance de la marche.
- //' @param plancher point bas après la marche.
- //' 
- //' @return un facteur d'atraction
- inline double marche_liss(double x, const double rayon, const double plafond) {
-   if (x > ceil(rayon)) return 1;
-   if (x <= floor(rayon)) return plafond;
-   return plafond + (1 - plafond) *  (ceil(rayon) - rayon);
- }
- 
- //' Fonction de pénalité "decay" : odd = 1/d^delta + plancher,
- //' @param x distance.
- //' @param delta, exposant de la distance.
- //' @param plancher valeur pour les distances infinies.
- //' 
- //' @return un facteur d'atraction
- inline double decay(double x, const double delta, const double plancher) {
-   return exp(-delta * log(x)) + plancher;
- }
- 
- // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
- //' @param x distance.
- //' @param rayon distance de la bascule.
- //' @param amplitude raideur de la bascule.
- //' @param plancher point bas après la marche.
- //' 
- //' @return un facteur d'atraction
- inline double logistique(double x, const double rayon, const double amplitude, const double plancher) {
-   double ex = exp( (rayon-x)/amplitude );
-   return plancher + ex / (ex + 1);
- }
- 
  //' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
  //' @param j_dist Le vecteur des indices des colonnes non vides.
  //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
@@ -213,7 +167,6 @@ using namespace Rcpp;
          std::size_t k_valid = fin - debut;
          
          std::vector<double> facteur_attraction(k_valid, 1.0), emplois_libres(k_valid), repartition(k_valid);
-         std::size_t odds_index = 0;
          
          if (attraction == "marche") {
            for (std::size_t k = 0; k < k_valid; ++k) {

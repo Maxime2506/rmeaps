@@ -1,3 +1,8 @@
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+// [[Rcpp::plugins(openmp)]]
+
 #include <Rcpp.h>
 #include "RankedRSMatrix.h"
 
@@ -24,8 +29,9 @@ RankedRSMatrix::RankedRSMatrix(Rcpp::S4 m) {
   jr = Rcpp::clone(jr_);
   xr = Rcpp::clone( xr_ );
   
-  // Cette boucle qui est longue pourrait être parallélisée
-
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
     for (auto from = 0; from < dim[0]; ++from) {
       std::multimap<double, int> arrangement;
       int debut = p[from], fin = p[from + 1L];
@@ -58,14 +64,15 @@ double RankedRSMatrix::at(int row, int col) {
   return NA_REAL;
 };
 
-// method pour changer l'ordre jr selon les rangs d'une autre sparse matrix
+// method pour changer l'ordre jr selon les rangs xr d'une autre sparse matrix
 void RankedRSMatrix::rankby(RankedRSMatrix d) {
   
   std::vector<int> new_jr;
   std::vector<double> new_xr;
+  new_jr.reserve(jr.size());
+  new_xr.reserve(xr.size());
   
   for (auto from = 0; from < dim[0]; ++from) {
-    
     std::map<int, int> rangementby;
     int debut = d.p[from], fin = d.p[from + 1L];
     for (auto k = p[from]; k < p[from + 1L]; ++k) {
@@ -92,7 +99,10 @@ void RankedRSMatrix::rankby(RankedRSMatrix d) {
 Rcpp::S4 RankedRSMatrix::unrank() {
   Rcpp::NumericVector x(xr.size());
   std::vector<int> j = Rcpp::as< std::vector<int> >(Rcpp::clone(jr));
-  
+
+  #ifdef _OPENMP
+  #pragma omp parallel for
+  #endif
   for (auto from = 0; from < dim[0]; ++from) {
     int debut = p[from], fin = p[from + 1L];
     std::sort(j.begin() + debut, j.begin() + fin);

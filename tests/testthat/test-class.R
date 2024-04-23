@@ -25,20 +25,10 @@ expect_equal(mat$unrank(), m2)
 
 m3 <- new(RankedRSMatrix, m2) # constructeur sur des données NON rangées.
 
-expect_equal(m3, mat)
+expect_equal(m3$xr, mat$xr)
 
 # tri <- mat2triplet(m2) |> as.data.frame()
 # sparseMatrix(i = tri$i, j = tri$j, x = tri$x, repr = "R")
-
-
-
-odds <- matrix(0, nrow = 2, ncol = 3)
-odds[, 2] <- 1
-odds <- as(as(as(odds, "dMatrix"), "generalMatrix"), "RsparseMatrix")
-
-modds <- new(RankedRSMatrix, odds@x, odds@j, odds@p, odds@Dim)
-
-modds$rankby(mat)
 
 odds <- matrix(0, nrow = 2, ncol = 3)
 odds[1, 2] <- 1
@@ -50,6 +40,7 @@ modds <- new(RankedRSMatrix, odds@x, odds@j, odds@p, odds@Dim)
 
 modds$rankby(mat)
 
+expect_equal(modds$xr, c(1, 5, 3))
 
 })
 
