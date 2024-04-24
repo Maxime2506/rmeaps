@@ -101,16 +101,19 @@ using namespace Rcpp;
    
    int nloop = 0;
 
-#pragma omp parallel num_threads(ntr)
+#pragma omp parallel num_threads(ntr) default(none) \
+  shared(_p_dist, emplois_libres, _emplois, _jr_dist, attraction, _xr_dist, parametres, _jr_odds, _p_odds, _xr_odds, actifs_libres, fcpp, tot_actifs_libres, old_tot, \
+         liaisons, res_xr, nloop, _LIMITE_PRECISION, _LIMITE_LOOP, N, K, verbose)
 {
-#pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+#pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
+    std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
    do {
 #pragma omp single
      {
      nloop++;
      if (verbose == TRUE) REprintf("*");
      }
-#pragma omp for
+#pragma omp for 
      for (std::size_t from = 0; from < N; ++from) {
        
        // Curseurs de la ligne from en cours.
@@ -169,7 +172,10 @@ using namespace Rcpp;
          liaisons[from][ _jr_dist[debut + k] ] += repartition[k];
        }
      } 
-     
+#pragma omp single
+{
+  if (verbose == TRUE) REprintf("+");
+}
      // Après la distribution simultanée, il faut récupérer les excédents et reconstruire des vecteurs
      // d'actifs encore libres et d'emplois encore libres.
      for (std::size_t i = 0; i < N; ++i) {
@@ -201,7 +207,7 @@ using namespace Rcpp;
      
      old_tot = tot_actifs_libres;
      tot_actifs_libres = 0;
-#pragma omp for reduction(+: tot_actifs_libres)
+#pragma omp for reduction(+: tot_actifs_libres) 
      for (std::size_t i = 0; i < N; ++i) {
        actifs_libres[i] /= (1 - fcpp[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
        tot_actifs_libres += actifs_libres[i];
@@ -219,7 +225,7 @@ using namespace Rcpp;
   } // fin clause pragma omp single
 
      // sortie au format xr_dist.
-#pragma omp for  
+#pragma omp for 
    for (std::size_t i = 0; i < N; ++i) {
      for (std::size_t k = _p_dist[i]; k < _p_dist[i + 1L]; ++k) {
       res_xr[k] = liaisons[i][ _jr_dist[k] ];

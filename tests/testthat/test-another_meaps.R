@@ -37,6 +37,7 @@ test_that("Test sur une matrice simple d'another meaps", {
   
   # Introduction de NA sur des distances longues.
   dist[dist == 0] <- .5
+  dist[dist > 20] <- NA_real_
   
   temp <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
   dist_triplet <- tibble(fromidINS = temp@i, toidINS = temp@j, dist = temp@x) |> 
