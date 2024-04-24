@@ -85,10 +85,9 @@ another_meaps <- function(dist, emplois, actifs, f,
                  verbose = verbose,
                  normalisation = normalisation,
                  fuite_min = fuite_min) |> 
-    dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from)), by = "i") |> 
-    dplyr::left_join(data.frame(toidINS = cle_to, j = seq_along(cle_to)), by = "j") |> 
+    dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from) - 1L), by = "i") |>
+    dplyr::left_join(data.frame(toidINS = cle_to, j = seq_along(cle_to) - 1L), by = "j") |>
     dplyr::select(fromidINS, toidINS, flux)
-  
 }
 
 
