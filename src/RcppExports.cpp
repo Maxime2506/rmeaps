@@ -10,6 +10,22 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// another_distrib
+std::vector<double> another_distrib(const double& entrants, const double& fuite, const std::vector<double>& attraction, const std::vector<double>& xr_dist, const std::size_t& debut, const std::vector<double>& placeslibres);
+RcppExport SEXP _rmeaps_another_distrib(SEXP entrantsSEXP, SEXP fuiteSEXP, SEXP attractionSEXP, SEXP xr_distSEXP, SEXP debutSEXP, SEXP placeslibresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type entrants(entrantsSEXP);
+    Rcpp::traits::input_parameter< const double& >::type fuite(fuiteSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type xr_dist(xr_distSEXP);
+    Rcpp::traits::input_parameter< const std::size_t& >::type debut(debutSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type placeslibres(placeslibresSEXP);
+    rcpp_result_gen = Rcpp::wrap(another_distrib(entrants, fuite, attraction, xr_dist, debut, placeslibres));
+    return rcpp_result_gen;
+END_RCPP
+}
 // another_meaps_cpp
 Rcpp::DataFrame another_meaps_cpp(IntegerVector jr_dist, IntegerVector p_dist, NumericVector xr_dist, NumericVector emplois, NumericVector actifs, NumericVector f, NumericVector param, IntegerVector jr_odds, IntegerVector p_odds, NumericVector xr_odds, std::string attraction, int nthreads, bool verbose, bool normalisation, double fuite_min);
 RcppExport SEXP _rmeaps_another_meaps_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fSEXP, SEXP paramSEXP, SEXP jr_oddsSEXP, SEXP p_oddsSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP) {
@@ -242,6 +258,7 @@ END_RCPP
 RcppExport SEXP _rcpp_module_boot_RankedRowSparseMatrix();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rmeaps_another_distrib", (DL_FUNC) &_rmeaps_another_distrib, 6},
     {"_rmeaps_another_meaps_cpp", (DL_FUNC) &_rmeaps_another_meaps_cpp, 15},
     {"_rmeaps_chances_absorption", (DL_FUNC) &_rmeaps_chances_absorption, 4},
     {"_rmeaps_communaliser", (DL_FUNC) &_rmeaps_communaliser, 3},

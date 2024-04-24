@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "repartir_continu.h"
+#include "another_distrib.h"
 #include "fcts_penal.h"
 
 using namespace Rcpp;
@@ -104,9 +104,11 @@ using namespace Rcpp;
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
    do {
+#pragma omp single
+     {
      nloop++;
      if (verbose == TRUE) REprintf("*");
-     
+     }
 #pragma omp for
      for (std::size_t from = 0; from < N; ++from) {
        
@@ -115,49 +117,51 @@ using namespace Rcpp;
        std::size_t k_valid = fin - debut;
        
        // Calcul de la fonction d'attraction retenue et mise en rang des emplois cibles.
-       std::vector<double> facteur_attraction(k_valid, 1.0), cibles(k_valid), repartition(k_valid);
+       std::vector<double> cibles(k_valid), repartition(k_valid);
+       
+       for (std::size_t k = 0; k < k_valid; ++k) {
+         cibles[k] = emplois_libres[ _jr_dist[ debut + k] ];
+       }
+       std::vector<double> attirances(cibles);
        
        if (attraction == "marche") {
          for (std::size_t k = 0; k < k_valid; ++k) {
-           facteur_attraction[k]  = marche(_xr_dist[debut + k], parametres[0], parametres[1]);
+           attirances[k] *= marche(_xr_dist[debut + k], parametres[0], parametres[1]);
          }}
        
        if (attraction == "marche_liss") {
          for (std::size_t k = 0; k < k_valid; ++k) {
-           facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], parametres[0], parametres[1]);
+           attirances[k] *= marche_liss(_xr_dist[debut + k], parametres[0], parametres[1]);
          }}
        
        if (attraction == "double_marche_liss") {
          for (std::size_t k = 0; k < k_valid; ++k) {
-           facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2], parametres[3]);
+           attirances[k] *= marche_liss(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2], parametres[3]);
          }}
        
        if (attraction == "decay") {
          for (std::size_t k = 0; k < k_valid; ++k) {
-           facteur_attraction[k]  = decay(_xr_dist[debut + k], parametres[0], parametres[1]);
+           attirances[k] *= decay(_xr_dist[debut + k], parametres[0], parametres[1]);
          }}
        
        if (attraction == "logistique") {
          for (std::size_t k = 0; k < k_valid; ++k) {
-           facteur_attraction[k] = logistique(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2]);
+           attirances[k] *= logistique(_xr_dist[debut + k], parametres[0], parametres[1], parametres[2]);
          }}
        
        if (attraction == "odds") {
          std::size_t odds_index = 0;
          for (std::size_t k = 0; k < k_valid; ++k) {
            if (_jr_odds[_p_odds[from] + odds_index] == _jr_dist[debut + k]) {
-             facteur_attraction[k] = exp( _xr_odds[_p_odds[from] + odds_index] );
+             attirances[k] *= exp( _xr_odds[_p_odds[from] + odds_index] );
              odds_index++;
            } 
          } 
        }
-       
-       for (std::size_t k = 0; k < k_valid; ++k) {
-         cibles[k] = emplois_libres[ _jr_dist[ debut + k] ];
-       }
+ 
        // Calcul de la distribution sur la ligne.
-       std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
-       repartition = one_distrib_continu(actifs_libres[from], fcpp[from], facteur_attraction, dist, cibles);
+       // On ne vérifie plus qu'il y a de la place libre car, tant qu'il y a des actifs libres, il doit y avoir de la place. 
+       repartition = another_distrib(actifs_libres[from], fcpp[from], attirances, _xr_dist, debut, cibles);
        
        // Réagencement au sein de la matrice des résultats (non sparse pour mener des calculs simples en colonnes).
        for (std::size_t k = 0; k < k_valid; ++k) {
@@ -173,7 +177,6 @@ using namespace Rcpp;
      double tx_depassement;
      
      // Traitement des dépassements en colonnes.
-
 #pragma omp for reduction(vsum: actifs_libres)
      for (std::size_t j = 0; j < K; ++j) {
        emplois_libres[j] = _emplois[j];
@@ -208,6 +211,7 @@ using namespace Rcpp;
   {
    if (nloop == _LIMITE_LOOP) REprintf("Warning : limite loop atteinte!");
    if (verbose == TRUE) {
+     REprintf("\nNombre de boucles effectuées = %i\n", nloop);
      REprintf("Nombre d'actifs non occupés = %f\n", tot_actifs_libres);
      }
   } // fin clause pragma omp single

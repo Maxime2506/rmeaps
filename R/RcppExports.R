@@ -4,6 +4,10 @@
 #' @importClassFrom Matrix dgRMatrix
 NULL
 
+another_distrib <- function(entrants, fuite, attraction, xr_dist, debut, placeslibres) {
+    .Call(`_rmeaps_another_distrib`, entrants, fuite, attraction, xr_dist, debut, placeslibres)
+}
+
 .another_meaps <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
     .Call(`_rmeaps_another_meaps_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min)
 }
