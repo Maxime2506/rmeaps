@@ -4,6 +4,7 @@
 // [[Rcpp::plugins(openmp)]]
 
 #include <Rcpp.h>
+#include <progress.hpp>
 #include <algorithm>
 #include <iterator>
 
@@ -180,6 +181,7 @@ using namespace Rcpp;
 #pragma omp for reduction(vsum: actifs_libres)
      for (std::size_t j = 0; j < K; ++j) {
        emplois_libres[j] = _emplois[j];
+       Progress::check_abort();
        for (std::size_t i = 0; i < N; ++i) {
          emplois_libres[j] -= liaisons[i][j];
        }

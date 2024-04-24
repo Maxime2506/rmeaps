@@ -10,7 +10,7 @@ meaps_optim(
   param = 0,
   odds_prep = NULL,
   nthreads = 0,
-  progress = TRUE,
+  progress = FALSE,
   normalisation = FALSE,
   fuite_min = 0.001
 )

@@ -160,7 +160,7 @@ using namespace Rcpp;
        
        for (auto from : theshuf) {
          // check interrupt & progress
-         if (! Progress::check_abort() )
+         if (! Progress::check_abort())
            p.increment();
          // Construction de l'accessibilité dite pénalisée.
          std::size_t debut = p_dist(from), fin = p_dist(from + 1L);

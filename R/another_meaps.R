@@ -13,7 +13,7 @@
 #' @param param Dans les cas de "marche" et "logistique", un vecteur avec dans l'ordre les valeurs des paramètres alpha, béta et, si nécessaire, gamma.
 #' @param modds un triplet au format data.frame des log(odds).
 #' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
-#' @param progress Ajoute une barre de progression. Default : true.
+#' @param quiet affiche des messages, Default : false.
 #' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
 #' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
 #' 
@@ -25,7 +25,6 @@ another_meaps <- function(dist, emplois, actifs, f,
                           param = numeric(),
                           modds = NULL,
                           nthreads = 0,
-                          verbose = TRUE,
                           normalisation = FALSE,
                           fuite_min = 1e-3,
                           quiet = FALSE) {
@@ -82,7 +81,7 @@ another_meaps <- function(dist, emplois, actifs, f,
                  p_odds = p_odds,
                  xr_odds = xr_odds,
                  nthreads = nthreads,
-                 verbose = verbose,
+                 verbose = !quiet,
                  normalisation = normalisation,
                  fuite_min = fuite_min) |> 
     dplyr::left_join(data.frame(fromidINS = cle_from, i = seq_along(cle_from) - 1L), by = "i") |>
