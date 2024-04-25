@@ -11,33 +11,33 @@
 
 using namespace Rcpp;
 
- //' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
- //' @param jr_dist Le vecteur des indices des colonnes non vides.
+//' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+//' @param jr_dist Le vecteur des indices des colonnes non vides.
  //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
- //' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
- //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes). 
+//' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
+//' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes). 
  //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
- //' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
- //' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i 
+//' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
+//' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i 
  //' en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs. 
- //' @param row_group Le vecteur de regroupement des départs (par ex. code commune en integer).
+//' @param row_group Le vecteur de regroupement des départs (par ex. code commune en integer).
  //' @param col_group Le vecteur de regroupement des arrivées (par ex. code commune en integer).
- //' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
+//' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
  //' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
  //' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2 si x > p1.
- //' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
- //' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
+//' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
+//' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
  //' "odds" où chaque flux (from, to) se voit attribuer un odds. Dans ce cas, on entre un Row Sparse Matrix des log(odds) selon ses éléments.
- //' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
- //' @param j_odds, p_odds et x_odds sont les vecteurs de la Row Sparse Matrix lorsque attraction = "odds".
+//' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
+//' @param j_odds, p_odds et x_odds sont les vecteurs de la Row Sparse Matrix lorsque attraction = "odds".
  //' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto. 
- //' @param progress Ajoute une barre de progression. Default : true. 
+//' @param progress Ajoute une barre de progression. Default : true. 
  //' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
  //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
  //'
- //' @return renvoie les flux au format triplet.
- // [[Rcpp::export(.another_meaps)]]
- Rcpp::DataFrame another_meaps_cpp(IntegerVector jr_dist, 
+//' @return renvoie les flux au format triplet.
+ // [[Rcpp::export(.another_meaps2)]]
+ Rcpp::DataFrame another_meaps2_cpp(IntegerVector jr_dist, 
                                    IntegerVector p_dist, 
                                    NumericVector xr_dist, 
                                    NumericVector emplois,
@@ -66,9 +66,9 @@ using namespace Rcpp;
 #endif
    
    // Choix d'une limite basse pour la fuite.
-   f = ifelse(f > fuite_min, f, fuite_min);
-   
-   // Calage de l'emploi sur les actifs.
+f = ifelse(f > fuite_min, f, fuite_min);
+
+// Calage de l'emploi sur les actifs.
    if (normalisation) {
      emplois = emplois * sum(actifs * (1 - f)) / sum(emplois);
    }
@@ -119,13 +119,12 @@ using namespace Rcpp;
        std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
        std::size_t k_valid = fin - debut;
        
-       // Calcul de la fonction d'attraction retenue et mise en rang des emplois cibles.
-       std::vector<double> cibles(k_valid), repartition(k_valid);
+       // Calcul de la fonction d'attraction retenue.
+       std::vector<double> attirances(k_valid), repartition(k_valid);
        
        for (std::size_t k = 0; k < k_valid; ++k) {
-         cibles[k] = emplois_libres[ _jr_dist[ debut + k] ];
+         attirances[k] = emplois_libres[ _jr_dist[ debut + k] ];
        }
-       std::vector<double> attirances(cibles);
        
        if (attraction == "marche") {
          for (std::size_t k = 0; k < k_valid; ++k) {
@@ -161,14 +160,50 @@ using namespace Rcpp;
            } 
          } 
        }
- 
-       // Calcul de la distribution sur la ligne.
-       // On ne vérifie plus qu'il y a de la place libre car, tant qu'il y a des actifs libres, il doit y avoir de la place. 
-       repartition = another_distrib(actifs_libres[from], fcpp[from], attirances, _xr_dist, debut, cibles);
        
-       // Réagencement au sein de la matrice des résultats (non sparse pour mener des calculs simples en colonnes).
-       for (std::size_t k = 0; k < k_valid; ++k) {
-         liaisons[from][ _jr_dist[debut + k] ] += repartition[k];
+       // Calcul de l'accessibilité pondérée par l'attraction.
+       std::vector<double> accessibility(k_valid);
+       double tot = 0;
+       for (std::size_t k = 0; k < k_valid;) {
+         auto pos = k + 1L;
+         while (_xr_dist[debut + k] == _xr_dist[debut + pos] && pos < k_valid) ++pos;
+         for (std::size_t ego = k; ego < pos; ++ego) {
+           tot += attirances[ego];
+         }
+         for (std::size_t ego = k; ego < pos; ++ego) {
+           accessibility[ego] = tot;
+         }
+         k = pos;
+       }
+
+       // Calcul de l'absorption.
+       double absorption = -log(fcpp[from]) / accessibility[k_valid - 1L];
+       
+       // Calcul des actifs absorbés par sites .
+       std::vector<double> jobtakers(k_valid + 1L);
+       jobtakers[0L] = actifs_libres[from];
+       for(std::size_t k = 0L; k < k_valid; ++k) {
+         jobtakers[k + 1L] = actifs_libres[from] * exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
+       }
+       for(std::size_t k = 0L; k < k_valid; ++k) {
+         jobtakers[k] -= jobtakers[k + 1L];
+       }
+       
+       // Répartition des jobtakers dans tous les cas.
+       for (std::size_t k = 0; k < k_valid;) {
+         double tot_attraction = 0, tot_jobtakers = 0;
+         auto pos = k + 1L;
+         while (_xr_dist[debut + k] == _xr_dist[debut + pos] && pos < k_valid) ++pos;
+         for (std::size_t ego = k; ego < pos; ++ego) {
+           tot_attraction += attirances[ego];
+           tot_jobtakers += jobtakers[ego];
+         }
+         if (tot_attraction > 0) {
+           for (std::size_t ego = k; ego < pos; ++ego) {
+             liaisons[from][ _jr_dist[debut + ego] ] = attirances[ego] / tot_attraction * tot_jobtakers;
+           }
+         }
+         k = pos;
        }
      } 
 #pragma omp single
@@ -183,7 +218,6 @@ using namespace Rcpp;
      }
      
      // Traitement des dépassements en colonnes.
-     double tx_depassement;
 #pragma omp for reduction(vsum: actifs_libres)
      for (std::size_t j = 0; j < K; ++j) {
        emplois_libres[j] = _emplois[j];
@@ -191,7 +225,7 @@ using namespace Rcpp;
          emplois_libres[j] -= liaisons[i][j];
        }
        if (emplois_libres[j] < 0) {
-         tx_depassement = _emplois[j] / (_emplois[j] - emplois_libres[j]);
+         double tx_depassement = _emplois[j] / (_emplois[j] - emplois_libres[j]);
          
          // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
          // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas 
@@ -204,10 +238,10 @@ using namespace Rcpp;
        }
      }
 #pragma omp single
-     {   
-     old_tot = tot_actifs_libres;
-     tot_actifs_libres = 0;
-     }
+{   
+  old_tot = tot_actifs_libres;
+  tot_actifs_libres = 0;
+}
 #pragma omp for reduction(+: tot_actifs_libres) 
      for (std::size_t i = 0; i < N; ++i) {
        actifs_libres[i] /= (1 - fcpp[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
@@ -215,38 +249,37 @@ using namespace Rcpp;
      }
      
    } while (tot_actifs_libres > 0 && std::abs(tot_actifs_libres - old_tot) > _LIMITE_PRECISION && nloop < _LIMITE_LOOP);
-  
+    
 #pragma omp single
-  {
-   if (nloop == _LIMITE_LOOP) REprintf("Warning : limite loop atteinte!");
-   if (verbose == TRUE) {
-     REprintf("\nNombre de boucles effectuées = %i\n", nloop);
-     REprintf("Nombre d'actifs non occupés = %f\n", tot_actifs_libres);
-     }
-  } // fin clause pragma omp single
+{
+  if (nloop == _LIMITE_LOOP) REprintf("Warning : limite loop atteinte!");
+  if (verbose == TRUE) {
+    REprintf("\nNombre de boucles effectuées = %i\n", nloop);
+    REprintf("Nombre d'actifs non occupés = %f\n", tot_actifs_libres);
+  }
+} // fin clause pragma omp single
 
-     // sortie au format xr_dist.
+// sortie au format xr_dist.
 #pragma omp for 
-   for (std::size_t i = 0; i < N; ++i) {
-     for (std::size_t k = _p_dist[i]; k < _p_dist[i + 1L]; ++k) {
-      res_xr[k] = liaisons[i][ _jr_dist[k] ];
-       }
-     liaisons[i].clear(); 
-     liaisons[i].shrink_to_fit();// pour libérer de la mémoire si ça peut aider.
-   }
+for (std::size_t i = 0; i < N; ++i) {
+  for (std::size_t k = _p_dist[i]; k < _p_dist[i + 1L]; ++k) {
+    res_xr[k] = liaisons[i][ _jr_dist[k] ];
+  }
+  liaisons[i].clear(); 
+  liaisons[i].shrink_to_fit();// pour libérer de la mémoire si ça peut aider.
+}
 } // fin clause omp parallel
+  
+  // création du vecteur i depuis p.
+Rcpp::IntegerVector res_i(Ndata);
+for (int i = 0; i < N; ++i) {
+  for (int k = _p_dist[i]; k < _p_dist[i + 1L]; ++k) {
+    res_i[k] = i;
+  }
+}
 
-   // création du vecteur i depuis p.
-   Rcpp::IntegerVector res_i(Ndata);
-   for (int i = 0; i < N; ++i) {
-     for (int k = _p_dist[i]; k < _p_dist[i + 1L]; ++k) {
-       res_i[k] = i;
-     }
-   }
+return Rcpp::DataFrame::create(_("i") = res_i, _("j") = jr_dist, _("flux") = Rcpp::wrap(res_xr));
+}
 
-   return Rcpp::DataFrame::create(_("i") = res_i, _("j") = jr_dist, _("flux") = Rcpp::wrap(res_xr));
- }
- 
- 
- 
- 
+
+

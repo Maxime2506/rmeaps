@@ -12,6 +12,40 @@ another_distrib <- function(entrants, fuite, attraction, xr_dist, debut, placesl
     .Call(`_rmeaps_another_meaps_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min)
 }
 
+#' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+#' @param jr_dist Le vecteur des indices des colonnes non vides.
+NULL
+
+#' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes). 
+NULL
+
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i 
+NULL
+
+#' @param row_group Le vecteur de regroupement des départs (par ex. code commune en integer).
+NULL
+
+#' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
+NULL
+
+#' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
+#' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
+NULL
+
+#' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
+#' @param j_odds, p_odds et x_odds sont les vecteurs de la Row Sparse Matrix lorsque attraction = "odds".
+NULL
+
+#' @param progress Ajoute une barre de progression. Default : true. 
+NULL
+
+#' @return renvoie les flux au format triplet.
+.another_meaps2 <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_another_meaps2_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min)
+}
+
 #' La fonction renvoie les chances d'absorption issue de meaps pour la méthode continue (default). 
 #' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
 #' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
