@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include "another_distrib.h"
 #include "fcts_penal.h"
 
 using namespace Rcpp;
@@ -36,7 +35,7 @@ using namespace Rcpp;
  //' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
  //'
 //' @return renvoie les flux au format triplet.
- // [[Rcpp::export(.another_meaps2)]]
+ // [[Rcpp::export]]
  Rcpp::DataFrame another_meaps2_cpp(IntegerVector jr_dist, 
                                    IntegerVector p_dist, 
                                    NumericVector xr_dist, 
@@ -99,9 +98,7 @@ f = ifelse(f > fuite_min, f, fuite_min);
    
    int nloop = 0;
 
-#pragma omp parallel num_threads(ntr) default(none) \
-  shared(_jr_dist, _xr_dist, _p_dist, actifs_libres, fcpp, emplois_libres, _emplois, _jr_odds, _p_odds, _xr_odds, tot_actifs_libres, old_tot, \
-         liaisons, res_xr, nloop, attraction, parametres, _LIMITE_PRECISION, _LIMITE_LOOP, N, K, verbose)
+#pragma omp parallel num_threads(ntr) 
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
     std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
@@ -175,32 +172,32 @@ f = ifelse(f > fuite_min, f, fuite_min);
          }
          k = pos;
        }
+       
+       if (accessibility[k_valid - 1L] <= 0) continue;
 
        // Calcul de l'absorption.
        double absorption = -log(fcpp[from]) / accessibility[k_valid - 1L];
-       
+
        // Calcul des actifs absorbés par sites .
-       std::vector<double> jobtakers(k_valid + 1L);
-       jobtakers[0L] = actifs_libres[from];
+       std::vector<double> jobtakers(k_valid + 1L, actifs_libres[from]);
        for(std::size_t k = 0L; k < k_valid; ++k) {
-         jobtakers[k + 1L] = actifs_libres[from] * exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
+         jobtakers[k + 1L] *= exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
        }
        for(std::size_t k = 0L; k < k_valid; ++k) {
          jobtakers[k] -= jobtakers[k + 1L];
        }
-       
        // Répartition des jobtakers dans tous les cas.
        for (std::size_t k = 0; k < k_valid;) {
-         double tot_attraction = 0, tot_jobtakers = 0;
+         double tot_attirances = 0, tot_jobtakers = 0;
          auto pos = k + 1L;
          while (_xr_dist[debut + k] == _xr_dist[debut + pos] && pos < k_valid) ++pos;
          for (std::size_t ego = k; ego < pos; ++ego) {
-           tot_attraction += attirances[ego];
+           tot_attirances += attirances[ego];
            tot_jobtakers += jobtakers[ego];
          }
-         if (tot_attraction > 0) {
+         if (tot_attirances > 0) {
            for (std::size_t ego = k; ego < pos; ++ego) {
-             liaisons[from][ _jr_dist[debut + ego] ] = attirances[ego] / tot_attraction * tot_jobtakers;
+             liaisons[from][ _jr_dist[debut + ego] ] += attirances[ego] / tot_attirances * tot_jobtakers;
            }
          }
          k = pos;

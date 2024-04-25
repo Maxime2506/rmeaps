@@ -42,7 +42,7 @@ NULL
 NULL
 
 #' @return renvoie les flux au format triplet.
-.another_meaps2 <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+another_meaps2_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
     .Call(`_rmeaps_another_meaps2_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min)
 }
 

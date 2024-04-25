@@ -101,4 +101,7 @@ test_that("Test sur une matrice simple d'another meaps", {
   expect_equal(m_odds |> as.matrix() |> colSums(), marges_actifs * (1 - fuites))
   
 })
+
+
+
   
