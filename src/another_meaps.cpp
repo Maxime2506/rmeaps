@@ -37,17 +37,17 @@ using namespace Rcpp;
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export(.another_meaps)]]
- Rcpp::DataFrame another_meaps_cpp(IntegerVector jr_dist, 
-                                   IntegerVector p_dist, 
-                                   NumericVector xr_dist, 
-                                   NumericVector emplois,
-                                   NumericVector actifs, 
-                                   NumericVector f, 
-                                   NumericVector param,
-                                   IntegerVector jr_odds,
-                                   IntegerVector p_odds ,
-                                   NumericVector xr_odds,
-                                   std::string attraction = "constant",
+ Rcpp::DataFrame another_meaps_cpp(const IntegerVector jr_dist, 
+                                   const IntegerVector p_dist, 
+                                   const NumericVector xr_dist, 
+                                   const NumericVector emplois,
+                                   const NumericVector actifs, 
+                                   const NumericVector fuite, 
+                                   const NumericVector param,
+                                   const IntegerVector jr_odds,
+                                   const IntegerVector p_odds ,
+                                   const NumericVector xr_odds,
+                                   const std::string attraction = "constant",
                                    int nthreads = 0, bool verbose = true, bool normalisation = false, double fuite_min = 1e-3) {
    const int _LIMITE_LOOP = 1000;
    const double _LIMITE_PRECISION = 1e-3;
@@ -66,15 +66,16 @@ using namespace Rcpp;
 #endif
    
    // Choix d'une limite basse pour la fuite.
-   f = ifelse(f > fuite_min, f, fuite_min);
+   NumericVector f = ifelse(fuite > fuite_min, fuite, fuite_min);
    
    // Calage de l'emploi sur les actifs.
+   NumericVector emp = emplois;
    if (normalisation) {
-     emplois = emplois * sum(actifs * (1 - f)) / sum(emplois);
+     emp = emp * sum(actifs * (1 - f)) / sum(emp);
    }
    
-   std::vector<double> emplois_libres = as<std::vector<double>>(emplois);
-   std::vector<double> _emplois = as<std::vector<double>>(emplois);
+   std::vector<double> emplois_libres = as<std::vector<double>>(emp);
+   std::vector<double> _emplois = as<std::vector<double>>(emp);
    std::vector<double> fcpp = as<std::vector<double>>(f);
    std::vector<double> actifs_libres = as<std::vector<double>>(actifs);
   

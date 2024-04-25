@@ -27,27 +27,27 @@ BEGIN_RCPP
 END_RCPP
 }
 // another_meaps_cpp
-Rcpp::DataFrame another_meaps_cpp(IntegerVector jr_dist, IntegerVector p_dist, NumericVector xr_dist, NumericVector emplois, NumericVector actifs, NumericVector f, NumericVector param, IntegerVector jr_odds, IntegerVector p_odds, NumericVector xr_odds, std::string attraction, int nthreads, bool verbose, bool normalisation, double fuite_min);
-RcppExport SEXP _rmeaps_another_meaps_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fSEXP, SEXP paramSEXP, SEXP jr_oddsSEXP, SEXP p_oddsSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP) {
+Rcpp::DataFrame another_meaps_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuite, const NumericVector param, const IntegerVector jr_odds, const IntegerVector p_odds, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose, bool normalisation, double fuite_min);
+RcppExport SEXP _rmeaps_another_meaps_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuiteSEXP, SEXP paramSEXP, SEXP jr_oddsSEXP, SEXP p_oddsSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type jr_dist(jr_distSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type p_dist(p_distSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type xr_dist(xr_distSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type param(paramSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type jr_odds(jr_oddsSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type p_odds(p_oddsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type xr_odds(xr_oddsSEXP);
-    Rcpp::traits::input_parameter< std::string >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuite(fuiteSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type param(paramSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type jr_odds(jr_oddsSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type p_odds(p_oddsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
     Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
-    rcpp_result_gen = Rcpp::wrap(another_meaps_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, f, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min));
+    rcpp_result_gen = Rcpp::wrap(another_meaps_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuite, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min));
     return rcpp_result_gen;
 END_RCPP
 }
