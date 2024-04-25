@@ -2,9 +2,7 @@
 #include <omp.h>
 #endif
 // [[Rcpp::plugins(openmp)]]
-
 #include <Rcpp.h>
-#include <progress.hpp>
 #include <algorithm>
 #include <iterator>
 
@@ -102,12 +100,13 @@ using namespace Rcpp;
    int nloop = 0;
 
 #pragma omp parallel num_threads(ntr) default(none) \
-  shared(_p_dist, emplois_libres, _emplois, _jr_dist, attraction, _xr_dist, parametres, _jr_odds, _p_odds, _xr_odds, actifs_libres, fcpp, tot_actifs_libres, old_tot, \
-         liaisons, res_xr, nloop, _LIMITE_PRECISION, _LIMITE_LOOP, N, K, verbose)
+  shared(_jr_dist, _xr_dist, _p_dist, actifs_libres, fcpp, emplois_libres, _emplois, _jr_odds, _p_odds, _xr_odds, tot_actifs_libres, old_tot, \
+         liaisons, res_xr, nloop, attraction, parametres, _LIMITE_PRECISION, _LIMITE_LOOP, N, K, verbose)
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
     std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
    do {
+
 #pragma omp single
      {
      nloop++;
@@ -178,16 +177,16 @@ using namespace Rcpp;
 }
      // Après la distribution simultanée, il faut récupérer les excédents et reconstruire des vecteurs
      // d'actifs encore libres et d'emplois encore libres.
+#pragma omp for 
      for (std::size_t i = 0; i < N; ++i) {
        actifs_libres[i] = 0;
      }
-     double tx_depassement;
      
      // Traitement des dépassements en colonnes.
+     double tx_depassement;
 #pragma omp for reduction(vsum: actifs_libres)
      for (std::size_t j = 0; j < K; ++j) {
        emplois_libres[j] = _emplois[j];
-       Progress::check_abort();
        for (std::size_t i = 0; i < N; ++i) {
          emplois_libres[j] -= liaisons[i][j];
        }
@@ -204,9 +203,11 @@ using namespace Rcpp;
          emplois_libres[j] = 0;
        }
      }
-     
+#pragma omp single
+     {   
      old_tot = tot_actifs_libres;
      tot_actifs_libres = 0;
+     }
 #pragma omp for reduction(+: tot_actifs_libres) 
      for (std::size_t i = 0; i < N; ++i) {
        actifs_libres[i] /= (1 - fcpp[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
