@@ -12,17 +12,8 @@ License: CeCILL-B
 Encoding: UTF-8
 Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4), Matrix, methods
 LinkingTo: Rcpp, RcppParallel, RcppProgress, Matrix
-RcppModules: RankedRowSparseMatrix
 SystemRequirements: GNU make
 RoxygenNote: 7.3.1
-Depends:
-    data.table
 Suggests: 
-    sf,
-    tidyr,
-    dplyr,
-    matrixStats,
-    MatrixExtra,
-    bench,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

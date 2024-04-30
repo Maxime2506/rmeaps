@@ -17,6 +17,8 @@ using namespace Rcpp;
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
  //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
  //' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
+ //' @param group_from Le vecteur des regroupements des lignes d'actifs.
+ //' @param group_to Le vecteur des regroupements des colonnes d'emplois.
  //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes). 
  //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
  //' @param fuite Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
@@ -36,22 +38,27 @@ using namespace Rcpp;
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- DataFrame meaps_all_in(const IntegerVector jr_dist, 
-                        const IntegerVector p_dist, 
-                        const NumericVector xr_dist, 
-                        NumericVector emplois,
-                        const NumericVector actifs, 
-                        NumericVector fuite, 
-                        const NumericVector parametres,
-                        const NumericVector xr_odds,
-                        const std::string attraction = "constant",
-                        const int nthreads = 0, 
-                        const bool verbose = true, 
-                        bool normalisation = false, 
-                        double fuite_min = 1e-3) {
-   
-   const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
-   
+ Rcpp::DataFrame meaps_all_in_optim(const IntegerVector jr_dist, 
+                                    const IntegerVector p_dist, 
+                                    const NumericVector xr_dist, 
+                                    const IntegerVector group_from,
+                                    const IntegerVector group_to,
+                                    NumericVector emplois,
+                                    const NumericVector actifs, 
+                                    NumericVector fuite, 
+                                    const NumericVector parametres,
+                                    const NumericVector xr_odds,
+                                    const std::string attraction = "constant",
+                                    const int nthreads = 0, 
+                                    const bool verbose = true, 
+                                    bool normalisation = false, double fuite_min = 1e-3) {
+ 
+   const std::size_t N = actifs.size(), K = emplois.size();
+   auto Nref = 1L + *std::max_element(group_from.begin(), group_from.end());
+   //Nref = Nref + 1L;
+   auto Kref = 1L + *std::max_element(group_to.begin(), group_to.end());
+   //Kref = Kref + 1L;
+
    // Choix d'une limite basse pour la fuite.
    fuite = ifelse(fuite > fuite_min, fuite, fuite_min);
    
@@ -73,37 +80,23 @@ using namespace Rcpp;
    
    const std::vector<double> ts_xr_odds = as< std::vector<double> >(xr_odds);
    
-   // Calcul du résultat.
+   // Initialisation du résultat.
    std::vector< std::vector<double> > liaisons(N, std::vector<double> (K));
    
    liaisons = meaps_core(ts_jr_dist, ts_p_dist, ts_xr_dist, ts_emplois, ts_actifs, ts_fuite, 
                          ts_parametres, ts_xr_odds, attraction, nthreads, verbose);
-   
-   // Mise au format de sortie
-#ifdef _OPENMP
-   int ntr = nthreads;
-   if (ntr == 0) {
-     ntr = omp_get_max_threads();
-   }
-   if (ntr > omp_get_max_threads()) {
-     ntr = omp_get_max_threads();
-   }
-#endif
-   
-   std::vector<double> res_xr(Ndata);
-   std::vector<int> res_i(Ndata);
-   
-   // sortie au format xr_dist.
-#pragma omp parallel for collapse(2)
-   for (std::size_t i = 0; i < N; ++i) {
-     for (std::size_t k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
-       res_xr[k] = liaisons[i][ ts_jr_dist[k] ];
-       res_i[k] = i;
-     }
-   }
-   
-   return DataFrame::create(_("i") = wrap(res_i), _("j") = jr_dist, _("flux") = wrap(res_xr));
+
+  // sortie du résultat agrégé.
+  NumericMatrix agregat(Nref, Kref);
+  for (std::size_t i = 0; i < N; ++i) {
+    for (std::size_t j = 0; j < K; ++j) {
+      agregat(group_from[i], group_from[j]) += liaisons[i][j];
+    }
+  }
+
+return agregat;
  }
-
-
-
+ 
+ 
+ 
+ 
