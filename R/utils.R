@@ -6,9 +6,23 @@
 #' Le nom de la troisième variable est libre.
 #' 
 is_triplet <- function(obj) {
-  if ( !inherits(obj, "data.frame") & length(obj) != 3) return(FALSE)
+  if ( !inherits(obj, "data.frame") | length(obj) != 3) return(FALSE)
   if ( length(setdiff(c("fromidINS", "toidINS"), names(obj))) != 0 ) return(FALSE)
   if ( !is.numeric(obj[[setdiff(names(obj), c("fromidINS", "toidINS"))]]) ) return(FALSE)
+  return(TRUE)
+}
+
+#' utils
+#' 
+
+#' Fonction de test de la validité d'un triplet sous de data.frame.
+#' Nom de variables admises : fromidINS, toidINS.
+#' Le nom de la troisième variable est libre.
+#' 
+is_rankedtriplet <- function(obj) {
+  if ( !inherits(obj, "data.frame") | length(obj) < 5) return(FALSE)
+  if ( length(setdiff(c("fromidINS", "toidINS", "i", "j"), names(obj))) != 0 ) return(FALSE)
+  if ( !is.numeric(obj[[setdiff(names(obj), c("fromidINS", "toidINS", "i", "j"))[[1]]]]) ) return(FALSE)
   return(TRUE)
 }
 
@@ -30,6 +44,23 @@ triplet2listij <- function(data) {
   data.table::set(data, j = "x", value = fifelse(data$x==0, .petite_distance(data$x), data$x))
   
   list(dgr = Matrix::sparseMatrix(i = data$i, j = data$j, x = data$x, dims = c(max(data$i), max(data$j)), repr = "R"), 
+       cle_from = cle_from, 
+       cle_to = cle_to)
+}
+
+#' Fonction de transformation d'un triplet fromidINS toidINS value à une liste avec i j x et les clés de correspondances.
+#' @import data.table
+rankedtriplet2listij <- function(data) {
+  if (!is_rankedtriplet(data)) stop("Ce n'est pas un ranked triplet valide.")
+  setDT(data)
+  colnames(data)[!colnames(data) %in% c("fromidINS", "toidINS", "i", "j")] <- "x"
+  setorder(data, fromidINS, x, toidINS)
+  cle_from <- unique(data$fromidINS) |> sort()
+  cle_to <- unique(data$toidINS) |> sort()
+  
+  data.table::set(data, j = "x", value = fifelse(data$x==0, .petite_distance(data$x), data$x))
+  
+  list(dgr = Matrix::sparseMatrix(i = data$i+1, j = data$j+1, x = data$x, dims = c(max(data$i)+1, max(data$j)+1), repr = "R"), 
        cle_from = cle_from, 
        cle_to = cle_to)
 }

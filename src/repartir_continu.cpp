@@ -1,10 +1,8 @@
-#include <Rcpp.h>
-using namespace Rcpp;
-// Fonction de répartition des actifs entre les sites d'emplois selon l'attractivité du site et la fuite.
-// La fonction ne vérifie pas si l'afflux d'actifs excède le nombre de places libres.
-// [[Rcpp::export]]
-std::vector<double> one_distrib_continu(const double& entrants, 
-                                        const double& fuite,
+#include <vector>
+#include <cmath>
+
+std::vector<double> one_distrib_continu(const double entrants, 
+                                        const double fuite,
                                         const std::vector<double>& attractivite,
                                         const std::vector<double>& distances,
                                         const std::vector<double>& placeslibres) {
@@ -81,7 +79,6 @@ std::vector<double> one_distrib_continu(const double& entrants,
   
 // Fonction de répartition des actifs entre les sites d'emplois selon l'attractivité du site et la fuite.
 // Cette fonction gère le cas d'un dépassement de l'offre.
-// [[Rcpp::export]]
 std::vector<double> repartir_continu(const double actifs, 
                                      const double fuite,
                                      const std::vector<double>& attractivite,

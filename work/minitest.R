@@ -20,7 +20,10 @@ triplet <- distances |>
   as_tibble(rownames = "fromidINS") |>
   pivot_longer(cols = -fromidINS, names_to = "toidINS", values_to = "distance") |>
   filter(!is.na(distance))
-
+triplet_ij <- triplet |> 
+  arrange(fromidINS, distance, toidINS) |> 
+  mutate(i = str_sub(fromidINS, 2,2) |> as.numeric()-1L,
+         j = str_sub(toidINS, 2,2) |> as.numeric()-1L)
 N <- length(actifs)
 K <- length(emplois)
 shuf <- emiette(actifs, 16)
@@ -29,7 +32,7 @@ modds <- matrix(1, ncol = K, nrow = N)
 dimnames(modds) <- dimnames(distances)
 
 c0 <- meaps_multishuf(
-  rkdist = rowRanks(distances, ties="random"),
+  rkdist = matrixStats::rowRanks(distances, ties="random"),
   emplois = emplois,
   actifs = actifs,
   modds = modds,
@@ -37,8 +40,11 @@ c0 <- meaps_multishuf(
   shuf = noshuf, 
   progress = FALSE)
 
+start_heap_profiler("/tmp/heap")
+start_profiler("/tmp/prof.out")
+
 c1 <- meaps_continu(
-  dist = triplet,
+  dist = triplet_ij,
   emplois = emplois,
   actifs = actifs,
   f = fuite, 
@@ -46,7 +52,9 @@ c1 <- meaps_continu(
   progress = FALSE) |> 
   as_tibble() |> 
   arrange(desc(flux))
-
+stop_profiler()
+stop_heap_profiler()
+get_heap_profiler()
 prep1 <- prep_meaps_dist(dist = triplet, emplois = emplois, actifs = actifs, fuite = fuite, shuf = noshuf, 
                          groups_from = set_names(1:5, names(actifs)),
                          groups_to = set_names(1:5, names(emplois)))
@@ -106,7 +114,7 @@ odds <- triplet |>
 prep_o3 <- prep_meaps_odds_on_dist(odds, prep1)
 m3 <- meaps_optim(prep1, odds_prep = prep_o3)
 m4 <- meaps_continu(
-  dist = triplet,
+  dist = triplet_ij,
   emplois = emplois,
   actifs = actifs,
   attraction = "odds",

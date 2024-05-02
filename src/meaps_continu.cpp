@@ -5,15 +5,129 @@
 #include <Rcpp.h>
 #include <algorithm>
 #include <iterator>
-// [[Rcpp::depends(RcppProgress)]]
+[[Rcpp::depends(RcppProgress)]]
 #include <progress.hpp>
 #include <progress_bar.hpp>
-#include "repartir_continu.h"
+// #include "repartir_continu.h"
 
 #include "fcts_penal.h"
 using namespace Rcpp;
 
- //' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
+std::vector<double> one_distrib_continu_l(const double entrants, 
+                                        const double fuite,
+                                        const std::vector<double>& attractivite,
+                                        const std::vector<double>& distances,
+                                        const std::vector<double>& placeslibres) {
+  
+  // Le cas sum(placeslibres) = 0 doit être géré en amont.
+  std::size_t k_valid = placeslibres.size();
+  std::vector<double> attraction(k_valid), accessibility(k_valid), placesprises(k_valid);
+  
+  // Calcul de l'attraction de chaque site.
+  double total_places = 0;
+  for (std::size_t k = 0; k < k_valid; ++k) {
+    attraction[k] = placeslibres[k] * attractivite[k];
+    total_places += placeslibres[k];
+  }
+  
+  // Cas où il y a plus d'entrants que de places libres.
+  if (total_places <= entrants) {
+    return placeslibres;
+  }
+  
+  // Calcul de l'accessibilité (corrigée de l'attraction).
+  double tot = 0;
+  for (std::size_t k = 0; k < k_valid;) {
+    auto pos = k + 1L;
+    while (distances[k] == distances[pos] && pos < k_valid) ++pos;
+    for (std::size_t ego = k; ego < pos; ++ego) {
+      tot += attraction[ego];
+    }
+    for (std::size_t ego = k; ego < pos; ++ego) {
+      accessibility[ego] = tot;
+    }
+    k = pos;
+  }
+  
+  // Cas (improbable) où l'accessibilité resterait nulle. En ce cas, pas de remplissage.
+  if (accessibility[k_valid - 1L] == 0) {
+    std::vector<double> zeros(k_valid);
+    return zeros;
+  }
+  
+  // Calcul de l'absorption.
+  double absorption = -log(fuite) / accessibility[k_valid - 1L];
+  
+  // Calcul des actifs absorbés par sites (avant traitement des sites à distances égales).
+  std::vector<double> jobtakers(k_valid + 1L);
+  jobtakers[0L] = entrants;
+  for(std::size_t k = 0L; k < k_valid; ++k) {
+    jobtakers[k + 1L] = entrants * exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
+  }
+  for(std::size_t k = 0L; k < k_valid; ++k) {
+    jobtakers[k] -= jobtakers[k + 1L];
+  }
+  
+  // Répartition des jobtakers dans tous les cas.
+  for (std::size_t k = 0; k < k_valid;) {
+    double tot_attraction = 0;
+    double tot_jobtakers = 0;
+    auto pos = k + 1L;
+    while (distances[k] == distances[pos] && pos < k_valid) ++pos;
+    for (std::size_t ego = k; ego < pos; ++ego) {
+      tot_attraction += attraction[ego];
+      tot_jobtakers += jobtakers[ego];
+    }
+    if (tot_attraction > 0) {
+      for (std::size_t ego = k; ego < pos; ++ego) {
+        placesprises[ego] = attraction[ego] / tot_attraction * tot_jobtakers;
+      }
+    }
+    k = pos;
+  }
+  
+  return placesprises;
+}
+
+// Fonction de répartition des actifs entre les sites d'emplois selon l'attractivité du site et la fuite.
+// Cette fonction gère le cas d'un dépassement de l'offre.
+std::vector<double> repartir_continu_l(const double actifs, 
+                                     const double fuite,
+                                     const std::vector<double>& attractivite,
+                                     const std::vector<double>& distances,
+                                     std::vector<double>& placeslibres) {
+  
+  std::size_t k_valid = placeslibres.size();
+  double actifs_non_etablis = actifs, tot_placeslibres = 0.0;
+  
+  // Cas où il n'y a pas assez de places libres.
+  for (std::size_t k = 0; k < k_valid; ++k) tot_placeslibres += placeslibres[k];
+  if (actifs * (1 - fuite) >= tot_placeslibres) return placeslibres;
+  
+  std::vector<double> placesprises(k_valid, 0.0), placesrestantes(placeslibres), nouvellesprises(k_valid);
+  
+  do {
+    nouvellesprises = one_distrib_continu_l(actifs_non_etablis, fuite, attractivite, distances, placesrestantes);
+    
+    actifs_non_etablis = 0.0;
+    for (std::size_t k = 0; k < k_valid; ++k) {
+      placesprises[k] += nouvellesprises[k];
+      if (placesprises[k] > placeslibres[k]) {
+        actifs_non_etablis += placesprises[k] - placeslibres[k];
+        placesprises[k] = placeslibres[k];
+      }
+      placesrestantes[k] = placeslibres[k] - placesprises[k];
+    }
+    // Attention : les actifs fuyant ne doivent pas être oubliés à côté de ceux ayant débordés. 
+    // Il faut ajouter une part résiduelle de fuyards.
+    actifs_non_etablis *= (1 + fuite);
+  } while (actifs_non_etablis > 1e-9);// Des boucles qui n'apportent rien peuvent être effectuées si les conditions sont trop stricts. 
+  
+  return placesprises;
+}
+
+
+//' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
  //' @param j_dist Le vecteur des indices des colonnes non vides.
  //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
  //' @param x_dist Le vecteur des valeurs dans l'ordre de j_dist.
@@ -37,14 +151,13 @@ using namespace Rcpp;
  //'
  //' @return renvoie un vecteur des estimations des flux de i vers j.
  // [[Rcpp::export(.meaps_continu)]]
- NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois,
-                                 NumericVector actifs, NumericVector f, IntegerMatrix shuf, 
-                                 NumericVector param,
-                                 NumericVector j_odds,
-                                 NumericVector p_odds ,
-                                 NumericVector x_odds,
-                                 std::string attraction = "constant",
-                                 int nthreads = 0, bool progress = true, bool normalisation = false, double fuite_min = 1e-3) {
+ NumericVector meaps_continu_cpp(
+     const IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois,
+     NumericVector actifs, NumericVector f, IntegerMatrix shuf, 
+     NumericVector param,
+     const NumericVector j_odds, NumericVector p_odds, NumericVector x_odds,
+     std::string attraction = "constant",
+     int nthreads = 0, bool progress = true, bool normalisation = false, double fuite_min = 1e-3) {
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
    
 #ifdef _OPENMP
@@ -160,7 +273,8 @@ using namespace Rcpp;
        
        for (auto from : theshuf) {
          // check interrupt & progress
-         if (! Progress::check_abort())
+         // if (! Progress::check_abort())
+         if (! Progress::check_abort() )
            p.increment();
          // Construction de l'accessibilité dite pénalisée.
          std::size_t debut = p_dist(from), fin = p_dist(from + 1L);
@@ -205,7 +319,7 @@ using namespace Rcpp;
          double actifspartant = actifscpp[from] / freq_actifs[from];
          
          std::vector<double> dist(xr_dist.begin() + debut, xr_dist.begin() + fin);
-         repartition = repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres); 
+         repartition = repartir_continu_l(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres); 
          
          // Impact sur l'emploi disponible total et sommation sur les emplois pris.
          for (std::size_t k = 0; k < k_valid; ++k) {
@@ -218,7 +332,7 @@ using namespace Rcpp;
      // Il faut ressortir le résultat au format classic de Sparse Matrix en
      // réordonnant les valeurs par l'ordre des colonnes.
      // je pense qu'on peut réduire la consommation de mémoire en
-     // réordonant liaisons ligne par ligne et en faisant la convertion à la fin
+     // réordonant liaisons ligne par ligne et en faisant la conversion à la fin
      // on peut aussi paralléliser cette partie
      std::vector<double> resultat(liaisons.size());
 #ifdef _OPENMP
@@ -235,9 +349,4 @@ using namespace Rcpp;
    
    return(wrap(resultat));
  }
- 
- 
- 
- 
- 
  

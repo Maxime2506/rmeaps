@@ -125,12 +125,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // meaps_continu_cpp
-NumericVector meaps_continu_cpp(IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois, NumericVector actifs, NumericVector f, IntegerMatrix shuf, NumericVector param, NumericVector j_odds, NumericVector p_odds, NumericVector x_odds, std::string attraction, int nthreads, bool progress, bool normalisation, double fuite_min);
+NumericVector meaps_continu_cpp(const IntegerVector j_dist, IntegerVector p_dist, NumericVector x_dist, NumericVector emplois, NumericVector actifs, NumericVector f, IntegerMatrix shuf, NumericVector param, const NumericVector j_odds, NumericVector p_odds, NumericVector x_odds, std::string attraction, int nthreads, bool progress, bool normalisation, double fuite_min);
 RcppExport SEXP _rmeaps_meaps_continu_cpp(SEXP j_distSEXP, SEXP p_distSEXP, SEXP x_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fSEXP, SEXP shufSEXP, SEXP paramSEXP, SEXP j_oddsSEXP, SEXP p_oddsSEXP, SEXP x_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP progressSEXP, SEXP normalisationSEXP, SEXP fuite_minSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type j_dist(j_distSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type j_dist(j_distSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type p_dist(p_distSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type x_dist(x_distSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
@@ -138,7 +138,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type param(paramSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type j_odds(j_oddsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type j_odds(j_oddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type p_odds(p_oddsSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type x_odds(x_oddsSEXP);
     Rcpp::traits::input_parameter< std::string >::type attraction(attractionSEXP);
@@ -198,36 +198,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type normalisation(normalisationSEXP);
     Rcpp::traits::input_parameter< double >::type fuite_min(fuite_minSEXP);
     rcpp_result_gen = Rcpp::wrap(meaps_optim_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction, nthreads, progress, normalisation, fuite_min));
-    return rcpp_result_gen;
-END_RCPP
-}
-// one_distrib_continu
-std::vector<double> one_distrib_continu(const double& entrants, const double& fuite, const std::vector<double>& attractivite, const std::vector<double>& distances, const std::vector<double>& placeslibres);
-RcppExport SEXP _rmeaps_one_distrib_continu(SEXP entrantsSEXP, SEXP fuiteSEXP, SEXP attractiviteSEXP, SEXP distancesSEXP, SEXP placeslibresSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double& >::type entrants(entrantsSEXP);
-    Rcpp::traits::input_parameter< const double& >::type fuite(fuiteSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type attractivite(attractiviteSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type distances(distancesSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type placeslibres(placeslibresSEXP);
-    rcpp_result_gen = Rcpp::wrap(one_distrib_continu(entrants, fuite, attractivite, distances, placeslibres));
-    return rcpp_result_gen;
-END_RCPP
-}
-// repartir_continu
-std::vector<double> repartir_continu(const double actifs, const double fuite, const std::vector<double>& attractivite, const std::vector<double>& distances, std::vector<double>& placeslibres);
-RcppExport SEXP _rmeaps_repartir_continu(SEXP actifsSEXP, SEXP fuiteSEXP, SEXP attractiviteSEXP, SEXP distancesSEXP, SEXP placeslibresSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< const double >::type fuite(fuiteSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type attractivite(attractiviteSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type distances(distancesSEXP);
-    Rcpp::traits::input_parameter< std::vector<double>& >::type placeslibres(placeslibresSEXP);
-    rcpp_result_gen = Rcpp::wrap(repartir_continu(actifs, fuite, attractivite, distances, placeslibres));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -292,8 +262,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_meaps_continu_cpp", (DL_FUNC) &_rmeaps_meaps_continu_cpp, 16},
     {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 13},
     {"_rmeaps_meaps_optim_cpp", (DL_FUNC) &_rmeaps_meaps_optim_cpp, 18},
-    {"_rmeaps_one_distrib_continu", (DL_FUNC) &_rmeaps_one_distrib_continu, 5},
-    {"_rmeaps_repartir_continu", (DL_FUNC) &_rmeaps_repartir_continu, 5},
     {"_rmeaps_meaps_tension", (DL_FUNC) &_rmeaps_meaps_tension, 14},
     {"_rmeaps_meaps_continu_test", (DL_FUNC) &_rmeaps_meaps_continu_test, 14},
     {"_rcpp_module_boot_RankedRowSparseMatrix", (DL_FUNC) &_rcpp_module_boot_RankedRowSparseMatrix, 0},

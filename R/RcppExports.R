@@ -85,6 +85,9 @@ meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "conti
     .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, normalisation, fuite_min, seuil_newton)
 }
 
+#' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
+NULL
+
 .meaps_continu <- function(j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
     .Call(`_rmeaps_meaps_continu_cpp`, j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction, nthreads, progress, normalisation, fuite_min)
 }
@@ -98,14 +101,6 @@ meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "con
 
 .meaps_optim <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
     .Call(`_rmeaps_meaps_optim_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction, nthreads, progress, normalisation, fuite_min)
-}
-
-one_distrib_continu <- function(entrants, fuite, attractivite, distances, placeslibres) {
-    .Call(`_rmeaps_one_distrib_continu`, entrants, fuite, attractivite, distances, placeslibres)
-}
-
-repartir_continu <- function(actifs, fuite, attractivite, distances, placeslibres) {
-    .Call(`_rmeaps_repartir_continu`, actifs, fuite, attractivite, distances, placeslibres)
 }
 
 #' MEAPS en calculant la tension sur les opportunités, 

@@ -32,12 +32,18 @@ meaps_continu <- function(dist, emplois, actifs, f, shuf,
                           quiet = FALSE) {
   
   delta <- (sum(actifs * (1 - f)) - sum(emplois))/sum(emplois)
-  if (delta>10^(-5)&!quiet)
+  if (delta>10^-3&!quiet)
     warning(glue("Les actifs restant dans la zone et les emplois ne correspondent pas à {round(delta*100,1)}% près."))
   
-  if (!is_triplet(dist)) stop("Format pour dist non reconnu.")
-  if(!quiet) cli::cli_alert_info("Préparation des distances, {ofce::f2si2(nrow(dist))} lignes à traiter.")
-  dist <- triplet2listij(dist)
+  if (is_triplet(dist)) {
+    if(!quiet) cli::cli_alert_info("Préparation des distances, {ofce::f2si2(nrow(dist))} lignes à traiter.")
+    dist <- triplet2listij(dist) 
+  } else 
+    if (is_rankedtriplet(dist)) {
+      if(!quiet) cli::cli_alert_info("Distances en triplet, {ofce::f2si2(nrow(dist))} lignes à traiter.")
+      dist <- rankedtriplet2listij(dist) 
+    } else stop("dist n'est ni un triplet ni un ranked triplet")
+  
   cle_from <- dist$cle_from
   if(!quiet) cli::cli_alert_info("Réordonnancement des entrées, {ofce::f2si2(length(cle_from))} origines")
   froms <- as.character(cle_from)

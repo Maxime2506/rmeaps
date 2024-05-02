@@ -48,16 +48,21 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=
 #'
 reordonne_shuf <- function(shuf, actifs) {
   ori <- unique(colnames(shuf))
-  dest <- unique(names(actifs))
+  new <- unique(names(actifs))
+  if(length(setdiff(new, ori))!=0)
+    stop("Des actifs ne sont pas dans la matrice shuf.")
+  ori_inter <- intersect(ori, new)
   
-  if(!setequal(ori, dest))
-    stop("Les actifs ne correspondent pas à la matrice shuf.")
-  dest2ori <- set_names(dest, ori)
-  
-  n_act <- length(ori) 
-  dest <- rlang::set_names(1:n_act, dest)
-  shuf_names <- ori[shuf]
-  new_shuf <- dest[shuf_names] |> matrix(nrow = nrow(shuf), ncol = ncol(shuf))
-  colnames(new_shuf) <- dest2ori[colnames(shuf)]
+  col_names <- colnames(shuf)
+  col_names <- col_names[col_names%in%new]
+  col_names <- factor(col_names, new) |>
+    sort() |>
+    as.character()
+  n_act <- length(new) 
+  new_index <- rlang::set_names(1:n_act, new)
+  shuf_names <- ori[t(shuf)]
+  new_shuf <- new_index[shuf_names[shuf_names%in%new]] |> 
+    matrix(nrow = nrow(shuf), ncol = length(col_names), byrow=TRUE)
+  colnames(new_shuf) <- col_names
   return(new_shuf)
 }
