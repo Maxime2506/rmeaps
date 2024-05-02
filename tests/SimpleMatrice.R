@@ -89,7 +89,7 @@ object = mdg
 arg <- list(attraction = "logistique", parametres = c(1,1,.1))
 
 
-meaps_optim(mdg, attraction = "logistique", parametres = c(1,1,.1))
+meaps_optim(mdg, attraction = "logistique", parametres = c(1,1,.1), method = "L-BFGS-B")
 
 
 
