@@ -94,7 +94,7 @@ using namespace Rcpp;
    std::vector<int> res_i(Ndata);
    
    // sortie au format xr_dist.
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(1)
    for (std::size_t i = 0; i < N; ++i) {
      for (std::size_t k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
        res_xr[k] = liaisons[i][ ts_jr_dist[k] ];

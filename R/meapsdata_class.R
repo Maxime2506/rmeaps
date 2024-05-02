@@ -151,7 +151,7 @@ setGeneric("all_in", function(object, ...) {standardGeneric("all_in")})
 setMethod("all_in", 
           signature = "MeapsData",
           function(object, ...){
-  
+ 
   arg <- list(...)
   # Définition de valeurs par défaut.
   if (is.null(arg$attraction)) { attraction <- "constant" } else { attraction <- arg$attraction }
@@ -173,8 +173,8 @@ setMethod("all_in",
   if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) stop("Parametres pour double_marche_liss invalide.")
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) stop("Parametres pour logistique invalide.")
-  
-  p_dist <- aggregate(object@distances$i, by = list(object@distances$i), FUN = length)$x |> cumsum()
+  # p_dist <- aggregate(object@distances$i, by = list(object@distances$i), FUN = length)$x |> cumsum()
+  p_dist <- object@distances |> group_by(i) |> summarize(n()) |> pull()
   p_dist <- c(0L, p_dist)
   
 
