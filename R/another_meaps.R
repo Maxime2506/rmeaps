@@ -69,7 +69,7 @@ another_meaps <- function(dist, emplois, actifs, f,
     }
   }
   
-  .another_meaps(jr_dist = dist$jr,
+  meaps_all_in(jr_dist = dist$jr,
                  p_dist = dist$p,
                  xr_dist = dist$xr,
                  emplois = emplois,

@@ -78,7 +78,7 @@ using namespace Rcpp;
    
    liaisons = meaps_core(ts_jr_dist, ts_p_dist, ts_xr_dist, ts_emplois, ts_actifs, ts_fuite, 
                          ts_parametres, ts_xr_odds, attraction, nthreads, verbose);
-   
+
    // Mise au format de sortie
 #ifdef _OPENMP
    int ntr = nthreads;

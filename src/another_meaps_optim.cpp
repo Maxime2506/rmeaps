@@ -38,20 +38,20 @@ using namespace Rcpp;
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- Rcpp::DataFrame meaps_all_in_optim(const IntegerVector jr_dist, 
-                                    const IntegerVector p_dist, 
-                                    const NumericVector xr_dist, 
-                                    const IntegerVector group_from,
-                                    const IntegerVector group_to,
-                                    NumericVector emplois,
-                                    const NumericVector actifs, 
-                                    NumericVector fuite, 
-                                    const NumericVector parametres,
-                                    const NumericVector xr_odds,
-                                    const std::string attraction = "constant",
-                                    const int nthreads = 0, 
-                                    const bool verbose = true, 
-                                    bool normalisation = false, double fuite_min = 1e-3) {
+ NumericVector all_in_optim(const IntegerVector jr_dist, 
+                            const IntegerVector p_dist, 
+                            const NumericVector xr_dist, 
+                            const IntegerVector group_from,
+                            const IntegerVector group_to,
+                            NumericVector emplois,
+                            const NumericVector actifs, 
+                            NumericVector fuite, 
+                            const NumericVector parametres,
+                            const NumericVector xr_odds,
+                            const std::string attraction = "constant",
+                            const int nthreads = 0, 
+                            const bool verbose = true, 
+                            bool normalisation = false, double fuite_min = 1e-3) {
  
    const std::size_t N = actifs.size(), K = emplois.size();
    auto Nref = 1L + *std::max_element(group_from.begin(), group_from.end());
@@ -87,14 +87,14 @@ using namespace Rcpp;
                          ts_parametres, ts_xr_odds, attraction, nthreads, verbose);
 
   // sortie du résultat agrégé.
-  NumericMatrix agregat(Nref, Kref);
+  NumericVector resultat(Nref * Kref);
   for (std::size_t i = 0; i < N; ++i) {
     for (std::size_t j = 0; j < K; ++j) {
-      agregat(group_from[i], group_from[j]) += liaisons[i][j];
+      resultat(group_from[i] * Kref + group_to[j]) += liaisons[i][j];
     }
   }
 
-return agregat;
+return resultat;
  }
  
  
