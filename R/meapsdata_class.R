@@ -3,99 +3,183 @@
 #' 
 #' 
 #' 
-is_triplet_meaps <- function(object, quiet = FALSE) {
-  if (!inherits(object, "data.frame")) return(FALSE)
-  if (!setequal(names(object), c("i", "j", "value"))) {
-    if (quiet) { return(FALSE) } else stop("Les variables doivent être i, j et value.")
+is_triplet_meaps <- function(object, quiet = TRUE) {
+
+  if (!inherits(object, "data.frame") || length(object) != 3) {
+    status <- 2L
+  } else if (!setequal(names(object), c("fromidINS", "toidINS", "metric"))) {
+      status <- 3L
+  } else if (any(is.na(object))) { 
+      status <- 4L 
+  } else {
+      status <- 1L
   }
-  if (!is.integer(object$i) | !is.integer(object$j) | !is.numeric(object$value)) {
-    if (quiet) { return(FALSE) } else stop("Le type des variables n'est pas valide.")
+  
+  if (!quiet) { 
+    switch(status,
+         cli::cli_alert_success("Le triplet meaps est un triplet valide."),
+         cli::cli_alert_warning("Le triplet meaps n'est pas un triplet."),
+         cli::cli_alert_warning("Les noms des colonnes devraient être fromidINS, toidINS et metric."),
+         cli::cli_alert_warning("Le triplet meaps contient des valeurs manquantes.")
+    )
   }
-  if (any(is.na(object))) {
-    if (quiet) { return(FALSE) } else stop("Il y a des valeurs manquantes.")
+  
+  invisible(status==1)
+}
+
+is_triplet_ordered <- function(object, quiet = TRUE) {
+  if ( is.unsorted(object$fromidINS) ) { 
+    status <- 2L
+  } else {
+    sort_v <- by(object, object$fromidINS, \(x) is.unsorted(x$metric)) |> any()
+    if (sort_v) {
+      status <- 3L
+    } else {
+      sort_j <- by(object, list(object$fromidINS, object$metric), \(x) { is.unsorted(x$toidINS, strictly = TRUE) }) |> any(na.rm = TRUE)
+      if (sort_j) { 
+        status <- 4L 
+      } else {
+          status <- 1L
+        }
+    }
   }
-  TRUE
+  
+  if (!quiet) { 
+    switch(status,
+         cli::cli_alert_success("Le triplet meaps est bien ordonné."),
+         cli::cli_alert_warning("Le triplet meaps n'est pas ordonné selon fromidINS."),
+         cli::cli_alert_warning("Le triplet meaps n'est pas ordonné selon metric"),
+         cli::cli_alert_warning("Le triplet meaps n'est pas ordonné selon toidINS.")
+         )
+  }
+  
+  invisible(status==1)
 }
 
-is_meapsdata_ordered <- function(object) {
-  if ( is.unsorted(object$i) ) return(FALSE)
-  sort_v <- by(object, object$i, \(x) is.unsorted(x$value)) |> any()
-  if (sort_v) return(FALSE)
-  sort_j <- by(object, list(object$i, object$value), \(x) {
-    is.unsorted(x$j, strictly = TRUE)
-    }) |> any(na.rm = TRUE)
-  return(!sort_j)
+is_meapsdata_valid <- function(object, quiet = TRUE) {
+  status <- TRUE
+  if (is.null(names(object@actifs))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("actifs n'a pas de labels") }
+    }
+  if (is.null(names(object@emplois))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("emplois n'a pas de labels") }
+  }
+  if (is.null(names(object@fuites))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("fuites n'a pas de labels") }
+  }
+  
+  N <- unique(object@triplet$fromidINS) |> length()
+  K <- unique(object@triplet$toidINS) |> length()
+  
+  if (!setequal(object@triplet$fromidINS, names(object@actifs)) || length(object@actifs) != N) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("triplet et actifs n'ont pas la même liste de fromidINS") }
+  }
+  if (!setequal(object@triplet$toidINS, names(object@emplois)) || length(object@emplois) != K) { 
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("triplet et emplois n'ont pas la même liste de toidINS") }
+  }
+  if (!setequal(object@triplet$fromidINS, names(object@fuites)) || length(object@fuites) != N) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("triplet et fuites n'ont pas la même liste de fromidINS") }
+  }
+  
+  if (any(object@fuites <= 0 | object@fuites >= 1)) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("Le vecteur fuite a des valeurs invalides.") }
+  }
+  
+  if (status) { cli::cli_alert_success("Le MeapsData est valide.") }
+  
+  invisible(status)
 }
 
-is_idINS_valid <- function(id) {
-  if (typeof(id) != "character") return(FALSE)
-  !is.unsorted(id)
+is_meaps_normalized <- function(object, just_a_warning = TRUE, seuil = 1e-4) {
+  delta <- (sum(object@actifs * (1 - object@fuites)) - sum(object@emplois))/sum(object@emplois)
+  if (delta > seuil) {
+    if (just_a_warning) { 
+      cli::cli_alert_warning("Les actifs restant dans la zone et les emplois divergent de {round(100 * delta, digits = 2)}%.")
+    } else {
+      cli::cli_abort("Les actifs restant dans la zone et les emplois divergent de {round(100 * delta, digits = 2)}%.")
+    }
+  }
+  invisible(delta <= seuil)
 }
 
-is_meapsdata_valid <- function(object) {
-  if (min(object@distances$i) != 0) stop("i doit commencer à 0 (convention C++)")
-  if (min(object@distances$j) != 0) stop("j doit commencer à 0 (convention C++)")
+check_meapsdata <- function(object, abort = FALSE) {
+  status <- is_triplet_meaps(object@triplet, quiet = FALSE) && 
+    is_triplet_ordered(object@triplet, quiet = FALSE) && 
+    is_meapsdata_valid(object, quiet = FALSE) &&
+    is_meaps_normalized(object)
   
-  N <- unique(object@distances$i) |> length()
-  K <- unique(object@distances$j) |> length()
-  
-  if (length(object@fromidINS) != N) stop("fromidINS et distances ne correspondent pas.")
-  if (length(object@toidINS) != K) stop("toidINS et distances ne correspondent pas.")
-  if (nrow(object@actifs) != N) stop("habitants et distances ne correspondent pas.")
-  if (nrow(object@emplois) != K) stop("opportunities et distances ne correspondent pas.")
-  if (nrow(object@fuite) != N) stop("habitants et fuite n'ont pas la même longueurs.")
-  
-  delta <- (sum(object@actifs * (1 - object@fuite)) - sum(object@emplois))/sum(object@emplois)
-  if (delta > 1e-5)  warning("Les actifs restant dans la zone et les emplois ne correspondent pas.")
-  
-  if (is.null(names(object@actifs))) stop("actifs n'est pas labelisée.")
-  if (is.null(names(object@emplois))) stop("emplois n'est pas labelisée.")
-  if (is.null(names(object@fuite))) stop("fuite n'est pas labelisée.")
-  
-  if (!setequal(names(object@actifs), object@fromidINS)) stop("Les labels d'actifs ne correspondent pas à fromidINS.")
-  if (!setequal(names(object@emplois), object@toidINS)) stop("Les labels d'emplois ne correspondent pas à toidINS.")
-  if (!setequal(names(object@fuite), object@fromidINS)) stop("Les labels de fuite ne correspondent pas à fromidINS.")
-  TRUE
+  if (abort && !status) {cli::cli_abort("Invalide.")} else { return(status)}
 }
 
-check_meapsdata <- function(object) {
-  is_triplet_meaps(object) && 
-    is_meapsdata_ordered(object) && 
-    is_idINS_valid(object@fromidINS) &&
-    is_idINS_valid(object@toidINS) &&
-    is_meapsdata_valid(object)
+is_meapsdatagroup_valid <- function(object, quiet = FALSE)  {
+  
+  if (!inherits(object, "data.frame") || length(object) != 3) {
+    status <- 2L
+  } else if (!setequal(names(object), c("group_from", "group_to", "value"))) {
+    status <- 3L
+  } else if (any(is.na(object))) { 
+    status <- 4L 
+  } else {
+    status <- 1L
+  }
+  
+  if (!quiet) { 
+    switch(status,
+           cli::cli_alert_success("Le triplet cible est un triplet valide."),
+           cli::cli_alert_warning("La cible n'est pas un triplet."),
+           cli::cli_alert_warning("Les noms des colonnes devraient être group_from, group_to et value."),
+           cli::cli_alert_warning("La cible contient des valeurs manquantes.")
+    )
+  }
+  
+  invisible(status==1)
 }
 
-formate_ciblemeaps <- function(x) {
-  if (!inherits(x, "data.frame") || length(x) != 3) return(FALSE)
-  filter_from <- grepl("commune", names(x))
-  if (sum(filter_from) != 1) stop("Impossible d'identifier le groupe commune")
-  filter_to <- grepl("dclt", names(x))
-  if (sum(filter_to) != 1) stop("Impossible d'identifier le groupe dclt")
-  names(x)[filter_from] <- "commune"
-  names(x)[filter_to] <- "dclt"
-  names(x)[!filter_from & !filter_to] <- "value"
+check_meapsdatagroup <- function(object, abort = FALSE){
+  status <- TRUE
+  if (length(object@group_from) != length(object@actifs)) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_from et actifs ne font pas la même longueur.") }
+  }
+  if (length(object@group_to) != length(object@emplois)) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_to et emplois ne font pas la même longueur.") }
+  }
   
-  x <- x[order(x$commune, x$dclt), ]
+  if (is.null(names(object@group_from))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_from n'est pas labelisé") }
+  }
+  if (is.null(names(object@group_to))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_to n'est pas labelisé.") }
+  }
   
-  return(x)
-}
-
-check_meapsdatagroup <- function(object){
+  if (!setequal(names(object@group_from), names(object@actifs))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_from et actifs n'ont pas la même liste de fromidINS.") }
+  }
+  if (!setequal(names(object@group_to), names(object@emplois))) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_to et emplois n'ont pas la même liste de toidINS.") }
+  }
   
-  if (length(object@group_from) != length(object@actifs)) stop("group_from et actifs ne font pas la même longueur.")
-  if (length(object@group_to) != length(object@emplois)) stop("group_to et emplois ne font pas la même longueur.")
+  if (!setequal(object@cible$group_from, object@group_from)) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_from et cible ne correspondent pas.") }
+  }
   
-  if (is.null(names(object@group_from))) stop("group_from n'est pas labelisé.")
-  if (is.null(names(object@group_to))) stop("group_to n'est pas labelisé.")
-  
-  if(!setequal(names(object@group_from), object@fromidINS)) stop("Les labels de group_from ne correspondent pas à fromidINS")
-  if(!setequal(names(object@group_to), object@toidINS)) stop("Les labels de group_to ne correspondent pas à toidINS")
-  
-  # La cible (MOBPRO) est une dataframe avec les colonnes contenant commune et dclt, d'un côté, et autre chose de l'autre.
-  cible <- formate_ciblemeaps(object@cible)
-  if (!setequal(cible$commune, object@group_from)) stop("group_from et cible ne correspondent pas.")
-  if (!setequal(cible$dclt, object@group_to)) stop("group_to et cible ne correspondent pas.")
+  if (!setequal(object@cible$group_to, object@group_to)) {
+    status <- FALSE
+    if (!quiet) { cli::cli_alert_warning("group_to et cible ne correspondent pas.") }
+  }
   
   check_meapsdata(object)
 }
@@ -104,95 +188,87 @@ check_meapsdatagroup <- function(object){
 # Class de base pour les données meaps.
 setClass("MeapsData", 
          representation = list(
-           distances = "data.frame",
-           fromidINS = "character",
-           toidINS = "character",
+           triplet = "data.frame",
            actifs = "numeric",
            emplois = "numeric",
-           fuite = "numeric"
+           fuites = "numeric"
          ),
          prototype = list(
-           distances = NULL,
-           fromidINS = character(),
-           toidINS = character(),
+           triplet = data.frame(fromidINS = character(), toidINS = character(), metric = numeric()),
            actifs = numeric(),
            emplois = numeric(),
-           fuite = numeric()
-         ),
-         validity = check_meapsdata
+           fuites = numeric()
+         )
 )
 
 setMethod(f = "initialize", signature = "MeapsData",
-          definition = function(.Object, distances, fromidINS, toidINS, actifs, emplois, fuite) {
+          definition = function(.Object, triplet, actifs, emplois, fuites) {
             
-            .Object@distances <- distances
-            .Object@fromidINS <- fromidINS
-            .Object@toidINS <- toidINS
+            fromidINS <- unique(triplet$fromidINS) # le tri est vérifié par ailleurs.
+            toidINS <- unique(triplet$toidINS) |> sort()
+            .Object@triplet <- triplet
             .Object@actifs <- actifs[fromidINS]
             .Object@emplois <- emplois[toidINS]
-            .Object@fuite <- fuite[fromidINS]
+            .Object@fuites <- fuites[fromidINS]
+            
+            check_meapsdata(.Object, abort = TRUE)
             
             return(.Object)
           })
 
 setMethod("show", "MeapsData", function(object) {
-  N <- unique(object@distances$i) |> length()
-  K <- unique(object@distances$j) |> length()
-  tx <- round(nrow(object@distances) / N / K * 100, digits = 1)
+  N <- unique(object@triplet$fromidINS) |> length()
+  K <- unique(object@triplet$toidINS) |> length()
+  tx <- round(nrow(object@triplet) / N / K * 100, digits = 1)
   cat("MeapsData :\n")
-  cat("Matrice des distances", N, "x", K, "remplie à", tx, "%\n")
+  cat("Matrice des triplet", N, "x", K, "remplie à", tx, "%\n")
   cat("Nombre d'actifs =", sum(object@actifs),"\n")
   cat("Nombre d'emplois =", sum(object@emplois), "\n")
-  cat("Nombre de fuyards =", sum(object@fuite * object@actifs))
+  cat("Nombre de fuyards =", sum(object@fuites * object@actifs))
 })
 
-setGeneric("all_in", function(object, ...) {standardGeneric("all_in")})
-
-setMethod("all_in", 
-          signature = "MeapsData",
-          function(object, ...){
- 
-  arg <- list(...)
-  # Définition de valeurs par défaut.
-  if (is.null(arg$attraction)) { attraction <- "constant" } else { attraction <- arg$attraction }
-  if (is.null(arg$parametres)) { parametres <- 0.0 } else { parametres <- arg$parametres }
-  if (is.null(arg$odds)) { odds <- 1.0 } else { odds <- arg$odds }
-  if (is.null(arg$nthreads)) { nthreads <- 0L} else { nthreads <- arg$nthreads }
-  if (is.null(arg$verbose)) { verbose <- TRUE } else { verbose <- arg$verbose }
-  if (is.null(arg$normalisation)) { normalisation <- FALSE } else { normalisation <- arg$normalisation }
-  if (is.null(arg$fuite_min)) { fuite_min <- 1e-3 } else { fuite_min <- arg$fuite_min }
+#' @import dplyr
+all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1, 
+                   nthreads = 0L, verbose = TRUE) {
   
+  if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
   # Validation des paramètres
-  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) stop("Fonction attraction inconnue")
-  
+  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+ 
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-  if (attraction == "odds" && length(odds) != nrow(object@distances) ) stop("vecteur odds invalide.")
+  if (attraction == "odds" && length(odds) != nrow(object@triplet) ) cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
-  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour marche invalide.")
-  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour marche_liss invalide.")
-  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) stop("Parametres pour double_marche_liss invalide.")
-  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour decay invalide.")
-  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) stop("Parametres pour logistique invalide.")
-  # p_dist <- aggregate(object@distances$i, by = list(object@distances$i), FUN = length)$x |> cumsum()
-  p_dist <- object@distances |> group_by(i) |> summarize(n()) |> pull()
+  froms <- unique(MeapsData@triplet$fromidINS)
+  tos <- unique(MeapsData@triplet$toidINS) |> sort()
+  
+  jlab <- seq_along(tos) - 1L
+  names(jlab) <- tos
+  
+  les_j <- jlab[MeapsData@triplet$toidINS]
+  
+  p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
   p_dist <- c(0L, p_dist)
   
-
-  meaps_all_in(jr_dist = object@distances$j,
+  meaps_all_in(jr_dist = les_j,
                p_dist = p_dist,
-               xr_dist = object@distances$value,
-               emplois = object@emplois,
-               actifs = object@actifs,
-               fuite = object@fuite,
+               xr_dist = MeapsData@triplet$metric,
+               emplois = MeapsData@emplois,
+               actifs = MeapsData@actifs,
+               fuites = MeapsData@fuites,
                parametres = parametres,
                xr_odds = odds,
                attraction = attraction,
-               nthreads = nthreads, verbose = verbose, normalisation = normalisation, fuite_min = fuite_min) |>
-    dplyr::left_join(data.frame(i = seq_along(object@fromidINS) - 1L, fromidINS = object@fromidINS), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(object@toidINS) - 1L, toidINS = object@toidINS), by = "j") |>
+               nthreads = nthreads, verbose = verbose) |>
+    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
+    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
     dplyr::select(fromidINS, toidINS, flux)
-})
-
+  
+}
 
 # Class pour les regroupements
 setClass("MeapsDataGroup", 
@@ -206,130 +282,132 @@ setClass("MeapsDataGroup",
            group_to = character(),
            cible = data.frame()
          ),
-         contains = "MeapsData",
-         validity = check_meapsdatagroup)
+         contains = "MeapsData")
 
 
 setMethod(f = "initialize", signature = "MeapsDataGroup",
-          definition = function(.Object, distances, fromidINS, toidINS, group_from, group_to, actifs, emplois, fuite, cible) {
+          definition = function(.Object, triplet, actifs, emplois, fuites, group_from, group_to, cible) {
             
-            .Object@distances <- distances
-            .Object@fromidINS <- fromidINS
-            .Object@toidINS <- toidINS
-            .Object@group_from <- sort(group_from)
-            .Object@group_to <- sort(group_to)
+            fromidINS <- unique(triplet$fromidINS) # le tri est vérifié par ailleurs.
+            toidINS <- unique(triplet$toidINS) |> sort()
+            
+            .Object@triplet <- triplet
             .Object@actifs <- actifs[fromidINS]
             .Object@emplois <- emplois[toidINS]
-            .Object@fuite <- fuite[fromidINS]
-            .Object@cible <- formate_ciblemeaps(cible)
+            .Object@fuites <- fuites[fromidINS]
+            .Object@group_from <- group_from[fromidINS]
+            .Object@group_to <- group_to[toidINS]
+            .Object@cible <- cible |> arrange(group_from, group_to)
+            
+            check_meapsdatagroup(.Object)
             
             return(.Object)
           })
 
 setMethod("show", "MeapsDataGroup", function(object) {
-  N <- unique(object@distances$i) |> length()
-  K <- unique(object@distances$j) |> length()
+  N <- unique(object@triplet$fromidINS) |> length()
+  K <- unique(object@triplet$toidINS) |> length()
   Ng <- unique(object@group_from) |> length()
   Kg <- unique(object@group_to) |> length()
-  tx <- round(nrow(object@distances) / N / K * 100, digits = 1)
+  tx <- round(nrow(object@triplet) / N / K * 100, digits = 1)
   cat("MeapsData :\n")
-  cat("Matrice des distances", N, "x", K, "remplie à", tx, "%\n")
+  cat("Matrice des triplet", N, "x", K, "remplie à", tx, "%\n")
   cat("Nombre d'actifs =", sum(object@actifs),"\n")
   cat("Nombre d'emplois =", sum(object@emplois), "\n")
-  cat("Nombre de fuyards =", sum(object@fuite * object@actifs), "\n")
+  cat("Nombre de fuyards =", sum(object@fuites * object@actifs), "\n")
   cat("Nombre de groupes de départ =", Ng,"\n")
   cat("Nombre de groupes d'arrivée =", Kg, "\n")
+  cat("Flux observés (cible) =", sum(object@cible$value))
 })
 
 # Constructeur
-meapsdatagroup <- function(MeapsData, group_from, group_to) {
-
-  new("MeapsDataGroup", MeapsData@distances, MeapsData@fromidINS, MeapsData@toidINS, 
-      group_from[MeapsData@fromidINS], group_to[MeapsData@toidINS],
-      MeapsData@actifs, MeapsData@emplois, MeapsData@fuite)
+meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
+  
+  fromidINS <- unique(MeapsData@triplet$fromidINS) # le tri est vérifié par ailleurs.
+  toidINS <- unique(MeapsData@triplet$toidINS) |> sort()
+  
+  new("MeapsDataGroup", MeapsData@triplet, MeapsData@actifs, MeapsData@emplois, MeapsData@fuites,
+      group_from[fromidINS], group_to[toidINS], cible |> arrange(group_from, group_to)
+      )
 }
 
-setGeneric("all_in_grouped", function(object, ...) {standardGeneric("all_in_grouped")})
+#' @import dplyr
+all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
+                           nthreads = 0L, verbose = TRUE) {
+  
+  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
+  # Validation des paramètres
+  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  
+  # RQ : pas de méthode pour vérifier le bon ordre des odds.
+  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  
+  froms <- unique(MeapsDataGroup@triplet$fromidINS)
+  tos <- unique(MeapsDataGroup@triplet$toidINS) |> sort()
+  
+  jlab <- seq_along(tos) - 1L
+  names(jlab) <- tos
+  
+  les_j <- jlab[MeapsDataGroup@triplet$toidINS]
+  
+  p_dist <- MeapsDataGroup@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
+  p_dist <- c(0L, p_dist)
+  
+  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
+  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
+  
+  gf_lab <- seq_along(g_froms) - 1L
+  names(gf_lab) <- g_froms
+  gt_lab <- seq_along(g_tos) - 1L
+  names(gt_lab) <- g_tos
+  
+  index_gfrom <- gf_lab[MeapsDataGroup@group_from]
+  index_gto <- gt_lab[MeapsDataGroup@group_to]
+  
+  all_in_optim(jr_dist = les_j,
+               p_dist = p_dist,
+               xr_dist = MeapsDataGroup@triplet$metric,
+               group_from = index_gfrom,
+               group_to = index_gto,
+               emplois = MeapsDataGroup@emplois,
+               actifs = MeapsDataGroup@actifs,
+               fuites = MeapsDataGroup@fuites,
+               parametres = parametres,
+               xr_odds = odds,
+               attraction = attraction,
+               nthreads = nthreads, verbose = verbose)
+}
+            
+meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1, 
+                        method = "L-BFGS-B", objective = "KL", lower = NULL, upper = NULL,
+                        nthreads = 0L, progress = TRUE) { 
+          
+  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
+  if (!attraction %in% c("marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Pas de fonction choisi ou fonction non paramètrique.")
 
-setMethod("all_in_grouped", 
-          signature = "MeapsDataGroup",
-          function(object, ...){
-            
-            arg <- list(...)
-            # Définition de valeurs par défaut.
-            if (is.null(arg$attraction)) { attraction <- "constant" } else { attraction <- arg$attraction }
-            if (is.null(arg$parametres)) { parametres <- 0.0 } else { parametres <- arg$parametres }
-            if (is.null(arg$odds)) { odds <- 1.0 } else { odds <- arg$odds }
-            if (is.null(arg$nthreads)) { nthreads <- 0L} else { nthreads <- arg$nthreads }
-            if (is.null(arg$verbose)) { verbose <- TRUE } else { verbose <- arg$verbose }
-            if (is.null(arg$normalisation)) { normalisation <- FALSE } else { normalisation <- arg$normalisation }
-            if (is.null(arg$fuite_min)) { fuite_min <- 1e-3 } else { fuite_min <- arg$fuite_min }
-            
-            # Validation des paramètres
-            if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) stop("Fonction attraction inconnue")
-            
-            # RQ : pas de méthode pour vérifier le bon ordre des odds.
-            if (attraction == "odds" && length(odds) != nrow(object@distances) ) stop("vecteur odds invalide.")
-            
-            if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour marche invalide.")
-            if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour marche_liss invalide.")
-            if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) stop("Parametres pour double_marche_liss invalide.")
-            if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) stop("Parametres pour decay invalide.")
-            if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) stop("Parametres pour logistique invalide.")
-            
-            p_dist <- aggregate(object@distances$i, by = list(object@distances$i), FUN = length)$x |> cumsum()
-            p_dist <- c(0L, p_dist)
-            
-            lab_groupfrom <- unique(object@group_from)
-            index_from <- sapply(object@group_from, FUN = \(x) which(x == lab_groupfrom) - 1L)
-            lab_groupto <- unique(object@group_to)
-            index_to <- sapply(object@group_to, FUN = \(x) which(x == lab_groupto) - 1L)
-            
-            all_in_optim(jr_dist = object@distances$j,
-                         p_dist = p_dist,
-                         xr_dist = object@distances$value,
-                         group_from = index_from,
-                         group_to = index_to,
-                         emplois = object@emplois,
-                         actifs = object@actifs,
-                         fuite = object@fuite,
-                         parametres = parametres,
-                         xr_odds = odds,
-                         attraction = attraction,
-                         nthreads = nthreads, verbose = verbose, normalisation = normalisation, fuite_min = fuite_min) 
-            
-          })
-
-setGeneric("meaps_optim", function(object, ...) {standardGeneric("meaps_optim")})
-
-setMethod("meaps_optim", 
-          signature = "MeapsDataGroup",
-          function(object, ...) {
-            arg <- list(...)
-            
-            if (is.null(arg$attraction) || arg$attraction == "constant") stop("Pas de fonction choisi ou fonction non paramètrique.")
-            if (is.null(arg$parametres)) stop("Pas de paramètres définis")
-            if (is.null(arg$method)) { arg$method <- "Nelder-Mead" }
-            
-            par0 <- arg$parametres
-            arg$parametres <- NULL
-            
-            # Définition des valeurs par défaut
-            if (is.null(arg$objective)) { objective <- "KL" } else { objective <- arg$objective}
-            
-            fn <- switch(objective, 
-                         "KL" = function(par) {
-                           les_arguments <- append(object, list(parametres = par)) |> append(arg)
-                           estim <- do.call(all_in_grouped, args = les_arguments)
-                           entropie_relative(estim, object@cible$value, floor = 1e-3 / length(estim) )
-                           }
-                         )
-            
-            if (is.null(fn)) stop("Fonction objective non définie !")
-            
-            stats::optim(par = par0, fn = fn, method = arg$method)
-
-            
-          })
+  arg <- list(MeapsDataGroup, attraction = attraction, odds = odds, nthreads = nthreads, verbose = FALSE)
+  
+  fn <- switch(objective, 
+               "KL" = function(par) {
+                 if (progress) cat("*")
+                 estim <- do.call(all_in_grouped, args = append(arg, list(parametres = par)))
+                 entropie_relative( estim, object@cible$value, floor = 1e-3 / length(estim) )
+                 
+               }
+  )
+  
+  if (is.null(fn)) stop("Fonction objective non définie !")
+  
+  nb_par <- length(parametres)
+  if (is.null(lower)) lower <- rep(0, nb_par)
+  if (is.null(upper)) upper <- rep(Inf, nb_par)
+  
+  stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper)
+}
 
 
