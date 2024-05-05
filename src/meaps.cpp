@@ -221,7 +221,8 @@ for (std::size_t j = 0; j < K; ++j) {
 }
 #pragma omp single
 {   
-  if (verbose == TRUE) REprintf("%f actifs non occupés (soit %f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
+  if (verbose == TRUE) 
+    REprintf("%.0f actifs non occupés (soit %.1f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
   
   old_tot = tot_actifs_libres;
   tot_actifs_libres = 0;
@@ -470,7 +471,8 @@ for (std::size_t j = 0; j < K; ++j) {
 }
 #pragma omp single
 {   
-  if (verbose == TRUE) REprintf("%f actifs non occupés (soit %f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
+  if (verbose == TRUE) 
+    REprintf("%.0f actifs non occupés (soit %.1f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
   
   old_tot = tot_actifs_libres;
   tot_actifs_libres = 0;

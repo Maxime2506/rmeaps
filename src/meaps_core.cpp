@@ -177,7 +177,8 @@ for (std::size_t j = 0; j < K; ++j) {
 }
 #pragma omp single
 {   
-  if (verbose == TRUE) REprintf("%f actifs non occupés (soit %f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
+  if (verbose == TRUE) 
+    REprintf("%f actifs non occupés (soit %f %%)", round(tot_actifs_libres), round(1000 * tot_actifs_libres/tot_actifs)/10);
   
   old_tot = tot_actifs_libres;
   tot_actifs_libres = 0;
