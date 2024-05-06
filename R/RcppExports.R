@@ -12,7 +12,7 @@ all_in_optim <- function(jr_dist, p_dist, xr_dist, group_from, group_to, emplois
 #' La fonction MEAPS sur plusieurs shufs
 NULL
 
-meaps_multishuf <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuite, shuf, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
-    .Call(`_rmeaps_meaps_multishuf`, jr_dist, p_dist, xr_dist, emplois, actifs, fuite, shuf, parametres, xr_odds, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton)
+meaps_multishuf <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuite, shuf, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE) {
+    .Call(`_rmeaps_meaps_multishuf`, jr_dist, p_dist, xr_dist, emplois, actifs, fuite, shuf, parametres, xr_odds, mode, oddssubjectifs, nthreads, progress)
 }
 

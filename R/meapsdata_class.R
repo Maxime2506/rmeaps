@@ -149,23 +149,25 @@ is_meapsdatagroup_valid <- function(object, quiet = FALSE)  {
 }
 
 check_meapsdatagroup <- function(object, abort = FALSE){
-  status <- TRUE
+  
+  status <- is_meapsdatagroup_valid(object@cible)
+  
   if (length(object@group_from) != length(object@actifs)) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_from et actifs ne font pas la même longueur.") }
+    cli::cli_alert_warning("group_from et actifs ne font pas la même longueur.")
   }
   if (length(object@group_to) != length(object@emplois)) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_to et emplois ne font pas la même longueur.") }
+    cli::cli_alert_warning("group_to et emplois ne font pas la même longueur.")
   }
   
   if (is.null(names(object@group_from))) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_from n'est pas labelisé") }
+    cli::cli_alert_warning("group_from n'est pas labelisé")
   }
   if (is.null(names(object@group_to))) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_to n'est pas labelisé.") }
+    cli::cli_alert_warning("group_to n'est pas labelisé.")
   }
   
   if (!setequal(names(object@group_from), names(object@actifs))) {
@@ -174,20 +176,26 @@ check_meapsdatagroup <- function(object, abort = FALSE){
   }
   if (!setequal(names(object@group_to), names(object@emplois))) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_to et emplois n'ont pas la même liste de toidINS.") }
+    cli::cli_alert_warning("group_to et emplois n'ont pas la même liste de toidINS.")
   }
   
   if (!setequal(object@cible$group_from, object@group_from)) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_from et cible ne correspondent pas.") }
+    cli::cli_alert_warning("group_from et cible ne correspondent pas.")
   }
   
   if (!setequal(object@cible$group_to, object@group_to)) {
     status <- FALSE
-    if (!quiet) { cli::cli_alert_warning("group_to et cible ne correspondent pas.") }
+    cli::cli_alert_warning("group_to et cible ne correspondent pas.")
   }
   
-  check_meapsdata(object)
+  if (status) { 
+    cli::cli_alert_success("Le MeapsDataGroup est valide.") 
+  } else if (abort) {
+    cli::cli_abort("Le MeapsDataGroup n'est pas valide.")
+    }
+  
+  invisible(status)
 }
 
 
@@ -319,7 +327,8 @@ setMethod(f = "initialize", signature = "MeapsDataGroup",
             .Object@group_to <- group_to[tos]
             .Object@cible <- cible |> arrange(group_from, group_to)
             
-            check_meapsdatagroup(.Object)
+            check_meapsdata(.Object, abort = TRUE)
+            check_meapsdatagroup(.Object, abort = TRUE)
             
             return(.Object)
           })
@@ -330,7 +339,7 @@ setMethod("show", "MeapsDataGroup", function(object) {
   Ng <- unique(object@group_from) |> length()
   Kg <- unique(object@group_to) |> length()
   tx <- round(nrow(object@triplet) / N / K * 100, digits = 1)
-  cat("MeapsData :\n")
+  cat("MeapsDataGroup :\n")
   cat("Matrice des triplet", N, "x", K, "remplie à", tx, "%\n")
   cat("Nombre d'actifs =", sum(object@actifs),"\n")
   cat("Nombre d'emplois =", sum(object@emplois), "\n")
@@ -411,10 +420,11 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   
   arg <- list(MeapsDataGroup, attraction = attraction, odds = odds, nthreads = nthreads, verbose = FALSE)
   
+  env <- environment()
   fn <- switch(
     objective, 
     "KL" = function(par) {
-      if (progress) cat("*")
+      if (progress) cli::cli_progress_update(.envir = env)
       estim <- do.call(all_in_grouped, args = append(arg, list(parametres = par)))
       entropie_relative( estim, MeapsDataGroup@cible$value, floor = 1e-3 / length(estim) )
       
@@ -427,7 +437,9 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   
+  cli::cli_progress_bar(.envir = env, clear = FALSE)
   stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper)
+  cli::cli_progress_done(.envir = env)
 }
 
 

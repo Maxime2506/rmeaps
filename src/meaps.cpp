@@ -45,11 +45,11 @@ using namespace Rcpp;
                         const int nthreads = 0, 
                         const bool verbose = true) {
    
+   const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
+   
    const int LIMITE_LOOP = 200; // condition d'arrêt pour les boucles lors de la distribution des résidents vers des emplois.
    const double LIMITE_PRECISION_1 = 1e-3; // condition d'arrêt sur le pourcentage de résidents non classés restants.
    const double LIMITE_PRECISION_2 = 1e-4; // condition d'arrêt sur la vitesse de reclassement des résidents non occupés.
-   
-   const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
    std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
@@ -77,6 +77,8 @@ using namespace Rcpp;
    double tot_actifs_libres = std::accumulate(actifs_libres.begin(), actifs_libres.end(), 0.0);
    double tot_actifs = tot_actifs_libres, old_tot;
    
+   const double LIMITE_PRECISION_3 = LIMITE_PRECISION_1 / tot_actifs; // seuil en deçà duquel une ligne d'actifs est supposée vides (tous actifs occupés). 
+   
    int nloop = 0;
    
 #ifdef _OPENMP
@@ -94,7 +96,8 @@ using namespace Rcpp;
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
   std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-  do {
+  
+  do { // DEBUT DES BOUCLES DO-WHILE
     
 #pragma omp single
 {
@@ -102,8 +105,9 @@ using namespace Rcpp;
   if (verbose == TRUE) REprintf("\nBoucle %i: ", nloop);
 }
 #pragma omp for schedule(static, 2)
-for (std::size_t from = 0; from < N; ++from) {
+for (auto from = 0; from < N; ++from) {
   
+  if (actifs_libres[from] < LIMITE_PRECISION_3) continue;
   // Inner index issu de la matrice sparse pour la ligne from en cours.
   std::size_t debut = ts_p_dist[from], fin = ts_p_dist[from + 1L];
   std::size_t k_valid = fin - debut;
@@ -235,7 +239,7 @@ for (std::size_t i = 0; i < N; ++i) {
 
   } while (tot_actifs_libres/tot_actifs > LIMITE_PRECISION_1 &&
     std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
-    nloop < LIMITE_LOOP);
+    nloop < LIMITE_LOOP); // FIN DES BOUCLES DO-WHILE
    
    // sortie au format xr_dist.
 #pragma omp parallel for

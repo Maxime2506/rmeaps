@@ -76,11 +76,11 @@ names(les_dclts) <- tos
 mobpro <- expand.grid(group_to = 1:3, group_from = 1:3) |> 
   mutate(value = 60/9)
 
-mdg <- new("MeapsDataGroup", dist_triplet, group_from = les_communes, group_to = les_dclts, 
-           actifs = actifs, emplois = emplois, fuite = fuites, cible = mobpro)
+# mdg <- new("MeapsDataGroup", dist_triplet, group_from = les_communes, group_to = les_dclts, 
+#            actifs = actifs, emplois = emplois, fuite = fuites, cible = mobpro)
 
 
-mdg2 <- meapsdatagroup(md, group_from = les_communes, group_to = les_dclts, cible = mobpro)
+mdg <- meapsdatagroup(md, group_from = les_communes, group_to = les_dclts, cible = mobpro)
 
 
 all_in_grouped(mdg)

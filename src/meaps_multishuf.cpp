@@ -38,21 +38,12 @@ using namespace Rcpp;
                                const std::string mode = "continu",
                                Nullable<NumericVector> oddssubjectifs = R_NilValue,
                                const int nthreads = 0, 
-                               const bool progress = true,
-                               bool normalisation = false, 
-                               double fuite_min = 1e-3,
-                               double seuil_newton = 1e-6) {
+                               const bool progress = true) {
+   
+   const double SEUIL_NEWTON = 1e-6;
    
    const std::size_t N = actifs.size(), K = emplois.size(), 
      Ns = shuf.ncol(), Nboot = shuf.nrow();
-   
-   // Choix d'une limite basse pour la fuite.
-   fuite = ifelse(fuite > fuite_min, fuite, fuite_min);
-   
-   // Calage de l'emploi sur les actifs.
-   if (normalisation) {
-     emplois = emplois * sum(actifs * (1 - fuite)) / sum(emplois);
-   }
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
    std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
@@ -156,7 +147,7 @@ using namespace Rcpp;
          // Nombre d'actifs partant par freq_actif paquets.
          double actifspartant = ts_actifs[i] / freq_actifs[i];
          std::vector<double> odds(ts_xr_odds.begin() + debut, ts_xr_odds.begin() + fin);
-         repartition = repartir_actifs(placeslibres, attractivites, odds, ts_fuite[i], actifspartant, seuil_newton);
+         repartition = repartir_actifs(placeslibres, attractivites, odds, ts_fuite[i], actifspartant, SEUIL_NEWTON);
          
          // Inscription des résultats locaux dans la perspective globale.
          for(std::size_t k = 0; k < k_valid ; ++k) {
