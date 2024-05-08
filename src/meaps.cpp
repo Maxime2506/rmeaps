@@ -48,7 +48,7 @@ using namespace Rcpp;
    const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
    
    const int LIMITE_LOOP = 200; // condition d'arrêt pour les boucles lors de la distribution des résidents vers des emplois.
-   const double LIMITE_PRECISION_1 = 1e-3; // condition d'arrêt sur le pourcentage de résidents non classés restants.
+   const double LIMITE_PRECISION_1 = 1e-4; // condition d'arrêt sur le pourcentage de résidents non classés restants.
    const double LIMITE_PRECISION_2 = 1e-4; // condition d'arrêt sur la vitesse de reclassement des résidents non occupés.
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
@@ -240,8 +240,10 @@ for (std::size_t i = 0; i < N; ++i) {
   } while (tot_actifs_libres/tot_actifs > LIMITE_PRECISION_1 &&
     std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
     nloop < LIMITE_LOOP); // FIN DES BOUCLES DO-WHILE
-   
+  
+
    // sortie au format xr_dist.
+   
 #pragma omp parallel for
    for (std::size_t i = 0; i < N; ++i) {
      for (std::size_t k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
@@ -250,6 +252,7 @@ for (std::size_t i = 0; i < N; ++i) {
      }
    }
 } // fin clause omp parallel
+  if(verbose == TRUE) REprintf("\n");
 
    return DataFrame::create(_("i") = wrap(res_i), _("j") = jr_dist, _("flux") = wrap(res_xr));
  }
