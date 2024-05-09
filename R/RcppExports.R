@@ -12,14 +12,21 @@ all_in_optim <- function(jr_dist, p_dist, xr_dist, group_from, group_to, emplois
 #' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
 NULL
 
-multishuf_optim_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_multishuf_optim_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction, nthreads, verbose)
+#' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+NULL
+
+multishuf_oc_group_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_oc_group_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction, nthreads, verbose)
+}
+
+multishuf_oc_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_oc_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose)
 }
 
 #' La fonction MEAPS sur plusieurs shufs
 NULL
 
-meaps_multishuf <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_meaps_multishuf`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode, oddssubjectifs, nthreads, verbose)
+meaps_multishuf_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_meaps_multishuf_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode, oddssubjectifs, nthreads, verbose)
 }
 

@@ -362,7 +362,7 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
     cumsum()
   
   p_dist <- c(0L, p_dist)
-  res <- meaps_multishuf(
+  res <- meaps_multishuf_cpp(
     jr_dist = les_j,
     p_dist = p_dist,
     xr_dist = MeapsData@triplet$metric,
@@ -399,7 +399,7 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
 #'
 #' @import dplyr
 multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1, nshuf = 16,
-                      nthreads = 0L, verbose = TRUE) {
+                         nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
   # Validation des paramètres
@@ -434,28 +434,22 @@ multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odd
     cumsum()
   
   p_dist <- c(0L, p_dist)
-  res <- multishuf_optim_cpp(
+  res <- multishuf_oc_cpp(
     jr_dist = les_j,
     p_dist = p_dist,
     xr_dist = MeapsData@triplet$metric,
     emplois = MeapsData@emplois,
     actifs = MeapsData@actifs,
     fuites = MeapsData@fuites,
-    group_from = 0:(length(MeapsData@froms)-1),
-    group_to = 0:(length(MeapsData@tos)-1),
     shuf = shuf,
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = nthreads, verbose = verbose) 
-  colnames(res) <- MeapsData@tos
-  
-  res |>
-    tibble::as_tibble() |> 
-    dplyr::mutate(fromidINS = MeapsData@froms) |> 
-    tidyr::pivot_longer(cols = -fromidINS, names_to = "toidINS", values_to = "flux") |> 
-    dplyr::filter(flux>0) |> 
-    arrange(desc(flux))
+    nthreads = nthreads, verbose = verbose) |>
+    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
+    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
+    dplyr::select(fromidINS, toidINS, flux)
+  return(res)
 }
 
 # Class pour les regroupements
@@ -558,20 +552,21 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
   index_gto <- gt_lab[MeapsDataGroup@group_to]
   
   res <- all_in_optim(jr_dist = les_j,
-               p_dist = p_dist,
-               xr_dist = MeapsDataGroup@triplet$metric,
-               group_from = index_gfrom,
-               group_to = index_gto,
-               emplois = MeapsDataGroup@emplois,
-               actifs = MeapsDataGroup@actifs,
-               fuites = MeapsDataGroup@fuites,
-               parametres = parametres,
-               xr_odds = odds,
-               attraction = attraction,
-               nthreads = nthreads, verbose = verbose)
-  MeapsDataGroup@cible |> 
-    mutate(cible = value, value = res[res>0]) |> 
-    arrange(desc(cible))
+                      p_dist = p_dist,
+                      xr_dist = MeapsDataGroup@triplet$metric,
+                      group_from = index_gfrom,
+                      group_to = index_gto,
+                      emplois = MeapsDataGroup@emplois,
+                      actifs = MeapsDataGroup@actifs,
+                      fuites = MeapsDataGroup@fuites,
+                      parametres = parametres,
+                      xr_odds = odds,
+                      attraction = attraction,
+                      nthreads = nthreads, verbose = verbose)
+  expand_grid(group_from = g_froms, group_to = g_tos)|> 
+    mutate(value = res) |>
+    left_join(MeapsDataGroup@cible |> rename(cible=value), by = c("group_from", "group_to")) |> 
+    arrange(desc(value))
 }
 
 
@@ -591,8 +586,8 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
 #' @return
 #' @export
 #'
-multishuf_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
-                              nthreads = 0L, verbose = TRUE) {
+multishuf_oc_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
+                                 nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) 
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
@@ -630,7 +625,7 @@ multishuf_grouped <- function(MeapsDataGroup,  attraction = "constant", parametr
   index_gfrom <- gf_lab[MeapsDataGroup@group_from]
   index_gto <- gt_lab[MeapsDataGroup@group_to]
   
-  res <- multishuf_optim_cpp(
+  res <- multishuf_oc_group_cpp(
     jr_dist = les_j,
     p_dist = p_dist,
     xr_dist = MeapsDataGroup@triplet$metric,
@@ -655,35 +650,57 @@ multishuf_grouped <- function(MeapsDataGroup,  attraction = "constant", parametr
 }
 
 
-meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1, 
-                        method = "L-BFGS-B", objective = "KL", lower = NULL, upper = NULL,
+meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
+                        meaps_fun = "all_in",
+                        method = "L-BFGS-B", objective = "KL",
+                        lower = NULL, upper = NULL,
                         nthreads = 0L, progress = TRUE) { 
   
-  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
-  if (!attraction %in% c("marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Pas de fonction choisi ou fonction non paramètrique.")
+  if (!inherits(MeapsDataGroup, "MeapsDataGroup"))
+    cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
+  if (!attraction %in% c("marche", "marche_liss", "double_marche_liss","decay", "logistique")) 
+    cli::cli_abort("Pas de fonction choisi ou fonction non paramètrique.")
+  if (!meaps_fun %in% c("all_in", "multishuf")) 
+    cli::cli_abort("meaps_fun doit être soit 'all_in', soit 'multishuf'")
   
-  arg <- list(MeapsDataGroup, attraction = attraction, odds = odds, nthreads = nthreads, verbose = FALSE)
-  
+  arg <- list(
+    MeapsDataGroup,
+    attraction = attraction,
+    odds = odds, nthreads = nthreads, verbose = FALSE)
+  meaps_fun_ <- switch(
+    meaps_fun,
+    "all_in" = all_in_grouped,
+    "multishuf" = multishuf_oc_grouped)
   env <- environment()
   fn <- switch(
     objective, 
     "KL" = function(par) {
-      if (progress) cli::cli_progress_update(.envir = env)
-      estim <- do.call(all_in_grouped, args = append(arg, list(parametres = par)))
-      entropie_relative( estim, MeapsDataGroup@cible$value, floor = 1e-3 / length(estim) )
-      
+      if (progress) 
+        cli::cli_progress_update(.envir = env)
+      estim <- do.call(
+        meaps_fun_, 
+        args = append(arg, list(parametres = par)))
+      entropie_relative(
+        estim, 
+        MeapsDataGroup@cible$value, 
+        floor = 1e-3 / length(estim) )
     }
   )
   
-  if (is.null(fn)) stop("Fonction objective non définie !")
+  if (is.null(fn)) 
+    cli::cli_abort("Erreur : la fonction objective est non définie")
   
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   
   cli::cli_progress_bar(.envir = env, clear = FALSE)
-  stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper)
+  res <- stats::optim(
+    par = parametres,
+    fn = fn,
+    method = method, lower = lower, upper = upper)
   cli::cli_progress_done(.envir = env)
+  res
 }
 
 

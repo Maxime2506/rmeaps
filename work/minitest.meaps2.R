@@ -25,10 +25,11 @@ triplet <- distances |>
 data <- meapsdata(triplet = triplet, actifs = actifs, emplois = emplois, fuites=fuite,  nshuf=256)
 cible <- all_in(data) |> arrange(desc(flux)) |> 
   rename(group_from = fromidINS, group_to = toidINS, value = flux)
-multishuf(data)
+
+multishuf_oc(data, nthreads = 4)
 
 data_g <- meapsdatagroup(data, group_from = set_names(names(actifs)), group_to = set_names(names(emplois)), cible = cible)
 
 all_in_grouped(data_g)
 
-multishuf_grouped(data_g)
+multishuf_oc_grouped(data_g)

@@ -29,7 +29,7 @@ using namespace Rcpp;
  //' 
  //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
  // [[Rcpp::export]]
- NumericMatrix meaps_multishuf(const IntegerVector jr_dist, 
+ NumericMatrix meaps_multishuf_cpp(const IntegerVector jr_dist, 
                                const IntegerVector p_dist, 
                                const NumericVector xr_dist, 
                                NumericVector emplois,
@@ -92,8 +92,7 @@ using namespace Rcpp;
        ts_xr_odds[k] =  xr_odds[k]; // dans ce cas, on suppose que les odds sont passés comme avant (pas en log)
      } 
    }
-   if (verbose == TRUE) REprintf("Attraction calculée");
-   
+
    std::vector<double> odsub;
    if (mode == "subjectif_c"|| mode == "subjectif_d") {
      odsub = as< std::vector<double> >(oddssubjectifs);
