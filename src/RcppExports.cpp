@@ -78,6 +78,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// max_threads
+IntegerVector max_threads();
+RcppExport SEXP _rmeaps_max_threads() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(max_threads());
+    return rcpp_result_gen;
+END_RCPP
+}
 // multishuf_oc_cpp
 DataFrame multishuf_oc_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, NumericVector emplois, const NumericVector actifs, NumericVector fuites, IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
 RcppExport SEXP _rmeaps_multishuf_oc_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
@@ -129,6 +139,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_meaps_all_in", (DL_FUNC) &_rmeaps_meaps_all_in, 11},
     {"_rmeaps_all_in_optim", (DL_FUNC) &_rmeaps_all_in_optim, 13},
     {"_rmeaps_multishuf_oc_group_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_group_cpp, 14},
+    {"_rmeaps_max_threads", (DL_FUNC) &_rmeaps_max_threads, 0},
     {"_rmeaps_multishuf_oc_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_cpp, 12},
     {"_rmeaps_meaps_multishuf_cpp", (DL_FUNC) &_rmeaps_meaps_multishuf_cpp, 14},
     {NULL, NULL, 0}

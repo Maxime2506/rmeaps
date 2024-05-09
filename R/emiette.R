@@ -11,7 +11,7 @@
 #' @export
 #'
 
-emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=TRUE) {
+emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=TRUE, seed = NULL) {
   if(tibble::is_tibble(les_actifs))
     act <- les_actifs |> 
       dplyr::pull(var, name = idINS)
@@ -33,6 +33,7 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=
   shuf <- matrix(NA, ncol = sum(freq), nrow = nshuf)
   if(weighted==FALSE)
     w <- NULL
+  set.seed(seed)
   for(i in 1:nshuf) 
     shuf[i, ] <- sample(set, sum(freq), prob = w, replace=FALSE)
   colnames(shuf) <- noms

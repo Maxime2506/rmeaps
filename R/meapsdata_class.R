@@ -230,7 +230,10 @@ setClass("MeapsData",
 )
 
 setMethod(f = "initialize", signature = "MeapsData",
-          definition = function(.Object, triplet, actifs, emplois, fuites, nshuf = NULL, seuil = 40) {
+          definition = function(
+    .Object,
+    triplet, actifs, emplois, fuites,
+    nshuf = NULL, seuil = 40, seed = NULL) {
             fromidINS <- dplyr::distinct(triplet, fromidINS) |> 
               dplyr::pull()
             # le tri est vérifié par ailleurs.
@@ -246,7 +249,9 @@ setMethod(f = "initialize", signature = "MeapsData",
             .Object@tos <- toidINS
             
             if(!is.null(nshuf))
-              .Object@shuf <- emiette(les_actifs = .Object@actifs, nshuf = nshuf, seuil=seuil)
+              .Object@shuf <- emiette(
+                les_actifs = .Object@actifs, 
+                nshuf = nshuf, seuil=seuil, seed = seed)
             
             check_meapsdata(.Object, abort = TRUE)
             
@@ -254,8 +259,11 @@ setMethod(f = "initialize", signature = "MeapsData",
           })
 
 # Constructeur
-meapsdata <- function(triplet, actifs, emplois, fuites, nshuf = NULL, seuil = 40) {
-  new("MeapsData", triplet, actifs, emplois, fuites, nshuf = nshuf, seuil = seuil)
+meapsdata <- function(triplet, actifs, emplois, fuites,
+                      nshuf = NULL, seuil = 40, seed = NULL) {
+  new("MeapsData", 
+      triplet, actifs, emplois, fuites, 
+      nshuf = nshuf, seuil = seuil, seed = seed)
 }
 
 setMethod("show", "MeapsData", function(object) {
@@ -398,8 +406,9 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
 #' @param verbose 
 #'
 #' @import dplyr
-multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1, nshuf = 16,
-                         nthreads = 0L, verbose = TRUE) {
+multishuf_oc <- function(MeapsData, attraction = "constant", 
+                         parametres = 0, odds = 1, nshuf = 16,
+                         nthreads = 0L, verbose = TRUE, gbperthreads=4) {
   
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
   # Validation des paramètres
@@ -426,7 +435,7 @@ multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odd
   names(jlab) <- tos
   
   les_j <- jlab[MeapsData@triplet$toidINS]
-  
+  names(les_j) <- NULL
   p_dist <- MeapsData@triplet |>
     dplyr::group_by(fromidINS) |> 
     dplyr::summarize(n()) |> 
@@ -434,6 +443,22 @@ multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odd
     cumsum()
   
   p_dist <- c(0L, p_dist)
+  
+  # check mem
+  size <- length(MeapsData@triplet$metric)/1024^3
+  large <- 4*size>gbperthreads/4
+  if(large) {
+    gc()
+    memused <- as.numeric(lobstr::mem_used())/1024^3
+    ntr <- nthreads
+    if(nthreads==0) ntr <- max_threads()
+    memleft <- gbperthreads*max_threads() - 4*size*ntr -20*size - memused
+    if(memleft < ntr) {
+      ntr <- min(max_threads(), max(1, round((gbperthreads*max_threads() - 20*size - memused)/(1.5+4*size))))
+      cli::cli_warn("le nombre de threads est réduit à {ntr}")
+    }
+  }
+  
   res <- multishuf_oc_cpp(
     jr_dist = les_j,
     p_dist = p_dist,
@@ -445,10 +470,11 @@ multishuf_oc <- function(MeapsData, attraction = "constant", parametres = 0, odd
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = nthreads, verbose = verbose) |>
+    nthreads = ntr, verbose = verbose) |>
     dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
     dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
     dplyr::select(fromidINS, toidINS, flux)
+  if(large) gc()
   return(res)
 }
 

@@ -19,6 +19,11 @@ multishuf_oc_group_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fu
     .Call(`_rmeaps_multishuf_oc_group_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction, nthreads, verbose)
 }
 
+#'
+max_threads <- function() {
+    .Call(`_rmeaps_max_threads`)
+}
+
 multishuf_oc_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
     .Call(`_rmeaps_multishuf_oc_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose)
 }

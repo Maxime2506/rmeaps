@@ -244,7 +244,8 @@ inline std::vector<double> _repartir_continu(
 #pragma omp parallel for num_threads(ntr)
 #endif
    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-     size_t max_i = std::min((Iboot+1)*NNboot-1, Nboot);
+     size_t max_i = (Iboot+1)*NNboot;
+     if(Iboot==ntr-1) max_i = Nboot;
      size_t min_i = Iboot*NNboot;
      for (size_t iboot = min_i; iboot < max_i; ++iboot) {
        // Initialisation de l'ordre de départ des actifs et de l'emploi
@@ -322,9 +323,9 @@ inline std::vector<double> _repartir_continu(
    
    NumericMatrix resultat(Nref, Kref);
    std::fill( resultat.begin(), resultat.end(), 0 ) ;
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(ntr)
-// #endif
+   // #ifdef _OPENMP
+   // #pragma omp parallel for num_threads(ntr)
+   // #endif
    for (std::size_t i = 0; i < Nref; ++i) {
      for (std::size_t j = 0; j < Kref; ++j) {
        for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
@@ -354,6 +355,11 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
     return tot;
 }
 
+//'
+// [[Rcpp::export]]
+IntegerVector max_threads() {
+  return(wrap(omp_get_max_threads()));
+}
 
 //' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
@@ -440,6 +446,14 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
    const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
    
+   const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
+   const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
+   const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
+   const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
+   
+   std::vector<float> resultat(Nx);
+   std::fill( resultat.begin(), resultat.end(), 0 );
+   
    // 
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
    // s'il fait repasser plusieurs fois la même ligne d'actifs. Dans ce cas, on
@@ -453,103 +467,107 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    // Initialisation du résultat.
    // Lancement du bootstrap.
    Progress p(Nboot*Ns, verbose);
-   std::size_t NNboot = floor( Nboot / ntr);
+   std::size_t NNboot = floor( Nboot / ntr );
+   if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
    std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nx));
    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
      std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
    }
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(ntr)
-#endif
-   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-     size_t max_i = std::min((Iboot+1)*NNboot-1, Nboot);
-     size_t min_i = Iboot*NNboot;
-     for (size_t iboot = min_i; iboot < max_i; ++iboot) {
-       // Initialisation de l'ordre de départ des actifs et de l'emploi
-       // disponible au début.
-       
-       
-       std::vector<int> theshuf = ishuf[iboot];  // deep copy pour un boot.
-       std::vector<double> emp(emploisinitial);  // deep copy.
-       
-       for (auto from : theshuf) {
-         // check interrupt & progress
-         if (! Progress::check_abort() )
-           p.increment();
-         // Construction de l'accessibilité dite pénalisée.
-         std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
-         std::size_t k_valid = fin - debut;
-         std::vector<double> facteur_attraction(k_valid, 1.0), 
-         emplois_libres(k_valid),
-         repartition(k_valid, 0);
-         
-         if (attraction == "marche") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
-           }}
-         
-         if (attraction == "marche_liss") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
-           }}
-         
-         if (attraction == "double_marche_liss") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
-           }}
-         
-         if (attraction == "decay") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
-           }}
-         
-         if (attraction == "logistique") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
-           }}
-         
-         if (attraction == "odds") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k] = exp( _xr_odds[debut + k] );
-           } 
-         }
-         
-         for (std::size_t k = 0; k < k_valid; ++k) {
-           emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
-         }
-         
-         double actifspartant = actifscpp[from] / freq_actifs[from];
-         
-         std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
-         repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
-         
-         for (std::size_t k = 0; k < k_valid; ++k) {
-           emp[ jr_dist[debut + k] ] -= repartition[k];
-           liaisons[Iboot][ debut + k ] += repartition[k];
-         }
-       } // shuf
-     } // iboot
-   } // Iboot
    
-   std::vector<float> resultat(Nx);
-   std::fill( resultat.begin(), resultat.end(), 0 ) ;
-  #ifdef _OPENMP
-   #pragma omp parallel for num_threads(ntr)
-  #endif
-   for (std::size_t i = 0; i < Nx; ++i) {
-     for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-       resultat[i] += liaisons[Iboot][i] / Nboot;
-     }
-   }
-   IntegerVector res_i(Nx);
-   std::size_t ii = 0;
-   for (std::size_t i = 0; i < N; ++i) {
-     for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
-       res_i[ii] = i;
-       ii++;
-     }
-   }
-   
-   return DataFrame::create(_("i") = res_i, _("j") = jr_dist, _("flux") = wrap(resultat));
+#pragma omp parallel num_threads(ntr) 
+{
+#pragma omp for schedule(static)
+  for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+    size_t max_i = (Iboot+1)*NNboot;
+    if(Iboot==ntr-1) max_i = Nboot;
+    size_t min_i = Iboot*NNboot;
+    //Rcout << "maxi:" << max_i << " mini:" << min_i << std::endl;
+    for (size_t iboot = min_i; iboot < max_i; ++iboot) {
+      // Initialisation de l'ordre de départ des actifs et de l'emploi
+      // disponible au début.
+      
+      
+      std::vector<int> theshuf = ishuf[iboot];  // deep copy pour un boot.
+      std::vector<double> emp(emploisinitial);  // deep copy.
+      
+      for (auto from : theshuf) {
+        // check interrupt & progress
+        if (! Progress::check_abort() )
+          p.increment();
+        // Construction de l'accessibilité dite pénalisée.
+        std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
+        std::size_t k_valid = fin - debut;
+        std::vector<double> facteur_attraction(k_valid, 1.0), 
+        emplois_libres(k_valid),
+        repartition(k_valid, 0);
+        
+        if (attraction == "marche") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
+          }}
+        
+        if (attraction == "marche_liss") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
+          }}
+        
+        if (attraction == "double_marche_liss") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
+          }}
+        
+        if (attraction == "decay") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
+          }}
+        
+        if (attraction == "logistique") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
+          }}
+        
+        if (attraction == "odds") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k] = exp( _xr_odds[debut + k] );
+          } 
+        }
+        
+        for (std::size_t k = 0; k < k_valid; ++k) {
+          emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
+        }
+        
+        double actifspartant = actifscpp[from] / freq_actifs[from];
+        
+        std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
+        repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
+        
+        for (std::size_t k = 0; k < k_valid; ++k) {
+          emp[ jr_dist[debut + k] ] -= repartition[k];
+          liaisons[Iboot][ debut + k ] += repartition[k];
+        }
+      } // shuf
+    } // iboot
+  } // Iboot
+  
+#pragma omp for schedule(static)
+  for (std::size_t i = 0; i < Nx; ++i) {
+    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+      resultat[i] += liaisons[Iboot][i] / Nboot;
+    }
+  }
+} // omp parallel
+
+IntegerVector res_i(Nx);
+std::size_t ii = 0;
+for (std::size_t i = 0; i < N; ++i) {
+  for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
+    res_i[ii] = i;
+    ii++;
+  }
+}
+
+return DataFrame::create(_("i") = res_i,
+                         _("j") = jr_dist,
+                         _("flux") = wrap(resultat));
  }
