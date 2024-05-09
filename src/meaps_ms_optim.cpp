@@ -435,9 +435,11 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    
    std::vector<double> param = as< std::vector<double> >(parametres);
    
-   // const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
-   // const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
-   // const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
+   const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
+   const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
+   const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
+   const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
+   
    // 
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
    // s'il fait repasser plusieurs fois la même ligne d'actifs. Dans ce cas, on
@@ -476,7 +478,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
          if (! Progress::check_abort() )
            p.increment();
          // Construction de l'accessibilité dite pénalisée.
-         std::size_t debut = p_dist[from], fin = p_dist[from + 1L];
+         std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
          std::size_t k_valid = fin - debut;
          std::vector<double> facteur_attraction(k_valid, 1.0), 
          emplois_libres(k_valid),
@@ -484,42 +486,42 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
          
          if (attraction == "marche") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche(xr_dist[debut + k], param[0], param[1]);
+             facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
            }}
          
          if (attraction == "marche_liss") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche_liss(xr_dist[debut + k], param[0], param[1]);
+             facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
            }}
          
          if (attraction == "double_marche_liss") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = marche_liss(xr_dist[debut + k], param[0], param[1], param[2], param[3]);
+             facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
            }}
          
          if (attraction == "decay") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k]  = decay(xr_dist[debut + k], param[0], param[1]);
+             facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
            }}
          
          if (attraction == "logistique") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k] = logistique(xr_dist[debut + k], param[0], param[1], param[2]);
+             facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
            }}
          
          if (attraction == "odds") {
            for (std::size_t k = 0; k < k_valid; ++k) {
-             facteur_attraction[k] = exp( xr_odds[debut + k] );
+             facteur_attraction[k] = exp( _xr_odds[debut + k] );
            } 
          }
          
          for (std::size_t k = 0; k < k_valid; ++k) {
-           emplois_libres[k] = emp[ jr_dist[ debut + k] ];
+           emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
          }
          
          double actifspartant = actifscpp[from] / freq_actifs[from];
          
-         std::vector<double> dist(xr_dist.begin() + debut, xr_dist.begin() + fin);
+         std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
          repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
          
          for (std::size_t k = 0; k < k_valid; ++k) {
@@ -530,14 +532,14 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
      } // iboot
    } // Iboot
    
-   NumericVector resultat(Nx);
+   std::vector<float> resultat(Nx);
    std::fill( resultat.begin(), resultat.end(), 0 ) ;
-   // #ifdef _OPENMP
-   // #pragma omp parallel for num_threads(ntr)
-   // #endif
+  #ifdef _OPENMP
+   #pragma omp parallel for num_threads(ntr)
+  #endif
    for (std::size_t i = 0; i < Nx; ++i) {
      for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-       resultat(i) += liaisons[Iboot][i] / Nboot;
+       resultat[i] += liaisons[Iboot][i] / Nboot;
      }
    }
    IntegerVector res_i(Nx);
