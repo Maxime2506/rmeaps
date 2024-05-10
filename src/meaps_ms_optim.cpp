@@ -446,11 +446,6 @@ IntegerVector max_threads() {
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
    const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
    
-   const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
-   const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
-   const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
-   const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
-   
    std::vector<float> resultat(Nx);
    std::fill( resultat.begin(), resultat.end(), 0 );
    
