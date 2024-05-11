@@ -447,10 +447,10 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   # check mem
   size <- length(MeapsData@triplet$metric)/1024^3
   large <- 4*size>gbperthreads/4
+  ntr <- nthreads
   if(large) {
     gc()
     memused <- as.numeric(lobstr::mem_used())/1024^3
-    ntr <- nthreads
     if(nthreads==0) ntr <- max_threads()
     memleft <- gbperthreads*max_threads() - 4*size*ntr -20*size - memused
     if(memleft < ntr) {
@@ -483,12 +483,21 @@ setClass("MeapsDataGroup",
          representation = list(
            group_from = "character",
            group_to = "character",
-           cible = "data.frame"
+           cible = "data.frame",
+           j_dist = "integer",
+           p_dist = "integer",
+           index_gfrom = "integer",
+           index_gto = "integer"
          ),
          prototype = list(
            group_from = character(),
            group_to = character(),
-           cible = data.frame()
+           cible = data.frame(),
+           j_dist = integer(),
+           p_dist = integer(),
+           index_gfrom = integer(),
+           index_gto = integer()
+           
          ),
          contains = "MeapsData")
 
@@ -507,6 +516,33 @@ setMethod(f = "initialize", signature = "MeapsDataGroup",
             .Object@group_to <- group_to[tos]
             .Object@cible <- cible |> arrange(group_from, group_to)
             .Object@shuf <- shuf
+            
+            jlab <- seq_along(tos) - 1L
+            names(jlab) <- tos
+            
+            les_j <- jlab[triplet$toidINS]
+            names(les_j) <- NULL
+            .Object@j_dist <- les_j
+            
+            p_dist <- triplet |> 
+              group_by(fromidINS) |> 
+              summarize(n()) |>
+              pull() |>
+              cumsum()
+            
+            .Object@p_dist <- c(0L, p_dist)
+            
+            g_froms <- unique(group_from) |> sort()
+            g_tos <- unique(group_to) |> sort()
+            
+            gf_lab <- seq_along(g_froms) - 1L
+            names(gf_lab) <- g_froms
+            gt_lab <- seq_along(g_tos) - 1L
+            names(gt_lab) <- g_tos
+            
+            .Object@index_gfrom <- gf_lab[group_from]
+            .Object@index_gto <- gt_lab[group_to]
+            
             check_meapsdata(.Object, abort = TRUE,)
             check_meapsdatagroup(.Object, abort = TRUE)
             
@@ -532,7 +568,8 @@ setMethod("show", "MeapsDataGroup", function(object) {
 # Constructeur
 meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
   
-  new("MeapsDataGroup", MeapsData@triplet, MeapsData@actifs, MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
+  new("MeapsDataGroup", MeapsData@triplet, MeapsData@actifs,
+      MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
       MeapsData@froms, MeapsData@tos,
       group_from[MeapsData@froms], group_to[MeapsData@tos],
       cible |> arrange(group_from, group_to)
@@ -555,33 +592,11 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
-  froms <- MeapsDataGroup@froms
-  tos <- MeapsDataGroup@tos
-  
-  jlab <- seq_along(tos) - 1L
-  names(jlab) <- tos
-  
-  les_j <- jlab[MeapsDataGroup@triplet$toidINS]
-  
-  p_dist <- MeapsDataGroup@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
-  p_dist <- c(0L, p_dist)
-  
-  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
-  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  
-  gf_lab <- seq_along(g_froms) - 1L
-  names(gf_lab) <- g_froms
-  gt_lab <- seq_along(g_tos) - 1L
-  names(gt_lab) <- g_tos
-  
-  index_gfrom <- gf_lab[MeapsDataGroup@group_from]
-  index_gto <- gt_lab[MeapsDataGroup@group_to]
-  
-  res <- all_in_optim(jr_dist = les_j,
-                      p_dist = p_dist,
+  res <- all_in_optim(jr_dist = MeapsDataGroup@j_dist,
+                      p_dist = MeapsDataGroup@p_dist,
                       xr_dist = MeapsDataGroup@triplet$metric,
-                      group_from = index_gfrom,
-                      group_to = index_gto,
+                      group_from = MeapsDataGroup@index_gfrom,
+                      group_to = MeapsDataGroup@index_gto,
                       emplois = MeapsDataGroup@emplois,
                       actifs = MeapsDataGroup@actifs,
                       fuites = MeapsDataGroup@fuites,
@@ -589,6 +604,8 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
                       xr_odds = odds,
                       attraction = attraction,
                       nthreads = nthreads, verbose = verbose)
+  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
+  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
   expand_grid(group_from = g_froms, group_to = g_tos)|> 
     mutate(value = res) |>
     left_join(MeapsDataGroup@cible |> rename(cible=value), by = c("group_from", "group_to")) |> 
@@ -612,8 +629,9 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
 #' @return
 #' @export
 #'
-multishuf_oc_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
-                                 nthreads = 0L, verbose = TRUE) {
+multishuf_oc_grouped <- function(
+    MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
+    nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) 
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
@@ -629,34 +647,12 @@ multishuf_oc_grouped <- function(MeapsDataGroup,  attraction = "constant", param
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
-  froms <- unique(MeapsDataGroup@triplet$fromidINS)
-  tos <- unique(MeapsDataGroup@triplet$toidINS) |> sort()
-  
-  jlab <- seq_along(tos) - 1L
-  names(jlab) <- tos
-  
-  les_j <- jlab[MeapsDataGroup@triplet$toidINS]
-  
-  p_dist <- MeapsDataGroup@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
-  p_dist <- c(0L, p_dist)
-  
-  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
-  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  
-  gf_lab <- seq_along(g_froms) - 1L
-  names(gf_lab) <- g_froms
-  gt_lab <- seq_along(g_tos) - 1L
-  names(gt_lab) <- g_tos
-  
-  index_gfrom <- gf_lab[MeapsDataGroup@group_from]
-  index_gto <- gt_lab[MeapsDataGroup@group_to]
-  
   res <- multishuf_oc_group_cpp(
-    jr_dist = les_j,
-    p_dist = p_dist,
+    jr_dist = MeapsDataGroup@j_dist,
+    p_dist = MeapsDataGroup@p_dist,
     xr_dist = MeapsDataGroup@triplet$metric,
-    group_from = index_gfrom,
-    group_to = index_gto,
+    group_from = MeapsDataGroup@index_gfrom,
+    group_to = MeapsDataGroup@index_gto,
     emplois = MeapsDataGroup@emplois,
     actifs = MeapsDataGroup@actifs,
     fuites = MeapsDataGroup@fuites,
@@ -665,13 +661,19 @@ multishuf_oc_grouped <- function(MeapsDataGroup,  attraction = "constant", param
     xr_odds = odds,
     attraction = attraction,
     nthreads = nthreads, verbose = verbose)
+  
+  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
+  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
   colnames(res) <- g_tos
   res |>
     tibble::as_tibble() |> 
     dplyr::mutate(group_from = g_froms) |> 
     tidyr::pivot_longer(cols = -group_from, names_to = "group_to", values_to = "value") |>  
     filter(value>0) |> 
-    left_join(MeapsDataGroup@cible |> rename(target = value), by = c("group_from", "group_to")) |> 
+    left_join(MeapsDataGroup@cible |> rename(target = value), 
+              by = c("group_from", "group_to")) |> 
+    mutate(target = replace_na(target, 0),
+           value = replace_na(value, 0)) |> 
     arrange(desc(value))
 }
 
@@ -706,10 +708,12 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       estim <- do.call(
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
-      entropie_relative(
-        estim, 
-        MeapsDataGroup@cible$value, 
+      kl <- entropie_relative(
+        estim$value, 
+        estim$target, 
         floor = 1e-3 / length(estim) )
+      cli::cli_inform("kl:{signif(kl, 4)} ; {signif(par,4)}")
+      return(kl)
     }
   )
   
@@ -719,8 +723,8 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
-  
-  cli::cli_progress_bar(.envir = env, clear = FALSE)
+  # browser()
+  #cli::cli_progress_bar(.envir = env, clear = FALSE)
   res <- stats::optim(
     par = parametres,
     fn = fn,
