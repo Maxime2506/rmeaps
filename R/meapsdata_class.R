@@ -577,7 +577,8 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
 }
 
 #' @import dplyr
-all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, odds = 1, 
+all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", 
+                           parametres = 0, odds = 1, 
                            nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
@@ -604,11 +605,15 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
                       xr_odds = odds,
                       attraction = attraction,
                       nthreads = nthreads, verbose = verbose)
+  
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
   expand_grid(group_from = g_froms, group_to = g_tos)|> 
     mutate(value = res) |>
-    left_join(MeapsDataGroup@cible |> rename(cible=value), by = c("group_from", "group_to")) |> 
+    left_join(MeapsDataGroup@cible |> rename(target=value),
+              by = c("group_from", "group_to")) |> 
+    mutate( value = replace_na(value, 0),
+            target = replace_na(target, 0)) |> 
     arrange(desc(value))
 }
 
@@ -711,9 +716,9 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       kl <- entropie_relative(
         estim$value, 
         estim$target, 
-        floor = 1e-3 / length(estim$value) )
-      cli::cli_progress_output("kl:{signif(kl, 4)} ; {signif(par,4)}",
-                               .envir = env)
+        floor = 1e-6 * sum(estim$value) / length(estim$value) )
+      mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+      cli::cli_progress_output(mes, .envir = env)
       return(kl)
     }
   )
@@ -724,7 +729,6 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
-  # browser()
   cli::cli_progress_bar(.envir = env, clear = FALSE)
   res <- stats::optim(
     par = parametres,
