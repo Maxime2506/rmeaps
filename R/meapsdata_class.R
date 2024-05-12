@@ -711,8 +711,9 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       kl <- entropie_relative(
         estim$value, 
         estim$target, 
-        floor = 1e-3 / length(estim) )
-      cli::cli_inform("kl:{signif(kl, 4)} ; {signif(par,4)}")
+        floor = 1e-3 / length(estim$value) )
+      cli::cli_progress_output("kl:{signif(kl, 4)} ; {signif(par,4)}",
+                               .envir = env)
       return(kl)
     }
   )
@@ -724,7 +725,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   # browser()
-  #cli::cli_progress_bar(.envir = env, clear = FALSE)
+  cli::cli_progress_bar(.envir = env, clear = FALSE)
   res <- stats::optim(
     par = parametres,
     fn = fn,
