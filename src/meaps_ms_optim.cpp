@@ -319,13 +319,15 @@ inline std::vector<double> _repartir_continu(
       } // shuf
     } // iboot
   } // Iboot
+  float rr; 
 #pragma omp for
   for (std::size_t i = 0; i < Nref; ++i) {
     for (std::size_t j = 0; j < Kref; ++j) {
-#pragma omp simd reduction(+:resultat[i * Kref + j])
+#pragma omp simd reduction(+:rr)
       for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-        resultat[i * Kref + j] += liaisons[Iboot][i * Kref + j ] / Nboot;
+        rr += liaisons[Iboot][i * Kref + j ] / Nboot;
       }
+      resultat[i * Kref + j] = rr;
     }
   }
 } // omp
