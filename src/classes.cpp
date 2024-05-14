@@ -23,7 +23,7 @@ public:
     {
     private:
         const Urban& urbs;
-        const std::size_t from;
+        const unsigned int from;
         const std::vector<double>& emplois_dispo;
         const double actifs_libres;
     public:
@@ -31,7 +31,8 @@ public:
         Residents(Urban& urbs_, std::size_t from_, std::vector<double>& emplois_dispo_, double actifs_libres_);
         Residents(Urban& urbs_, std::size_t from_);
     };
-    //friend RowIter<class Line::iterator> parcourir(const Urban& region, const std::size_t line);
+    friend class InnerIterator;
+    friend class StrictInnerIterator;
 };
 
 Urban::Urban(std::vector<int>& jr_, std::vector<int>& p_, std::vector<double>& xr_, 
@@ -40,37 +41,47 @@ Urban::Urban(std::vector<int>& jr_, std::vector<int>& p_, std::vector<double>& x
 
 Urban::Residents::Residents(Urban& urbs_, std::size_t from_, std::vector<double>& emplois_dispo_, double actifs_libres_):
         urbs(urbs_), from(from_), emplois_dispo(emplois_dispo_), actifs_libres(actifs_libres_) {};
+
 Urban::Residents::Residents(Urban& urbs_, std::size_t from_):
         urbs(urbs_), from(from_), emplois_dispo(urbs_.emplois), actifs_libres(urbs_.actifs[from_]) {};
 
-template <typename Iter> 
-class RowIter
-{
-    Iter debut;
-    Iter fin;
-public:
-    RowIter() = default;
-    RowIter(Iter d, Iter f);
-    RowIter(const Urban region, const Iter line);
 
-    Iter begin() { return debut;}
-    Iter end() { return fin;}    
+class InnerIterator {
+private:
+    const Urban& ptr;
+    const unsigned int from, max_index;
+    unsigned int index;
+public:
+    InnerIterator(Urban& ptr, unsigned int row) : ptr(ptr), from(row), index(ptr.p[row]), max_index(ptr.p[row + 1]) {}
+    operator bool() const { return (index < max_index); }
+    InnerIterator& operator++() {
+        ++index;
+        return *this;
+    }
+    const double& value() const { return ptr.xr[index]; }
+    unsigned int col() const { return ptr.jr[index]; }
+    unsigned int row() const { return from; }
 };
 
-template <typename Iter>
-RowIter<Iter>::RowIter(Iter d, Iter f): debut(d), fin(f) {};
 
-template <typename Iter>
-RowIter<Iter>::RowIter(const Urban region, const Iter line)
-{
-    debut = region.p[line];
-    fin = region.p[line + 1L];
-}
-
-template <typename Line>
-RowIter<typename Line::iterator> parcourir(const Urban& region, typename line)
-{
-    return RowIter<typename line::iterator> (c.begin() + debut, c.begin() + fin);
-}
-
+class StrictInnerIterator {
+private:
+    const Urban& ptr;
+    const unsigned int from, max_index;
+    unsigned int index;
+public:
+    StrictInnerIterator(Urban& ptr, unsigned int row) : ptr(ptr), from(row), index(ptr.p[row]), max_index(ptr.p[row + 1]) {}
+    operator bool() const { return (index < max_index); }
+    StrictInnerIterator& operator++() {
+        while(index < max_index && ptr.xr[index] == ptr.xr[index + 1]) ++index;
+        return *this;
+    }
+    const double cumsum(const std::vector<double>& values, const StrictInnerIterator& pos) const { 
+        std::size_t fin = pos.index;
+        while (fin < pos.max_index && pos.ptr.xr[fin] == pos.ptr.xr[fin + 1]) ++fin;
+        double tot = 0.0;
+        for (auto equal_rank = pos.index; equal_rank < fin; ++equal_rank) tot += values[equal_rank];
+        return tot; 
+        }
+};
 
