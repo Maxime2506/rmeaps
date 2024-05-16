@@ -3,11 +3,12 @@
 #endif
 // [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
-#include <iterator>
+#include <stdio.h>
 #include <algorithm>
 
-#include "fcts_penal.h"
-
+#include "constants.h"
+#include "classes.h"
+#include "classes_attraction.cpp"
 
 using namespace Rcpp;
 
@@ -38,52 +39,53 @@ using namespace Rcpp;
  //'
 //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- List meaps_all_in(const IntegerVector jr_dist, 
-                        const IntegerVector p_dist, 
-                        const NumericVector xr_dist, 
-                        const NumericVector emplois,
-                        const NumericVector actifs, 
-                        const NumericVector fuites, 
-                        const NumericVector parametres,
-                        const NumericVector xr_odds,
-                        const std::string attraction = "constant",
-                        const Nullable<IntegerVector> group_from = R_NilValue,
-                        const Nullable<IntegerVector> group_to = R_NilValue,
-                        const Nullable<NumericVector> cible = R_NilValue,
-                        const int nthreads = 0L, 
-                        const bool verbose = true) {
-   
-   const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
-   
-   constexpr int LIMITE_LOOP = 200; // condition d'arrêt pour les boucles lors de la distribution des résidents vers des emplois.
-constexpr double LIMITE_PRECISION_1 = 1e-3; // condition d'arrêt sur le pourcentage de résidents non classés restants.
-   constexpr double LIMITE_PRECISION_2 = 1e-4; // condition d'arrêt sur la vitesse de reclassement des résidents non occupés.
-constexpr double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
-   
+List meaps(const IntegerVector jr_dist, 
+                  const IntegerVector p_dist, 
+                  const NumericVector xr_dist, 
+                  const NumericVector emplois,
+                  const NumericVector actifs, 
+                  const NumericVector fuites, 
+                  const NumericVector parametres,
+                  const NumericVector xr_odds,
+                  const std::string attraction = "constant",
+                  const Nullable<IntegerVector> group_from = R_NilValue,
+                  const Nullable<IntegerVector> group_to = R_NilValue,
+                  const Nullable<NumericVector> cible = R_NilValue,
+                  const int nthreads = 0L, 
+                  const bool verbose = true) {
+  
+  const unsigned int N = actifs.size(), K = emplois.size();
+  const std::size_t Ndata = xr_dist.size();
+
+  // instantation de la fonction d'attraction.
+  mode_attraction type_att;
+  auto fct_attraction = type_att.create(parametres, attraction);
+  
+  Urban urb(jr_dist, p_dist, xr_dist, actifs, emplois, fuites);
+
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
-   const std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
-   const std::vector<double> ts_fuite = as<std::vector<double>>(fuites);
-   const std::vector<double> ts_actifs = as<std::vector<double>>(actifs);
+   //const std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
+   //const std::vector<double> ts_fuite = as<std::vector<double>>(fuites);
+   //const std::vector<double> ts_actifs = as<std::vector<double>>(actifs);
    
-   const std::vector<double> ts_parametres = as< std::vector<double> >(parametres);
+  // const std::vector<double> ts_parametres = as< std::vector<double> >(parametres);
    
-   const std::vector<int> ts_jr_dist = as< std::vector<int> >(jr_dist);
-   const std::vector<int> ts_p_dist = as< std::vector<int> >(p_dist);
-   const std::vector<double> ts_xr_dist = as< std::vector<double> >(xr_dist);
+  // const std::vector<int> ts_jr_dist = as< std::vector<int> >(jr_dist);
+  // const std::vector<int> ts_p_dist = as< std::vector<int> >(p_dist);
+  // const std::vector<double> ts_xr_dist = as< std::vector<double> >(xr_dist);
    
-   const std::vector<double> ts_xr_odds = as< std::vector<double> >(xr_odds);
+  // const std::vector<double> ts_xr_odds = as< std::vector<double> >(xr_odds);
    
-   std::vector<double> emplois_libres(ts_emplois);
-   std::vector<double> actifs_libres(ts_actifs);
+   std::vector<double> emplois_libres(emplois);
+   std::vector<double> actifs_libres(actifs);
    
    // Initialisation de la matrice origines-destination.
-   std::vector< std::vector<double> > liaisons(N, std::vector<double> (K));
+   std::vector< std::vector<float> > liaisons(N, std::vector<float> (K));
    
    double tot_actifs_libres = std::accumulate(actifs_libres.begin(), actifs_libres.end(), 0.0);
    double tot_actifs = tot_actifs_libres, old_tot;
    
-   const double LIMITE_PRECISION_3 = LIMITE_PRECISION_1 / tot_actifs; // seuil en deçà duquel une ligne d'actifs est supposée vides (tous actifs occupés). 
-
+  
 int nloop = 0;
 
 #ifdef _OPENMP
@@ -114,134 +116,45 @@ do { // DEBUT DES BOUCLES DO-WHILE
     
     if (actifs_libres[from] < LIMITE_PRECISION_3) continue;
     
-    std::size_t debut = ts_p_dist[from], fin = ts_p_dist[from + 1L];
-    
-    std::vector<std::size_t> rangs_valid;
-    std::vector<double> attirances;
-    rangs_valid.reserve(fin - debut);
-    attirances.reserve(fin- debut);
-    
-    for (auto k = 0; k < fin - debut; ++k) {
-      if (emplois_libres[ ts_jr_dist[debut + k] ] > LIMITE_PRECISION_3) {
-        rangs_valid.push_back(k);
-        attirances.push_back(emplois_libres[ ts_jr_dist[debut + k] ]);
-      }
-    }
-    
-    std::size_t k_valid = rangs_valid.size();
-    
-    // Calcul de l'attractivité d'un site modulée par la fonction d'attraction retenue.
-  for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-    std::size_t index = std::distance(rangs_valid.begin(), k);
-    attirances[index] = emplois_libres[ ts_jr_dist[ debut + *k] ];
-  }
-  
-  if (attraction == "marche") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= marche(ts_xr_dist[debut + *k], ts_parametres[0], ts_parametres[1]);
-    }}
-  
-  if (attraction == "marche_liss") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= marche_liss(xr_dist[debut + *k], ts_parametres[0], ts_parametres[1]);
-    }}
-  
-  if (attraction == "double_marche_liss") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= marche_liss(xr_dist[debut + *k], ts_parametres[0], ts_parametres[1], ts_parametres[2], ts_parametres[3]);
-    }}
-  
-  if (attraction == "decay") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= decay(ts_xr_dist[debut + *k], ts_parametres[0], ts_parametres[1]);
-    }}
-  
-  if (attraction == "logistique") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= logistique(ts_xr_dist[debut + *k], ts_parametres[0], ts_parametres[1], ts_parametres[2]);
-    }}
-  
-  if (attraction == "odds") {
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end(); ++k) {
-      std::size_t index = std::distance(rangs_valid.begin(), k);
-      attirances[index] *= ts_xr_odds[debut + *k];
-    } 
-  } 
-  
-  // Calcul de l'accessibilité pondérée par l'attraction.
-  std::vector<double> accessibility(k_valid);
-  double tot = 0;
-  for (auto k = rangs_valid.begin(); k != rangs_valid.end();) {
-    auto pos = k + 1L;
-    while (pos != rangs_valid.end() && ts_xr_dist[debut + *k] == ts_xr_dist[debut + *pos]) ++pos;
-    for (auto ego = k; ego != pos; ++ego) {
-      tot += attirances[*ego];
-    }
-    for (auto ego = k; ego != pos; ++ego) {
-      accessibility[*ego] = tot;
-    }
-    k = pos;
-  }
-  
-  if (accessibility[k_valid - 1L] <= 0) continue;
-  
-  // Calcul de l'absorption sur la ligne from considérée.
-    double absorption = -log(ts_fuite[from]) / accessibility[k_valid - 1L];
-    
-    // Calcul des actifs absorbés par sites.
-    std::vector<double> jobtakers(k_valid + 1L, actifs_libres[from]);
-    for(std::size_t k = 0L; k < k_valid; ++k) {
-      jobtakers[k + 1L] *= exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
-    }
-    for(std::size_t k = 0L; k < k_valid; ++k) {
-      jobtakers[k] -= jobtakers[k + 1L];
-    }
-    // Répartition des jobtakers en traitant les cas à distances égales.
-    for (auto k = rangs_valid.begin(); k != rangs_valid.end();) {
-      double tot_attirances = 0, tot_jobtakers = 0;
-      auto pos = k + 1L;
-      while (pos != rangs_valid.end() && ts_xr_dist[debut + *k] == ts_xr_dist[debut + *pos]) ++pos;
-      for (auto ego = k; ego != pos; ++ego) {
-        tot_attirances += attirances[*ego];
-        tot_jobtakers += jobtakers[*ego];
-      }
-      if (tot_attirances > 0) {
-        for (auto ego = k; ego != pos; ++ego) {
-          liaisons[from][ ts_jr_dist[debut + *ego] ] += attirances[*ego] / tot_attirances * tot_jobtakers;
-        }
-      }
-      k = pos;
+    Urban::Residents res(urb, from);
+    unsigned int n_sites = res.col_dispo.size();
+    std::vector<double> attirances(n_sites), cumul_att(n_sites);
+
+    attirances = attractivite(res, fct_attraction);
+    cumul_att = attract_cumul(res, attirances);
+
+    // Attention : attirances stocke temporairement le résultat de la répartition des emplois.
+    attirances = calc_repartition(res, attirances, cumul_att);
+
+    for (auto k: res.col_dispo) {
+      index = std::distance(res.col_dispo.begin(), k);
+      liaisons[from][*k] += (float) attirances[index];
     }
   } // fin des boucles sur les from
   
   // Après la distribution simultanée, il faut récupérer les excédents et reconstruire des vecteurs
   // d'actifs encore libres et d'emplois encore libres.
   #pragma omp for 
-  for (std::size_t i = 0; i < N; ++i) {
+  for (auto i = 0; i < N; ++i) {
     actifs_libres[i] = 0;
   }
   
   // Traitement des dépassements en colonnes.
   #pragma omp for reduction(vsum: actifs_libres)
-  for (std::size_t j = 0; j < K; ++j) {
-    emplois_libres[j] = ts_emplois[j];
-    for (std::size_t i = 0; i < N; ++i) {
-      emplois_libres[j] -= liaisons[i][j];
+  for (auto j = 0; j < K; ++j) {
+    emplois_libres[j] = urb.emplois[j];
+    for (auto i = 0; i < N; ++i) {
+      emplois_libres[j] -= (double) liaisons[i][j];
     }
     if (emplois_libres[j] < 0) {
-      double tx_depassement = ts_emplois[j] / (ts_emplois[j] - emplois_libres[j]);
+      double tx_depassement = urb.emplois[j] / (urb.emplois[j] - emplois_libres[j]);
       
       // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
       // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas 
       // uniquement à proportion de la dernière vague d'arrivants.
-      for (std::size_t i = 0; i < N; ++i) {
-        actifs_libres[i] += liaisons[i][j] * (1 - tx_depassement);
-        liaisons[i][j] = liaisons[i][j] * tx_depassement; 
+      for (auto i = 0; i < N; ++i) {
+        actifs_libres[i] += (double) liaisons[i][j] * (1 - tx_depassement);
+        liaisons[i][j] = liaisons[i][j] * (float) tx_depassement; 
       }
       emplois_libres[j] = 0;
     }
@@ -256,8 +169,8 @@ do { // DEBUT DES BOUCLES DO-WHILE
     tot_actifs_libres = 0;
   }
   #pragma omp for reduction(+: tot_actifs_libres) 
-  for (std::size_t i = 0; i < N; ++i) {
-    actifs_libres[i] /= (1 - ts_fuite[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
+  for (auto i = 0; i < N; ++i) {
+    actifs_libres[i] /= (1 - urb.fuite[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
     tot_actifs_libres += actifs_libres[i];
   }
   
@@ -271,14 +184,14 @@ do { // DEBUT DES BOUCLES DO-WHILE
 if (group_from == R_NilValue || group_to == R_NilValue) {
    
   // Format de sortie
-  std::vector<double> res_xr(Ndata);
+  std::vector<float> res_xr(Ndata);
   std::vector<int> res_i(Ndata);
 
   // sortie au format xr_dist.
   #pragma omp parallel for
   for (auto i = 0; i < N; ++i) {
-    for (auto k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
-      res_xr[k] = liaisons[i][ ts_jr_dist[k] ];
+    for (auto k = urb.p_dist[i]; k < urb.p_dist[i + 1]; ++k) {
+      res_xr[k] = liaisons[i][ urb.jr_dist[k] ];
       res_i[k] = i;
     }
   }
