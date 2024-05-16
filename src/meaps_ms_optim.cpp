@@ -14,7 +14,7 @@
 using namespace Rcpp;
 
 
-inline std::vector<double> _one_distrib_continu(
+std::vector<double> _one_distrib_continu(
     const double entrants, 
     const double fuite,
     const std::vector<double>& attractivite,
@@ -93,7 +93,7 @@ inline std::vector<double> _one_distrib_continu(
 
 // Fonction de répartition des actifs entre les sites d'emplois selon l'attractivité du site et la fuite.
 // Cette fonction gère le cas d'un dépassement de l'offre.
-inline std::vector<double> _repartir_continu(
+std::vector<double> _repartir_continu(
     const double actifs, 
     const double fuite,
     const std::vector<double>& attractivite,
@@ -156,21 +156,24 @@ inline std::vector<double> _repartir_continu(
  //' @return renvoie une matrice avec les estimations des flux regroupés.
  
  // [[Rcpp::export]]
- NumericMatrix multishuf_oc_group_cpp(
+ List multishuf_oc_group_cpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
-     NumericVector emplois,
+     const NumericVector emplois,
      const NumericVector actifs, 
-     NumericVector fuites, 
-     IntegerMatrix shuf, 
+     const NumericVector fuites, 
+     const IntegerMatrix shuf, 
      const IntegerVector group_from,
      const IntegerVector group_to,
      const NumericVector parametres,
      const NumericVector xr_odds,
      const std::string attraction = "constant",
-     int nthreads = 0, bool verbose = true) {
+     const Nullable<NumericVector> cible = R_NilValue,
+     const int nthreads = 0L, 
+     const bool verbose = true) {
    
+   constexpr double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
    
    auto Nref = *std::max_element(group_from.begin(), group_from.end());
@@ -189,17 +192,14 @@ inline std::vector<double> _repartir_continu(
    if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
    
-   // Les rangs dans shuf commencent à 1.
-   shuf = shuf - 1L;
    
    // REMARQUE : les conversions de Numeric et IntegerVector en équivalent std::vector sont ici nécessaires car
    // les vecteurs initiaux de sont pas thread safe dans openmp.
    // Conversion en vecteur de vecteurs C++.
-   std::vector< std::size_t > shufcpp = as< std::vector<std::size_t> >(shuf);
    std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
    for (std::size_t i = 0; i < Nboot; ++i) {
      for (std::size_t j = 0; j < Ns; ++j) {
-       ishuf[i][j] = shufcpp[i + j * Nboot];
+       ishuf[i][j] = shuf(i,j) - 1L;
        if (ishuf[i][j] >= N) {
          stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
        }
@@ -221,8 +221,6 @@ inline std::vector<double> _repartir_continu(
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
    
-   std::vector<double> resultat(Nref*Kref, 0);
-   
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
    // s'il fait repasser plusieurs fois la même ligne d'actifs. Dans ce cas, on
    // compte la fréquence de passage de chaque ligne et l'on divise le poids de
@@ -238,10 +236,7 @@ inline std::vector<double> _repartir_continu(
    std::size_t NNboot = floor( Nboot / ntr);
    if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
-   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nref * Kref));
-   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-     std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
-   }
+   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nref * Kref, 0));
    
 #pragma omp parallel num_threads(ntr)
 {
@@ -254,13 +249,13 @@ inline std::vector<double> _repartir_continu(
       // Initialisation de l'ordre de départ des actifs et de l'emploi
       // disponible au début.
       
-      std::vector<int> theshuf = ishuf[iboot];  // deep copy pour un boot.
+      //std::vector<int> theshuf = ishuf[iboot];  // deep copy pour un boot.
       std::vector<double> emp(emploisinitial);  // deep copy.
       
-      for (auto from : theshuf) {
+      for (auto from : ishuf[iboot]) {
         
         // Construction de l'accessibilité dite pénalisée.
-        std::size_t debut = p_dist[from], fin = _p_dist[from + 1L];
+        std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
         std::size_t k_valid = fin - debut;
         std::vector<double> facteur_attraction(k_valid, 1.0), 
         emplois_libres(k_valid),
@@ -273,17 +268,17 @@ inline std::vector<double> _repartir_continu(
         
         if (attraction == "marche_liss") {
           for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
+            facteur_attraction[k] = marche_liss(_xr_dist[debut + k], param[0], param[1]);
           }}
         
         if (attraction == "double_marche_liss") {
           for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
+            facteur_attraction[k] = marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
           }}
         
         if (attraction == "decay") {
           for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
+            facteur_attraction[k] = decay(_xr_dist[debut + k], param[0], param[1]);
           }}
         
         if (attraction == "logistique") {
@@ -316,29 +311,55 @@ inline std::vector<double> _repartir_continu(
         // check interrupt & progress
         p.increment();
         if (from % 100 == 0) Progress::check_abort();
+        
       } // shuf
     } // iboot
   } // Iboot
-#pragma omp for
-  for (std::size_t i = 0; i < Nref; ++i) {
-    for (std::size_t j = 0; j < Kref; ++j) {
-      //float rr = 0;
-      for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-        resultat[i * Kref + j] += liaisons[Iboot][i * Kref + j ] / Nboot;
-      }
-      //resultat[i * Kref + j] = rr;
-    }
-  }
+  
 } // omp
 
-NumericMatrix out(Nref, Kref);
+NumericVector out(Nref*Kref);
+IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
 for (std::size_t i = 0; i < Nref; ++i) {
   for (std::size_t j = 0; j < Kref; ++j) {
-    out(i,j) = resultat[i * Kref + j ];
+    float rr = 0;
+#pragma omp simd reduction(+:rr)
+    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+      rr += liaisons[Iboot][i * Kref + j ] / Nboot;
+    }
+    out(i*Kref + j) = rr;
+    res_i(i*Kref + j) = i;
+    res_j(i*Kref + j) = j;
   }
 }
-return out;
+
+if (cible == R_NilValue) {
+  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
+} else {
+  std::vector<double> p_cible = as< std::vector<double> >(cible);
+  std::vector<double> p_flux= as< std::vector<double> >(out);
+  // Calcul du KL
+  double tot_flux = std::accumulate(out.begin(), out.end(), 0.0);
+  double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
+  
+  if (tot_flux == 0) stop("Les flux groupés sont tous nuls.");
+  
+  double kl = 0;
+  double kl_term;
+  for (auto k = 0; k < Nref * Kref; ++k) {
+    if (p_cible[k] == 0) {
+      kl_term = 0; 
+    } else {
+      p_cible[k] /= tot_cible;
+      p_flux[k] /= tot_flux;
+      if (p_flux[k] < PLANCHER_KL) p_flux[k] = PLANCHER_KL;
+      kl_term = p_cible[k] * (log(p_cible[k]) - log(p_flux[k]));
+    } 
+    kl += kl_term;
+  }
+  return List::create(_("i") = res_i , _("j") = res_j,  _("flux") = out, _("kl") = kl);
 }
+ }
 
 // Métrique pour comparer les flux agrégés estimés et des flux cibles.
 // On calcule plus simplement sur les effectifs que sur les probabilités. Ne fait que translater le résultat.
@@ -363,8 +384,8 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
  IntegerVector max_threads() {
    return(wrap(omp_get_max_threads()));
  }
- 
- //' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+
+//' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
  //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
  //' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
@@ -391,7 +412,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
  //' @return renvoie une matrice avec les estimations des flux regroupés.
  
  // [[Rcpp::export]]
- DataFrame multishuf_oc_cpp(
+ List multishuf_oc_cpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
@@ -494,7 +515,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
         p.increment();
         if(from % 100==0)
           Progress::check_abort();
-          
+        
         // Construction de l'accessibilité dite pénalisée.
         std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
         std::size_t k_valid = fin - debut;
@@ -567,8 +588,7 @@ for (std::size_t i = 0; i < N; ++i) {
   }
 }
 
-return DataFrame::create(_("i") = res_i,
-                         _("j") = jr_dist,
-                         _("flux") = wrap(resultat));
+return List::create(_("i") = res_i,
+                    _("j") = jr_dist,
+                    _("flux") = wrap(resultat));
  }
- 

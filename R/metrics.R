@@ -36,10 +36,9 @@ shannon <- function(nb_ref, seuil_collapse = 1) {
   sum(tib$py * log(tib$py), na.rm=TRUE)
 }
 
-entropie_relative <- function(x, y, floor) {
-  py <- y / sum(y)
-  px <- x / sum(x)
-  py <- pmax(py, floor)
+entropie_relative <- function(x, y, floor=1e-6) {
+  py <- y[y>0] / sum(y[y>0])
+  px <- x[y>0] / sum(x[y>0])
   px <- pmax(px, floor)
   sum( py * log(py/px) )
 }
