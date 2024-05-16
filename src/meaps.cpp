@@ -10,7 +10,7 @@
 
 using namespace Rcpp;
 
- //' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
+//' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
  //' doit être définie sous forme des inner et outer index d'une matrice sparse en ligne. Ceci revient à classer un data.frame
  //' avec les colonnes i, j et dist, d'abord par i, puis dist (=xr), puis j (=jr). 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
@@ -38,19 +38,19 @@ using namespace Rcpp;
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
  List meaps_all_in(const IntegerVector jr_dist, 
-                        const IntegerVector p_dist, 
-                        const NumericVector xr_dist, 
-                        const NumericVector emplois,
-                        const NumericVector actifs, 
-                        const NumericVector fuites, 
-                        const NumericVector parametres,
-                        const NumericVector xr_odds,
-                        const std::string attraction = "constant",
-                        const Nullable<IntegerVector> group_from = R_NilValue,
-                        const Nullable<IntegerVector> group_to = R_NilValue,
-                        const Nullable<NumericVector> cible = R_NilValue,
-                        const int nthreads = 0L, 
-                        const bool verbose = true) {
+                   const IntegerVector p_dist, 
+                   const NumericVector xr_dist, 
+                   const NumericVector emplois,
+                   const NumericVector actifs, 
+                   const NumericVector fuites, 
+                   const NumericVector parametres,
+                   const NumericVector xr_odds,
+                   const std::string attraction = "constant",
+                   const Nullable<IntegerVector> group_from = R_NilValue,
+                   const Nullable<IntegerVector> group_to = R_NilValue,
+                   const Nullable<NumericVector> cible = R_NilValue,
+                   const int nthreads = 0L, 
+                   const bool verbose = true) {
    
    const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
    
@@ -86,16 +86,16 @@ using namespace Rcpp;
    int nloop = 0;
    
 #ifdef _OPENMP
-     int ntr = nthreads;
-     if (ntr == 0) {
-       ntr = omp_get_max_threads();
-     }
-     if (ntr > omp_get_max_threads()) {
-       ntr = omp_get_max_threads();
-     }
-     if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
+   int ntr = nthreads;
+   if (ntr == 0) {
+     ntr = omp_get_max_threads();
+   }
+   if (ntr > omp_get_max_threads()) {
+     ntr = omp_get_max_threads();
+   }
+   if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
-     
+   
 #pragma omp parallel num_threads(ntr) 
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
@@ -114,7 +114,7 @@ for (auto from = 0; from < N; ++from) {
   if (actifs_libres[from] < LIMITE_PRECISION_3) continue;
   
   std::size_t debut = ts_p_dist[from], fin = ts_p_dist[from + 1L];
-
+  
   std::vector<std::size_t> rangs_valid;
   std::vector<double> attirances;
   rangs_valid.reserve(fin - debut);
@@ -124,7 +124,7 @@ for (auto from = 0; from < N; ++from) {
     if (emplois_libres[ ts_jr_dist[debut + k] ] > LIMITE_PRECISION_3) {
       rangs_valid.push_back(k);
       attirances.push_back(emplois_libres[ ts_jr_dist[debut + k] ]);
-      }
+    }
   }
   
   std::size_t k_valid = rangs_valid.size();
@@ -221,30 +221,30 @@ for (auto from = 0; from < N; ++from) {
 // Après la distribution simultanée, il faut récupérer les excédents et reconstruire des vecteurs
 // d'actifs encore libres et d'emplois encore libres.
 #pragma omp for 
-  for (std::size_t i = 0; i < N; ++i) {
-    actifs_libres[i] = 0;
-  }
+for (std::size_t i = 0; i < N; ++i) {
+  actifs_libres[i] = 0;
+}
 
 // Traitement des dépassements en colonnes.
 #pragma omp for reduction(vsum: actifs_libres)
-  for (std::size_t j = 0; j < K; ++j) {
-    emplois_libres[j] = ts_emplois[j];
-    for (std::size_t i = 0; i < N; ++i) {
-      emplois_libres[j] -= liaisons[i][j];
-    }
-    if (emplois_libres[j] < 0) {
-      double tx_depassement = ts_emplois[j] / (ts_emplois[j] - emplois_libres[j]);
-      
-      // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
-      // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas 
-      // uniquement à proportion de la dernière vague d'arrivants.
-      for (std::size_t i = 0; i < N; ++i) {
-        actifs_libres[i] += liaisons[i][j] * (1 - tx_depassement);
-        liaisons[i][j] = liaisons[i][j] * tx_depassement; 
-      }
-      emplois_libres[j] = 0;
-    }
+for (std::size_t j = 0; j < K; ++j) {
+  emplois_libres[j] = ts_emplois[j];
+  for (std::size_t i = 0; i < N; ++i) {
+    emplois_libres[j] -= liaisons[i][j];
   }
+  if (emplois_libres[j] < 0) {
+    double tx_depassement = ts_emplois[j] / (ts_emplois[j] - emplois_libres[j]);
+    
+    // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
+    // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas 
+    // uniquement à proportion de la dernière vague d'arrivants.
+    for (std::size_t i = 0; i < N; ++i) {
+      actifs_libres[i] += liaisons[i][j] * (1 - tx_depassement);
+      liaisons[i][j] = liaisons[i][j] * tx_depassement; 
+    }
+    emplois_libres[j] = 0;
+  }
+}
 
 #pragma omp single
 {   
@@ -255,26 +255,26 @@ for (auto from = 0; from < N; ++from) {
   tot_actifs_libres = 0;
 }
 #pragma omp for reduction(+: tot_actifs_libres) 
-  for (std::size_t i = 0; i < N; ++i) {
-    actifs_libres[i] /= (1 - ts_fuite[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
-    tot_actifs_libres += actifs_libres[i];
-  }
+for (std::size_t i = 0; i < N; ++i) {
+  actifs_libres[i] /= (1 - ts_fuite[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
+  tot_actifs_libres += actifs_libres[i];
+}
 
-} while (tot_actifs_libres/tot_actifs > LIMITE_PRECISION_1 &&
-         std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
-         nloop < LIMITE_LOOP); // FIN DES BOUCLES DO-WHILE
+  } while (tot_actifs_libres/tot_actifs > LIMITE_PRECISION_1 &&
+    std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
+    nloop < LIMITE_LOOP); // FIN DES BOUCLES DO-WHILE
   
 } // fin clause omp parallel
 
 // Mise en forme du résultat selon présence ou non de groupes et d'une cible.
-if (group_from == R_NilValue || group_to == R_NilValue) {
-   
+if (group_from.isNull() || group_to.isNull()) {
+  
   // Format de sortie
   std::vector<double> res_xr(Ndata);
   std::vector<int> res_i(Ndata);
-
+  
   // sortie au format xr_dist.
-  #pragma omp parallel for
+#pragma omp parallel for
   for (auto i = 0; i < N; ++i) {
     for (auto k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
       res_xr[k] = liaisons[i][ ts_jr_dist[k] ];
@@ -290,46 +290,46 @@ if (group_from == R_NilValue || group_to == R_NilValue) {
   
   NumericVector res_i(Nref * Kref), res_j(Nref * Kref);
   std::vector<double> flux(Nref * Kref);
-
-  #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
+  
+#pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
   std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-  #pragma omp parallel for reduction(vsum: flux) collapse(2)
-  for (auto i = 0; i < N; ++i) {
-    for (auto j = 0; j < K; ++j) {
-      flux[ ts_group_from[i] * Kref + ts_group_to[j] ] += liaisons[i][j];
-    }
-  }
-  
-  for (auto i = 0; i < Nref; ++i) {
-    for (auto j = 0; j < Kref; ++j) {
-      res_i[i * Kref + j] = i;
-      res_j[i * Kref + j] = j;
-    }
-  }
-  
-  if (cible == R_NilValue) {
-    return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux));
-  } else {
-    std::vector<double> p_cible = as< std::vector<double> >(cible);
-    std::vector<double> p_flux(flux);
-    // Calcul du KL
-    double tot_flux = std::accumulate(flux.begin(), flux.end(), 0.0);
-    double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
-    
-    if (tot_flux == 0) stop("Les flux groupés sont tous nuls.");
-    
-    double kl = 0;
-    
-    for (auto k = 0; k < Nref * Kref; ++k) {
-      p_cible[k] /= tot_cible;
-      p_flux[k] /= tot_flux;
-      if (p_flux[k] < PLANCHER_KL) p_flux[k] = PLANCHER_KL;
-      kl += p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+#pragma omp parallel for reduction(vsum: flux) collapse(2)
+    for (auto i = 0; i < N; ++i) {
+      for (auto j = 0; j < K; ++j) {
+        flux[ ts_group_from[i] * Kref + ts_group_to[j] ] += liaisons[i][j];
+      }
     }
     
-    return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux), _("kl") = kl);
-  }
+    for (auto i = 0; i < Nref; ++i) {
+      for (auto j = 0; j < Kref; ++j) {
+        res_i[i * Kref + j] = i;
+        res_j[i * Kref + j] = j;
+      }
+    }
+    
+    if (cible.isNull()) {
+      return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux));
+    } else {
+      std::vector<double> p_cible = as< std::vector<double> >(cible);
+      std::vector<double> p_flux(flux);
+      // Calcul du KL
+      double tot_flux = std::accumulate(flux.begin(), flux.end(), 0.0);
+      double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
+      
+      if (tot_flux == 0) stop("Les flux groupés sont tous nuls.");
+      
+      double kl = 0;
+      
+      for (auto k = 0; k < Nref * Kref; ++k) {
+        p_cible[k] /= tot_cible;
+        p_flux[k] /= tot_flux;
+        if (p_flux[k] < PLANCHER_KL) p_flux[k] = PLANCHER_KL;
+        kl += p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+      }
+      
+      return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux), _("kl") = kl);
+    }
 }
-}
+ }
  
  

@@ -25,20 +25,21 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1,
   p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
   p_dist <- c(0L, p_dist)
   
-  meaps_all_in(jr_dist = les_j,
-               p_dist = p_dist,
-               xr_dist = MeapsData@triplet$metric,
-               emplois = MeapsData@emplois,
-               actifs = MeapsData@actifs,
-               fuites = MeapsData@fuites,
-               parametres = parametres,
-               xr_odds = odds,
-               attraction = attraction,
-               nthreads = nthreads, verbose = verbose) |>
-    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
-    dplyr::select(fromidINS, toidINS, flux)
+  res <- meaps_all_in(jr_dist = les_j,
+                      p_dist = p_dist,
+                      xr_dist = MeapsData@triplet$metric,
+                      emplois = MeapsData@emplois,
+                      actifs = MeapsData@actifs,
+                      fuites = MeapsData@fuites,
+                      group_from = NULL,
+                      group_to = NULL,
+                      cible = NULL,
+                      parametres = parametres,
+                      xr_odds = odds,
+                      attraction = attraction,
+                      nthreads = nthreads, verbose = verbose) 
   
+  list(flux = tibble::tibble(from = res$i, to = res$j, flux = ))
 }
 
 #' Multishuf, l'original
@@ -107,8 +108,8 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
   
   res |>
     tibble::as_tibble() |> 
-    dplyr::mutate(fromidINS = MeapsData@froms) |> 
-    tidyr::pivot_longer(cols = -fromidINS, names_to = "toidINS", values_to = "flux") |> 
+    dplyr::mutate(from = MeapsData@froms) |> 
+    tidyr::pivot_longer(cols = -fromidINS, names_to = "to", values_to = "flux") |> 
     dplyr::filter(flux>0) |> 
     arrange(desc(flux))
 }
@@ -191,10 +192,12 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = ntr, verbose = verbose) |>
-    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
-    dplyr::select(fromidINS, toidINS, flux)
+    nthreads = ntr, verbose = verbose)
+  
+  res <- list(flux = tibble::tibble(
+    from = MeapsData@froms[res$i+1L], 
+    to = MeapsData@tos[res$j+1L], 
+    flux = res$flux))
   if(large) gc()
   return(res)
 }
@@ -292,17 +295,18 @@ multishuf_oc_grouped <- function(
   
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  colnames(res) <- g_tos
-  res |>
-    tibble::as_tibble() |> 
-    dplyr::mutate(group_from = g_froms) |> 
-    tidyr::pivot_longer(cols = -group_from, names_to = "group_to", values_to = "value") |>  
-    filter(value>0) |> 
-    left_join(MeapsDataGroup@cible |> rename(target = value), 
-              by = c("group_from", "group_to")) |> 
+  
+  tibble::tibble(
+    from = g_froms[res$i+1L],
+    to = g_tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0) |> 
+    left_join(MeapsDataGroup@cible |> rename(
+      target = value, from = group_from, to = group_to), 
+      by = c("from", "to")) |> 
     mutate(target = replace_na(target, 0),
-           value = replace_na(value, 0)) |> 
-    arrange(desc(value))
+           flux = replace_na(flux, 0)) |> 
+    arrange(desc(flux))
 }
 
 
@@ -336,10 +340,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       estim <- do.call(
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
-      kl <- entropie_relative(
-        estim$value, 
-        estim$target, 
-        floor = 1e-6 * sum(estim$value) / length(estim$value) )
+      kl <- estim$kl
       mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
       cli::cli_progress_output(mes, .envir = env)
       return(kl)

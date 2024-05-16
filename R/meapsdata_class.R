@@ -162,7 +162,7 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
   new("MeapsDataGroup", MeapsData@triplet, MeapsData@actifs,
       MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
       MeapsData@froms, MeapsData@tos,
-      group_from[MeapsData@froms], group_to[MeapsData@tos],
+      sort(group_from)[MeapsData@froms], sort(group_to)[MeapsData@tos],
       cible |> arrange(group_from, group_to)
   )
 }
