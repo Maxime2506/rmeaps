@@ -55,7 +55,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // multishuf_oc_group_cpp
-NumericMatrix multishuf_oc_group_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, NumericVector emplois, const NumericVector actifs, NumericVector fuites, IntegerMatrix shuf, const IntegerVector group_from, const IntegerVector group_to, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
+NumericMatrix multishuf_oc_group_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const IntegerVector group_from, const IntegerVector group_to, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
 RcppExport SEXP _rmeaps_multishuf_oc_group_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -63,10 +63,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type fuites(fuitesSEXP);
-    Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type shuf(shufSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type group_from(group_fromSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type group_to(group_toSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
@@ -89,7 +89,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // multishuf_oc_cpp
-DataFrame multishuf_oc_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, NumericVector emplois, const NumericVector actifs, NumericVector fuites, IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
+DataFrame multishuf_oc_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
 RcppExport SEXP _rmeaps_multishuf_oc_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -97,10 +97,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
     Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type fuites(fuitesSEXP);
-    Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type shuf(shufSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
     Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);

@@ -74,7 +74,7 @@ using namespace Rcpp;
    
    if (attraction == "double_marche_liss") {
      for (std::size_t k = 0; k < L; ++k) {
-       ts_xr_odds[k]  = marche_liss(ts_xr_dist[k], parametres[0], parametres[1], parametres[2], parametres[3]);
+       ts_xr_odds[k]  = double_marche_liss(ts_xr_dist[k], parametres[0], parametres[1], parametres[2], parametres[3]);
      }}
    
    if (attraction == "decay") {

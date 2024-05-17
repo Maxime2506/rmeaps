@@ -131,7 +131,7 @@ for (auto from = 0; from < N; ++from) {
   
   if (attraction == "double_marche_liss") {
     for (std::size_t k = 0; k < k_valid; ++k) {
-      attirances[k] *= marche_liss(xr_dist[debut + k], ts_parametres[0], ts_parametres[1], ts_parametres[2], ts_parametres[3]);
+      attirances[k] *= double_marche_liss(xr_dist[debut + k], ts_parametres[0], ts_parametres[1], ts_parametres[2], ts_parametres[3]);
     }}
   
   if (attraction == "decay") {
@@ -381,7 +381,7 @@ for (std::size_t from = 0; from < N; ++from) {
   
   if (attraction == "double_marche_liss") {
     for (std::size_t k = 0; k < k_valid; ++k) {
-      attirances[k] *= marche_liss(xr_dist[debut + k], ts_parametres[0], ts_parametres[1], ts_parametres[2], ts_parametres[3]);
+      attirances[k] *= double_marche_liss(xr_dist[debut + k], ts_parametres[0], ts_parametres[1], ts_parametres[2], ts_parametres[3]);
     }
   }
   
