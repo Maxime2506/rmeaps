@@ -10,9 +10,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// meaps_all_in
-List meaps_all_in(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, const Nullable<IntegerVector> group_from, const Nullable<IntegerVector> group_to, const Nullable<NumericVector> cible, const int nthreads, const bool verbose);
-RcppExport SEXP _rmeaps_meaps_all_in(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+// meaps
+List meaps(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const std::string attraction, const Nullable<IntegerVector> group_from, const Nullable<IntegerVector> group_to, const Nullable<NumericVector> cible, const int nthreads, const bool verbose);
+RcppExport SEXP _rmeaps_meaps(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP attractionSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,44 +23,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
     Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
     Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type group_from(group_fromSEXP);
     Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type group_to(group_toSEXP);
     Rcpp::traits::input_parameter< const Nullable<NumericVector> >::type cible(cibleSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_all_in(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, xr_odds, attraction, group_from, group_to, cible, nthreads, verbose));
-    return rcpp_result_gen;
-END_RCPP
-}
-// meaps_multishuf
-NumericMatrix meaps_multishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, NumericVector emplois, const NumericVector actifs, NumericVector fuite, IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string mode, Nullable<NumericVector> oddssubjectifs, const int nthreads, const bool progress);
-RcppExport SEXP _rmeaps_meaps_multishuf(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuiteSEXP, SEXP shufSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP modeSEXP, SEXP oddssubjectifsSEXP, SEXP nthreadsSEXP, SEXP progressSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type emplois(emploisSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type fuite(fuiteSEXP);
-    Rcpp::traits::input_parameter< IntegerMatrix >::type shuf(shufSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
-    Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
-    Rcpp::traits::input_parameter< const std::string >::type mode(modeSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type oddssubjectifs(oddssubjectifsSEXP);
-    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type progress(progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps_multishuf(jr_dist, p_dist, xr_dist, emplois, actifs, fuite, shuf, parametres, xr_odds, mode, oddssubjectifs, nthreads, progress));
+    rcpp_result_gen = Rcpp::wrap(meaps(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rmeaps_meaps_all_in", (DL_FUNC) &_rmeaps_meaps_all_in, 14},
-    {"_rmeaps_meaps_multishuf", (DL_FUNC) &_rmeaps_meaps_multishuf, 13},
+    {"_rmeaps_meaps", (DL_FUNC) &_rmeaps_meaps, 13},
     {NULL, NULL, 0}
 };
 

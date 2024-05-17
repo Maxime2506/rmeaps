@@ -76,7 +76,6 @@ arg <- list(jr_dist = les_j,
              actifs = MeapsData@actifs,
              fuites = MeapsData@fuites,
              parametres = 1.0,
-             xr_odds = 1.0,
             nthreads = 1L,
             verbose = TRUE)
 

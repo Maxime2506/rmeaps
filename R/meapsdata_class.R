@@ -256,7 +256,7 @@ setMethod("show", "MeapsData", function(object) {
 })
 
 #' @import dplyr
-all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1, 
+all_in <- function(MeapsData, attraction = "constant", parametres = 0, 
                    nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
@@ -282,16 +282,16 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1,
   p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
   p_dist <- c(0L, p_dist)
   
-  meaps_all_in(jr_dist = les_j,
+  meaps(jr_dist = les_j,
                p_dist = p_dist,
                xr_dist = MeapsData@triplet$metric,
                emplois = MeapsData@emplois,
                actifs = MeapsData@actifs,
                fuites = MeapsData@fuites,
                parametres = parametres,
-               xr_odds = odds,
                attraction = attraction,
-               nthreads = nthreads, verbose = verbose) |>
+               nthreads = nthreads, verbose = verbose) |> 
+    as.data.frame() |> 
     dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
     dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
     dplyr::select(fromidINS, toidINS, flux)
