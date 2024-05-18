@@ -10,9 +10,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// meaps
-List meaps(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const std::string attraction, const Nullable<IntegerVector> group_from, const Nullable<IntegerVector> group_to, const Nullable<NumericVector> cible, const int nthreads, const bool verbose);
-RcppExport SEXP _rmeaps_meaps(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP attractionSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+// meapsclass
+List meapsclass(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const std::string attraction, const Nullable<IntegerVector> group_from, const Nullable<IntegerVector> group_to, const Nullable<NumericVector> cible, const int nthreads, const bool verbose);
+RcppExport SEXP _rmeaps_meapsclass(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP attractionSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,13 +29,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Nullable<NumericVector> >::type cible(cibleSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(meaps(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose));
+    rcpp_result_gen = Rcpp::wrap(meapsclass(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rmeaps_meaps", (DL_FUNC) &_rmeaps_meaps, 13},
+    {"_rmeaps_meapsclass", (DL_FUNC) &_rmeaps_meapsclass, 13},
     {NULL, NULL, 0}
 };
 

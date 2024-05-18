@@ -39,7 +39,7 @@ using namespace Rcpp;
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- List meaps(const IntegerVector jr_dist, 
+ List meapsclass(const IntegerVector jr_dist, 
             const IntegerVector p_dist, 
             const NumericVector xr_dist, 
             const NumericVector emplois,
@@ -230,8 +230,8 @@ if (group_from.isNull() || group_to.isNull()) {
       for (auto k = 0; k < Nref * Kref; ++k) {
         p_cible[k] /= tot_cible;
         p_flux[k] /= tot_flux;
-        if (p_flux[k] < PLANCHER_KL) p_flux[k] = PLANCHER_KL;
-        kl += p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+        if (p_cible[k] < PLANCHER_KL) p_cible[k] = PLANCHER_KL;
+        if (p_flux[k] != 0) kl += p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
       }
       
       return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux), _("kl") = kl);

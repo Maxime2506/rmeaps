@@ -4,7 +4,7 @@
 #' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
 NULL
 
-meaps <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_meaps`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
+meapsclass <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_meapsclass`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
 }
 
