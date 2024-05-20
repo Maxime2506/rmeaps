@@ -1,5 +1,3 @@
-
-
 # Class de base pour les données meaps.
 setClass("MeapsData", 
          representation = list(
@@ -9,7 +7,9 @@ setClass("MeapsData",
            fuites = "numeric", 
            froms = "character",
            tos = "character",
-           shuf = "matrix"
+           shuf = "matrix",
+           j_dist = "integer",
+           p_dist = "integer"
          ),
          prototype = list(
            triplet = data.frame(fromidINS = character(), toidINS = character(), metric = numeric()),
@@ -18,7 +18,9 @@ setClass("MeapsData",
            fuites = numeric(),
            froms = character(),
            tos = character(),
-           shuf = matrix()
+           shuf = matrix(),
+           j_dist = integer(),
+           p_dist = integer()
          )
 )
 
@@ -40,6 +42,20 @@ setMethod(f = "initialize", signature = "MeapsData",
             .Object@fuites <- fuites[fromidINS]
             .Object@froms <- fromidINS
             .Object@tos <- toidINS
+            
+            jlab <- seq_along(.Object@tos) - 1L
+            names(jlab) <- .Object@tos
+            
+            les_j <- jlab[triplet$toidINS]
+            names(les_j) <- NULL
+            .Object@j_dist <- les_j
+            
+            p_dist <- triplet |> 
+              group_by(fromidINS) |> 
+              summarize(n()) |>
+              pull() |>
+              cumsum()
+            .Object@p_dist <- c(0L, p_dist)
             
             if(!is.null(nshuf))
               .Object@shuf <- emiette(
@@ -76,8 +92,6 @@ setClass("MeapsDataGroup",
            group_from = "character",
            group_to = "character",
            cible = "data.frame",
-           j_dist = "integer",
-           p_dist = "integer",
            index_gfrom = "integer",
            index_gto = "integer"
          ),
@@ -85,8 +99,6 @@ setClass("MeapsDataGroup",
            group_from = character(),
            group_to = character(),
            cible = data.frame(),
-           j_dist = integer(),
-           p_dist = integer(),
            index_gfrom = integer(),
            index_gto = integer()
            
@@ -96,7 +108,7 @@ setClass("MeapsDataGroup",
 
 setMethod(f = "initialize", signature = "MeapsDataGroup",
           definition = function(.Object, triplet, actifs, emplois, fuites, shuf,
-                                froms, tos, group_from, group_to, cible) {
+                                froms, tos, group_from, group_to, cible, j_dist, p_dist) {
             
             .Object@triplet <- triplet
             .Object@actifs <- actifs[froms]
@@ -106,23 +118,10 @@ setMethod(f = "initialize", signature = "MeapsDataGroup",
             .Object@tos <- tos
             .Object@group_from <- group_from[froms]
             .Object@group_to <- group_to[tos]
-            .Object@cible <- cible |> arrange(group_from, group_to)
+            .Object@cible <- cible |> arrange(group_from, group_to) 
             .Object@shuf <- shuf
-            
-            jlab <- seq_along(tos) - 1L
-            names(jlab) <- tos
-            
-            les_j <- jlab[triplet$toidINS]
-            names(les_j) <- NULL
-            .Object@j_dist <- les_j
-            
-            p_dist <- triplet |> 
-              group_by(fromidINS) |> 
-              summarize(n()) |>
-              pull() |>
-              cumsum()
-            
-            .Object@p_dist <- c(0L, p_dist)
+            .Object@j_dist <- j_dist
+            .Object@p_dist <- p_dist
             
             g_froms <- unique(group_from) |> sort()
             g_tos <- unique(group_to) |> sort()
@@ -164,8 +163,7 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
       MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
       MeapsData@froms, MeapsData@tos,
       group_from[MeapsData@froms], group_to[MeapsData@tos],
-      cible |> arrange(group_from, group_to)
+      cible |> arrange(group_from, group_to),
+      MeapsData@j_dist, MeapsData@p_dist
   )
 }
-
-

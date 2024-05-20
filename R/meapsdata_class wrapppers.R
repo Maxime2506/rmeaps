@@ -109,19 +109,6 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   } else 
     shuf <- MeapsData@shuf
   
-  jlab <- seq_along(tos) - 1L
-  names(jlab) <- tos
-  
-  les_j <- jlab[MeapsData@triplet$toidINS]
-  names(les_j) <- NULL
-  p_dist <- MeapsData@triplet |>
-    dplyr::group_by(fromidINS) |> 
-    dplyr::summarize(n()) |> 
-    dplyr::pull() |> 
-    cumsum()
-  
-  p_dist <- c(0L, p_dist)
-  
   # check mem
   size <- length(MeapsData@triplet$metric)/1024^3
   large <- 4*size>gbperthreads/4
@@ -138,8 +125,8 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   }
   
   res <- multishuf_oc_cpp(
-    jr_dist = les_j,
-    p_dist = p_dist,
+    jr_dist = MeapsData@j_dist,
+    p_dist = MeapsData@p_dist,
     xr_dist = MeapsData@triplet$metric,
     emplois = MeapsData@emplois,
     actifs = MeapsData@actifs,
