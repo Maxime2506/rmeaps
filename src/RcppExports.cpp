@@ -11,7 +11,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // meaps_all_in
-DataFrame meaps_all_in(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, const int nthreads, const bool verbose);
+List meaps_all_in(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, const int nthreads, const bool verbose);
 RcppExport SEXP _rmeaps_meaps_all_in(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -31,9 +31,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// all_in_optim
-NumericVector all_in_optim(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const IntegerVector group_from, const IntegerVector group_to, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, const int nthreads, const bool verbose);
-RcppExport SEXP _rmeaps_all_in_optim(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+// all_in_grouped_cpp
+List all_in_grouped_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const IntegerVector group_from, const IntegerVector group_to, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, const Nullable< NumericVector > cible, const int nthreads, const bool verbose);
+RcppExport SEXP _rmeaps_all_in_grouped_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -48,15 +48,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
     Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< const Nullable< NumericVector > >::type cible(cibleSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(all_in_optim(jr_dist, p_dist, xr_dist, group_from, group_to, emplois, actifs, fuites, parametres, xr_odds, attraction, nthreads, verbose));
+    rcpp_result_gen = Rcpp::wrap(all_in_grouped_cpp(jr_dist, p_dist, xr_dist, group_from, group_to, emplois, actifs, fuites, parametres, xr_odds, attraction, cible, nthreads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
 // multishuf_oc_group_cpp
-NumericMatrix multishuf_oc_group_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const IntegerVector group_from, const IntegerVector group_to, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
-RcppExport SEXP _rmeaps_multishuf_oc_group_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+List multishuf_oc_group_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const IntegerVector group_from, const IntegerVector group_to, const NumericVector parametres, const NumericVector xr_odds, const Nullable<NumericVector> cible, const std::string attraction, int nthreads, bool verbose);
+RcppExport SEXP _rmeaps_multishuf_oc_group_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP cibleSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -71,10 +72,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector >::type group_to(group_toSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
+    Rcpp::traits::input_parameter< const Nullable<NumericVector> >::type cible(cibleSEXP);
     Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(multishuf_oc_group_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, attraction, nthreads, verbose));
+    rcpp_result_gen = Rcpp::wrap(multishuf_oc_group_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, cible, attraction, nthreads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -89,7 +91,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // multishuf_oc_cpp
-DataFrame multishuf_oc_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
+List multishuf_oc_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
 RcppExport SEXP _rmeaps_multishuf_oc_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -107,6 +109,53 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     rcpp_result_gen = Rcpp::wrap(multishuf_oc_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// multishuf_oc_group_fpp
+List multishuf_oc_group_fpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const IntegerVector group_from, const IntegerVector group_to, const NumericVector parametres, const NumericVector xr_odds, const Nullable<NumericVector> cible, const std::string attraction, int nthreads, bool verbose);
+RcppExport SEXP _rmeaps_multishuf_oc_group_fpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP cibleSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type group_from(group_fromSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type group_to(group_toSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
+    Rcpp::traits::input_parameter< const Nullable<NumericVector> >::type cible(cibleSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(multishuf_oc_group_fpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, cible, attraction, nthreads, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// multishuf_oc_fpp
+List multishuf_oc_fpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const IntegerMatrix shuf, const NumericVector parametres, const NumericVector xr_odds, const std::string attraction, int nthreads, bool verbose);
+RcppExport SEXP _rmeaps_multishuf_oc_fpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP shufSEXP, SEXP parametresSEXP, SEXP xr_oddsSEXP, SEXP attractionSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type shuf(shufSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_odds(xr_oddsSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(multishuf_oc_fpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -137,10 +186,12 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_meaps_all_in", (DL_FUNC) &_rmeaps_meaps_all_in, 11},
-    {"_rmeaps_all_in_optim", (DL_FUNC) &_rmeaps_all_in_optim, 13},
-    {"_rmeaps_multishuf_oc_group_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_group_cpp, 14},
+    {"_rmeaps_all_in_grouped_cpp", (DL_FUNC) &_rmeaps_all_in_grouped_cpp, 14},
+    {"_rmeaps_multishuf_oc_group_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_group_cpp, 15},
     {"_rmeaps_max_threads", (DL_FUNC) &_rmeaps_max_threads, 0},
     {"_rmeaps_multishuf_oc_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_cpp, 12},
+    {"_rmeaps_multishuf_oc_group_fpp", (DL_FUNC) &_rmeaps_multishuf_oc_group_fpp, 15},
+    {"_rmeaps_multishuf_oc_fpp", (DL_FUNC) &_rmeaps_multishuf_oc_fpp, 12},
     {"_rmeaps_meaps_multishuf_cpp", (DL_FUNC) &_rmeaps_meaps_multishuf_cpp, 14},
     {NULL, NULL, 0}
 };

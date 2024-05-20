@@ -1,21 +1,16 @@
 #' Calcul de la béta-divergence Kullback-Leibler, soit l'entropie relative.
 #' @param nb_mod Vecteur dont on veut évaluer la divergence.
 #' @param nb_ref Vecteur de référence.
-#' @param seuil_collapse Seuil en dessous duquel on aggrège les effectifs. Défaut : 0,1.
+#' @param seuil Seuil de bruit. Défaut : 1e-6.
 #' 
 #' @return Valeur de Kullback-Leibler.
-kullback_leibler <- function(nb_mod, nb_ref, seuil_collapse = .1) {
-  
-  tib <- tibble(x = nb_mod, y = nb_ref) |> 
-    mutate(
-      g = cur_group_rows(),
-      g = ifelse( pmin(nb_ref, nb_mod) >= seuil_collapse, g, 0)
-    ) |>
-    group_by(g) |> 
-    summarise(x = sum(x, na.rm=TRUE), y = sum(y, na.rm=TRUE)) |> 
-    mutate(px = x / sum(x, na.rm=TRUE), py = y / sum(y, na.rm=TRUE))
-  
-  sum(tib$py * log(tib$py / tib$px), na.rm=TRUE)
+kullback_leibler <- function(nb_mod, nb_ref, seuil = 1e-6) {
+  zx <- nb_mod>0
+  px <- nb_mod[zx]/sum(nb_mod)
+  py <- nb_ref[zx]/sum(nb_ref[zx])
+  py[py < seuil] <- seuil
+  py <- py/sum(py)
+  sum(px * log(px / py), na.rm=TRUE)
 }
 
 #' Calcul de l'entropie de Shannon.

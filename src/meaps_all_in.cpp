@@ -3,13 +3,14 @@
 #endif
 // [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
+#include <Rcpp/Benchmark/Timer.h>
 #include <iterator>
 
 #include "fcts_penal.h"
 
 using namespace Rcpp;
 
- //' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
+//' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
  //' doit être définie sous forme des inner et outer index d'une matrice sparse en ligne. Ceci revient à classer un data.frame
  //' avec les colonnes i, j et dist, d'abord par i, puis dist (=xr), puis j (=jr). 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
@@ -33,19 +34,22 @@ using namespace Rcpp;
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- DataFrame meaps_all_in(const IntegerVector jr_dist, 
-                        const IntegerVector p_dist, 
-                        const NumericVector xr_dist, 
-                        const NumericVector emplois,
-                        const NumericVector actifs, 
-                        const NumericVector fuites, 
-                        const NumericVector parametres,
-                        const NumericVector xr_odds,
-                        const std::string attraction = "constant",
-                        const int nthreads = 0, 
-                        const bool verbose = true) {
+ List meaps_all_in(const IntegerVector jr_dist, 
+                   const IntegerVector p_dist, 
+                   const NumericVector xr_dist, 
+                   const NumericVector emplois,
+                   const NumericVector actifs, 
+                   const NumericVector fuites, 
+                   const NumericVector parametres,
+                   const NumericVector xr_odds,
+                   const std::string attraction = "constant",
+                   const int nthreads = 0, 
+                   const bool verbose = true) {
+   Timer timer;
+   timer.step("start");
    
-   const std::size_t N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
+   const std::size_t N = actifs.size(), K = emplois.size(), 
+     Ndata = xr_dist.size();
    
    const int LIMITE_LOOP = 200; // condition d'arrêt pour les boucles lors de la distribution des résidents vers des emplois.
    const double LIMITE_PRECISION_1 = 1e-4; // condition d'arrêt sur le pourcentage de résidents non classés restants.
@@ -70,10 +74,6 @@ using namespace Rcpp;
    // Initialisation de la matrice origines-destination.
    std::vector< std::vector<double> > liaisons(N, std::vector<double> (K));
    
-   // Format de sortie
-   std::vector<double> res_xr(Ndata);
-   std::vector<int> res_i(Ndata);
-   
    double tot_actifs_libres = std::accumulate(actifs_libres.begin(), actifs_libres.end(), 0.0);
    double tot_actifs = tot_actifs_libres, old_tot;
    
@@ -82,16 +82,18 @@ using namespace Rcpp;
    int nloop = 0;
    
 #ifdef _OPENMP
-     int ntr = nthreads;
-     if (ntr == 0) {
-       ntr = omp_get_max_threads();
-     }
-     if (ntr > omp_get_max_threads()) {
-       ntr = omp_get_max_threads();
-     }
-     if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
+   int ntr = nthreads;
+   if (ntr == 0) {
+     ntr = omp_get_max_threads();
+   }
+   if (ntr > omp_get_max_threads()) {
+     ntr = omp_get_max_threads();
+   }
+   if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
-     
+   
+   timer.step("init");
+   
 #pragma omp parallel num_threads(ntr) 
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
@@ -241,20 +243,28 @@ for (std::size_t i = 0; i < N; ++i) {
     std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
     nloop < LIMITE_LOOP); // FIN DES BOUCLES DO-WHILE
   
-
-   // sortie au format xr_dist.
-   
-#pragma omp parallel for
-   for (std::size_t i = 0; i < N; ++i) {
-     for (std::size_t k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
-       res_xr[k] = liaisons[i][ ts_jr_dist[k] ];
-       res_i[k] = i;
-     }
-   }
+  // sortie au format xr_dist.
+  
 } // fin clause omp parallel
-  if(verbose == TRUE) REprintf("\n");
 
-   return DataFrame::create(_("i") = wrap(res_i), _("j") = jr_dist, _("flux") = wrap(res_xr));
+timer.step("OMP");
+// Format de sortie
+NumericVector res_xr(Ndata);
+IntegerVector res_i(Ndata);
+
+if(verbose == TRUE) REprintf("\n");
+
+for (std::size_t i = 0; i < N; ++i) {
+  for (std::size_t k = ts_p_dist[i]; k < ts_p_dist[i + 1L]; ++k) {
+    res_xr(k) = liaisons[i][ ts_jr_dist[k] ];
+    res_i(k) = i;
+  }
+}
+
+timer.step("res");
+
+return List::create(_("i") = res_i, _("j") = jr_dist, _("flux") = res_xr,
+                    _("timer") = wrap(timer));
  }
  
  
@@ -285,32 +295,37 @@ for (std::size_t i = 0; i < N; ++i) {
  //'
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
- NumericVector all_in_optim(const IntegerVector jr_dist, 
-                            const IntegerVector p_dist, 
-                            const NumericVector xr_dist, 
-                            const IntegerVector group_from,
-                            const IntegerVector group_to,
-                            const NumericVector emplois,
-                            const NumericVector actifs, 
-                            const NumericVector fuites, 
-                            const NumericVector parametres,
-                            const NumericVector xr_odds,
-                            const std::string attraction = "constant",
-                            const int nthreads = 0, 
-                            const bool verbose = true) {
+ List all_in_grouped_cpp(const IntegerVector jr_dist, 
+                         const IntegerVector p_dist, 
+                         const NumericVector xr_dist, 
+                         const IntegerVector group_from,
+                         const IntegerVector group_to,
+                         const NumericVector emplois,
+                         const NumericVector actifs, 
+                         const NumericVector fuites, 
+                         const NumericVector parametres,
+                         const NumericVector xr_odds,
+                         const std::string attraction = "constant",
+                         const Nullable< NumericVector > cible = R_NilValue,
+                         const int nthreads = 0, 
+                         const bool verbose = true) {
+   
+   Timer timer;
+   timer.step("start");
    
    const int LIMITE_LOOP = 200; // condition d'arrêt pour les boucles lors de la distribution des résidents vers des emplois.
-   const double LIMITE_PRECISION_1 = 1e-3; // condition d'arrêt sur le pourcentage de résidents non classés restants.
+   const double LIMITE_PRECISION_1 = 1e-4; // condition d'arrêt sur le pourcentage de résidents non classés restants.
    const double LIMITE_PRECISION_2 = 1e-4; // condition d'arrêt sur la vitesse de reclassement des résidents non occupés.
+   constexpr double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
    
    const std::size_t N = actifs.size(), K = emplois.size();
    auto Nref = 1L + *std::max_element(group_from.begin(), group_from.end());
    auto Kref = 1L + *std::max_element(group_to.begin(), group_to.end());
-
+   
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
-   std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
-   std::vector<double> ts_fuite = as<std::vector<double>>(fuites);
-   const std::vector<double> ts_actifs = as<std::vector<double>>(actifs);
+   std::vector<double> ts_emplois = as< std::vector<double> >(emplois);
+   std::vector<double> ts_fuite = as< std::vector<double> >(fuites);
+   const std::vector<double> ts_actifs = as< std::vector<double> >(actifs);
    
    const std::vector<double> ts_parametres = as< std::vector<double> >(parametres);
    
@@ -322,7 +337,7 @@ for (std::size_t i = 0; i < N; ++i) {
    
    std::vector<double> emplois_libres(ts_emplois);
    std::vector<double> actifs_libres(ts_actifs);
-   
+   timer.step("init_0");
    // Initialisation du résultat.
    std::vector< std::vector<double> > liaisons(N, std::vector<double> (K));
    
@@ -342,6 +357,7 @@ for (std::size_t i = 0; i < N; ++i) {
    if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
    
+  timer.step("init");
 #pragma omp parallel num_threads(ntr) 
 {
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
@@ -494,17 +510,57 @@ for (std::size_t i = 0; i < N; ++i) {
     std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
     nloop < LIMITE_LOOP);
 } // fin clause omp parallel
+if (verbose == TRUE) 
+  REprintf("\n");
 
+ timer.step("OMP");
 // sortie du résultat agrégé.
-NumericVector resultat(Nref * Kref);
+std::vector< double > out(Nref * Kref);
+std::vector< int > res_i(Nref * Kref);
+std::vector< int > res_j(Nref * Kref);
+#pragma omp parallel for
 for (std::size_t i = 0; i < N; ++i) {
   for (std::size_t j = 0; j < K; ++j) {
-    resultat(group_from[i] * Kref + group_to[j]) += liaisons[i][j];
+    auto index = group_from[i] * Kref + group_to[j];
+    out[index] += liaisons[i][j];
+    res_i[index] = group_from[i];
+    res_j[index] = group_to[j];
   }
 }
-
-return resultat;
+timer.step("aggregation");
+if (cible.isNull()) {
+  NumericVector res_t(timer);
+  return List::create(_("i") = wrap(res_i), _("j") = wrap(res_j),
+                      _("flux") = wrap(out),
+                      _("timer") = res_t);
 }
+std::vector<double> p_cible = as< std::vector<double> >(cible);
+std::vector<double> p_flux = out;
+if(p_cible.size() != p_flux.size())
+  stop("La cible n'a pas la bonne longueur");
+// Calcul du KL
+double tot_flux = std::accumulate(out.begin(), out.end(), 0.0);
+double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
+
+if (tot_flux == 0) stop("Les flux groupés sont tous nuls");
+
+double kl = 0;
+double kl_term;
+for (auto k = 0; k < Nref * Kref; ++k) {
+  if (p_flux[k] == 0) {
+    continue; 
+  }
+  p_cible[k] /= tot_cible;
+  p_flux[k] /= tot_flux;
+  if (p_cible[k] < PLANCHER_KL) p_cible[k] = PLANCHER_KL;
+  kl_term = p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+  kl += kl_term;
+ }
+ timer.step("kl");
+ NumericVector res_t(timer);   
+ return List::create(_("i") = res_i , _("j") = res_j,
+                     _("flux") = out, _("kl") = kl, 
+                     _("timer") = res_t);
+ } // end fonction
  
-
-
+ 

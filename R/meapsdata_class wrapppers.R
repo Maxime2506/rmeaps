@@ -60,14 +60,14 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
     parametres = parametres,
     xr_odds = odds,
     nthreads = nthreads, verbose = verbose) 
-  colnames(res) <- MeapsData@tos
-  
-  res |>
-    tibble::as_tibble() |> 
-    dplyr::mutate(fromidINS = MeapsData@froms) |> 
-    tidyr::pivot_longer(cols = -fromidINS, names_to = "toidINS", values_to = "flux") |> 
-    dplyr::filter(flux>0) |> 
-    arrange(desc(flux))
+  list(
+    flux = tibble::tibble(
+      fromidINS = MeapsData@froms[res$i+1L],
+      toidINS = MeapsData@tos[res$j+1L],
+      flux = res$flux) |> 
+      filter(flux>0) |> 
+      arrange(desc(flux)),
+    timer = round(diff(res$timer)/1e+9, 5))
 }
 
 #' Multishuf, la version continue
@@ -88,39 +88,19 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
                          parametres = 0, odds = 1, nshuf = 16,
                          nthreads = 0L, verbose = TRUE, gbperthreads=4) {
   
-  if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
+  if (!inherits(MeapsData, "MeapsData")) 
+    cli::cli_abort("Ce n'est pas un objet MeapsData.") 
   # Validation des paramètres
-  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) 
+    cli::cli_abort("Fonction attraction inconnue")
   
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-  if (attraction == "odds" && length(odds) != nrow(object@triplet) ) cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) cli::cli_abort("vecteur odds invalide.") 
   if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
   if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
   if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
-  
-  froms <- MeapsData@froms
-  tos <- MeapsData@tos
-  
-  if(is.null(MeapsData@shuf)) {
-    if(nshuf<=0) cli::cli_abort("pas de shufs et pas d'envie de shuf") 
-    shuf <- emiette(MeapsData@actifs, nshuf = nshuf)
-  } else 
-    shuf <- MeapsData@shuf
-  
-  jlab <- seq_along(tos) - 1L
-  names(jlab) <- tos
-  
-  les_j <- jlab[MeapsData@triplet$toidINS]
-  names(les_j) <- NULL
-  p_dist <- MeapsData@triplet |>
-    dplyr::group_by(fromidINS) |> 
-    dplyr::summarize(n()) |> 
-    dplyr::pull() |> 
-    cumsum()
-  
-  p_dist <- c(0L, p_dist)
   
   # check mem
   size <- length(MeapsData@triplet$metric)/1024^3
@@ -138,65 +118,27 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   }
   
   res <- multishuf_oc_cpp(
-    jr_dist = les_j,
-    p_dist = p_dist,
+    jr_dist = MeapsData@j_dist,
+    p_dist = MeapsData@p_dist,
     xr_dist = MeapsData@triplet$metric,
     emplois = MeapsData@emplois,
     actifs = MeapsData@actifs,
     fuites = MeapsData@fuites,
-    shuf = shuf,
+    shuf = MeapsData@shuf,
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = ntr, verbose = verbose) |>
-    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
-    dplyr::select(fromidINS, toidINS, flux)
-  if(large) gc()
-  return(res)
-}
+    nthreads = ntr, verbose = verbose) 
 
-#' @import dplyr
-all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", 
-                           parametres = 0, odds = 1, 
-                           nthreads = 0L, verbose = TRUE) {
-  
-  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
-  # Validation des paramètres
-  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
-  
-  # RQ : pas de méthode pour vérifier le bon ordre des odds.
-  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) cli::cli_abort("vecteur odds invalide.") 
-  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
-  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
-  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
-  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
-  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
-  
-  res <- all_in_optim(jr_dist = MeapsDataGroup@j_dist,
-                      p_dist = MeapsDataGroup@p_dist,
-                      xr_dist = MeapsDataGroup@triplet$metric,
-                      group_from = MeapsDataGroup@index_gfrom,
-                      group_to = MeapsDataGroup@index_gto,
-                      emplois = MeapsDataGroup@emplois,
-                      actifs = MeapsDataGroup@actifs,
-                      fuites = MeapsDataGroup@fuites,
-                      parametres = parametres,
-                      xr_odds = odds,
-                      attraction = attraction,
-                      nthreads = nthreads, verbose = verbose)
-  
-  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
-  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  expand_grid(group_from = g_froms, group_to = g_tos)|> 
-    mutate(value = res) |>
-    left_join(MeapsDataGroup@cible |> rename(target=value),
-              by = c("group_from", "group_to")) |> 
-    mutate( value = replace_na(value, 0),
-            target = replace_na(target, 0)) |> 
-    arrange(desc(value))
+  list(
+    flux = tibble::tibble(
+      fromidINS = MeapsData@froms[res$i+1L],
+      toidINS = MeapsData@tos[res$j+1L],
+      flux = res$flux) |> 
+      filter(flux>0) |> 
+      arrange(desc(flux)),
+    timer = round(diff(res$timer)/1e+9, 5))
 }
-
 
 
 #' Multishuf continu groupé
@@ -232,6 +174,11 @@ multishuf_oc_grouped <- function(
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
+  cible <- MeapsDataGroup@cible |> 
+    complete(group_from, group_to, fill = list(value = 0)) |> 
+    arrange(group_from, group_to) |> 
+    pull(value)
+  
   res <- multishuf_oc_group_cpp(
     jr_dist = MeapsDataGroup@j_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -242,6 +189,7 @@ multishuf_oc_grouped <- function(
     actifs = MeapsDataGroup@actifs,
     fuites = MeapsDataGroup@fuites,
     shuf = MeapsDataGroup@shuf,
+    cible = cible,
     parametres = parametres,
     xr_odds = odds,
     attraction = attraction,
@@ -249,19 +197,23 @@ multishuf_oc_grouped <- function(
   
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  colnames(res) <- g_tos
-  res |>
-    tibble::as_tibble() |> 
-    dplyr::mutate(group_from = g_froms) |> 
-    tidyr::pivot_longer(cols = -group_from, names_to = "group_to", values_to = "value") |>  
-    filter(value>0) |> 
-    left_join(MeapsDataGroup@cible |> rename(target = value), 
-              by = c("group_from", "group_to")) |> 
-    mutate(target = replace_na(target, 0),
-           value = replace_na(value, 0)) |> 
-    arrange(desc(value))
+  flux <- tibble::tibble(
+    group_from = g_froms[res$i+1L],
+    group_to = g_tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0)
+  if(!is.null(MeapsDataGroup@cible))
+    flux <- flux |> left_join(MeapsDataGroup@cible |> rename(cible=value),
+                              by=c("group_from", "group_to")) |>
+    mutate(flux = replace_na(flux, 0),
+           cible = replace_na(cible, 0)) |> 
+    filter(flux>0|cible>0) 
+  
+  flux <- flux |> arrange(desc(flux))
+  
+  return(list( flux = flux, kl = res$kl,
+               timer = round(diff(res$timer/1e9), 3) ))
 }
-
 
 meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
                         meaps_fun = "all_in",
@@ -293,10 +245,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       estim <- do.call(
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
-      kl <- entropie_relative(
-        estim$value, 
-        estim$target, 
-        floor = 1e-6 * sum(estim$value) / length(estim$value) )
+      kl <- estim$kl
       mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
       cli::cli_progress_output(mes, .envir = env)
       return(kl)
@@ -345,18 +294,78 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1,
   p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
   p_dist <- c(0L, p_dist)
   
-  meaps_all_in(jr_dist = les_j,
-               p_dist = p_dist,
-               xr_dist = MeapsData@triplet$metric,
-               emplois = MeapsData@emplois,
-               actifs = MeapsData@actifs,
-               fuites = MeapsData@fuites,
-               parametres = parametres,
-               xr_odds = odds,
-               attraction = attraction,
-               nthreads = nthreads, verbose = verbose) |>
-    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
-    dplyr::select(fromidINS, toidINS, flux)
+  res <- meaps_all_in(jr_dist = les_j,
+                      p_dist = p_dist,
+                      xr_dist = MeapsData@triplet$metric,
+                      emplois = MeapsData@emplois,
+                      actifs = MeapsData@actifs,
+                      fuites = MeapsData@fuites,
+                      parametres = parametres,
+                      xr_odds = odds,
+                      attraction = attraction,
+                      nthreads = nthreads, verbose = verbose)
   
+  list(
+    flux = tibble::tibble(
+    fromidINS = MeapsData@froms[res$i+1L],
+    toidINS = MeapsData@tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0),
+    timer = round(diff(res$timer)/1e+9, 5))
+  
+}
+
+#' @import dplyr
+all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", 
+                           parametres = 0, odds = 1, 
+                           nthreads = 0L, verbose = TRUE) {
+  
+  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
+  # Validation des paramètres
+  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  
+  # RQ : pas de méthode pour vérifier le bon ordre des odds.
+  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  cible <- NULL
+  if(!is.null(MeapsDataGroup@cible)) {
+    cible <- MeapsDataGroup@cible |> 
+      complete(group_from, group_to, fill = list(value = 0)) |> 
+      arrange(group_from, group_to) |> 
+      pull(value) }
+  
+  res <- all_in_grouped_cpp(jr_dist = MeapsDataGroup@j_dist,
+                            p_dist = MeapsDataGroup@p_dist,
+                            xr_dist = MeapsDataGroup@triplet$metric,
+                            group_from = MeapsDataGroup@index_gfrom,
+                            group_to = MeapsDataGroup@index_gto,
+                            emplois = MeapsDataGroup@emplois,
+                            actifs = MeapsDataGroup@actifs,
+                            fuites = MeapsDataGroup@fuites,
+                            cible = cible,
+                            parametres = parametres,
+                            xr_odds = odds,
+                            attraction = attraction,
+                            nthreads = nthreads, verbose = verbose)
+  
+  g_froms <- unique(MeapsDataGroup@group_from) |> sort()
+  g_tos <- unique(MeapsDataGroup@group_to) |> sort()
+  flux <- tibble::tibble(
+    group_from = g_froms[res$i+1L],
+    group_to = g_tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0)
+  if(!is.null(MeapsDataGroup@cible))
+    flux <- flux |> 
+    left_join(MeapsDataGroup@cible |> rename(cible=value),
+              by=c("group_from", "group_to")) |>
+    mutate(flux = replace_na(flux, 0),
+           cible = replace_na(cible, 0)) |> 
+    filter(flux>0|cible>0) 
+  return(list(flux=flux, kl = res$kl, 
+              timer = round(diff(res$timer/1e9), 3)))
 }

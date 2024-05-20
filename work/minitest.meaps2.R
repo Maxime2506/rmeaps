@@ -25,7 +25,7 @@ triplet <- distances |>
 data <- meapsdata(
   triplet = triplet, actifs = actifs, emplois = emplois, fuites=fuite, 
   nshuf=6, seed = 42)
-cible <- all_in(data) |> arrange(desc(flux)) |> 
+cible <- all_in(data)$flux |> arrange(desc(flux)) |> 
   rename(group_from = fromidINS, group_to = toidINS, value = flux)
 
 multishuf_oc(data, verbose = TRUE) |> pull(flux) |> sum()

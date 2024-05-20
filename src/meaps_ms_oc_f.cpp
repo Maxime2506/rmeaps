@@ -10,24 +10,86 @@
 #include <progress.hpp>
 #include <progress_bar.hpp>
 // #include "repartir_continu.h"
-
-#include "fcts_penal.h"
+//#include "fcts_penal.h"
 using namespace Rcpp;
 
+//' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
+ //' @param x distance.
+ //' @param rayon distance de la marche.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'attraction
+ float marche(float x, const float rayon, const float plafond) {
+   if (x > rayon) return 1;
+   return plafond;
+ }
+ 
+ //' Fonction de pénalité "marche_liss" : vaut 1 sur un rayon fixé, et décroit au-delà,
+ //' en lissant le passge pour les distances fractionaires
+ //' @param x distance.
+ //' @param rayon distance de la marche.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'attraction
+ float marche_liss(float x, const float rayon, const float plafond) {
+   if (x > ceil(rayon)) return 1;
+   if (x <= floor(rayon)) return plafond;
+   return plafond + (1 - plafond) *  (ceil(rayon) - rayon);
+ }
+ 
+ //' Fonction de pénalité "double_marche_liss" : vaut 1 au delà de r1+r2+1, et prend deux valeurs (o1, o2),
+ //' lorsque x<=r1 et r1<x<=r2+r1,
+ //' en lissant le passage pour les distances fractionaires
+ //' @param x distance.
+ //' @param rayon distance de la marche.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'attraction
+ float double_marche_liss(float x, const float r1, const float r2,
+                           const float o1, const float o2) {
+   if (x > ceil(r1+r2)) return 1;
+   if (x <= floor(r1)) return o1;
+   if (x < ceil(r1)) return o1 + (o2 - o1) *  (ceil(r1) - r1);
+   if (x <= floor(r1+r2)) return o2;
+   return o2 + (1 - o2) *  (ceil(r1+r2) - r1 - r2);
+ }
+ 
+ //' Fonction de pénalité "decay" : odd = 1/d^delta + plancher,
+ //' @param x distance.
+ //' @param delta, exposant de la distance.
+ //' @param plancher valeur pour les distances infinies.
+ //' 
+ //' @return un facteur d'attraction
+ float decay(float x, const float delta, const float plancher) {
+   return exp(-delta * log(x)) + plancher;
+ }
+ 
+ // Fonction de type logistique x -> 1 + amplitude * { exp(-(x-rayon)) - 1} / { exp(-(x-rayon)) + 1 }
+ //' @param x distance.
+ //' @param rayon distance de la bascule.
+ //' @param amplitude raideur de la bascule.
+ //' @param plancher point bas après la marche.
+ //' 
+ //' @return un facteur d'attraction
+ float logistique(float x, const float rayon, const float amplitude, const float plancher) {
+   float ex = exp( (rayon-x)/amplitude );
+   return plancher + ex / (ex + 1);
+ }
+ 
 
-inline std::vector<double> _one_distrib_continu(
-    const double entrants, 
-    const double fuite,
-    const std::vector<double>& attractivite,
-    const std::vector<double>& distances,
-    const std::vector<double>& placeslibres) {
+std::vector<float> _one_distrib_continu(
+    const float entrants, 
+    const float fuite,
+    const std::vector<float>& attractivite,
+    const std::vector<float>& distances,
+    const std::vector<float>& placeslibres) {
   
   // Le cas sum(placeslibres) = 0 doit être géré en amont.
   std::size_t k_valid = placeslibres.size();
-  std::vector<double> attraction(k_valid), accessibility(k_valid), placesprises(k_valid);
+  std::vector<float> attraction(k_valid), accessibility(k_valid), placesprises(k_valid);
   
   // Calcul de l'attraction de chaque site.
-  double total_places = 0;
+  float total_places = 0;
   for (std::size_t k = 0; k < k_valid; ++k) {
     attraction[k] = placeslibres[k] * attractivite[k];
     total_places += placeslibres[k];
@@ -39,7 +101,7 @@ inline std::vector<double> _one_distrib_continu(
   }
   
   // Calcul de l'accessibilité (corrigée de l'attraction).
-  double tot = 0;
+  float tot = 0;
   for (std::size_t k = 0; k < k_valid;) {
     auto pos = k + 1L;
     while (distances[k] == distances[pos] && pos < k_valid) ++pos;
@@ -54,15 +116,15 @@ inline std::vector<double> _one_distrib_continu(
   
   // Cas (improbable) où l'accessibilité resterait nulle. En ce cas, pas de remplissage.
   if (accessibility[k_valid - 1L] == 0) {
-    std::vector<double> zeros(k_valid);
+    std::vector<float> zeros(k_valid);
     return zeros;
   }
   
   // Calcul de l'absorption.
-  double absorption = -log(fuite) / accessibility[k_valid - 1L];
+  float absorption = -log(fuite) / accessibility[k_valid - 1L];
   
   // Calcul des actifs absorbés par sites (avant traitement des sites à distances égales).
-  std::vector<double> jobtakers(k_valid + 1L);
+  std::vector<float> jobtakers(k_valid + 1L);
   jobtakers[0L] = entrants;
   for(std::size_t k = 0L; k < k_valid; ++k) {
     jobtakers[k + 1L] = entrants * exp(-absorption * accessibility[k]); // ceux qui dépassent le site k+1.
@@ -73,8 +135,8 @@ inline std::vector<double> _one_distrib_continu(
   
   // Répartition des jobtakers dans tous les cas.
   for (std::size_t k = 0; k < k_valid;) {
-    double tot_attraction = 0;
-    double tot_jobtakers = 0;
+    float tot_attraction = 0;
+    float tot_jobtakers = 0;
     auto pos = k + 1L;
     while (distances[k] == distances[pos] && pos < k_valid) ++pos;
     for (std::size_t ego = k; ego < pos; ++ego) {
@@ -94,21 +156,21 @@ inline std::vector<double> _one_distrib_continu(
 
 // Fonction de répartition des actifs entre les sites d'emplois selon l'attractivité du site et la fuite.
 // Cette fonction gère le cas d'un dépassement de l'offre.
-inline std::vector<double> _repartir_continu(
-    const double actifs, 
-    const double fuite,
-    const std::vector<double>& attractivite,
-    const std::vector<double>& distances,
-    std::vector<double>& placeslibres) {
+inline std::vector<float> _repartir_continu(
+    const float actifs, 
+    const float fuite,
+    const std::vector<float>& attractivite,
+    const std::vector<float>& distances,
+    std::vector<float>& placeslibres) {
   
   std::size_t k_valid = placeslibres.size();
-  double actifs_non_etablis = actifs, tot_placeslibres = 0.0;
+  float actifs_non_etablis = actifs, tot_placeslibres = 0.0;
   
   // Cas où il n'y a pas assez de places libres.
   for (std::size_t k = 0; k < k_valid; ++k) tot_placeslibres += placeslibres[k];
   if (actifs * (1 - fuite) >= tot_placeslibres) return placeslibres;
   
-  std::vector<double> placesprises(k_valid, 0.0), placesrestantes(placeslibres), nouvellesprises(k_valid);
+  std::vector<float> placesprises(k_valid, 0.0), placesrestantes(placeslibres), nouvellesprises(k_valid);
   
   do {
     nouvellesprises = _one_distrib_continu(actifs_non_etablis, fuite, attractivite, distances, placesrestantes);
@@ -158,7 +220,7 @@ inline std::vector<double> _repartir_continu(
  
  // [[Rcpp::export]]
  
- List multishuf_oc_group_cpp(
+ List multishuf_oc_group_fpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
@@ -177,7 +239,7 @@ inline std::vector<double> _repartir_continu(
    Timer timer;
    timer.step("start");
    
-   constexpr double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
+   constexpr float PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
    
    auto Nref = *std::max_element(group_from.begin(), group_from.end());
@@ -210,22 +272,22 @@ inline std::vector<double> _repartir_continu(
      }
    }
    
-   std::vector<double> xr_lor = as< std::vector<double> >(xr_odds);
+   std::vector<float> xr_lor = as< std::vector<float> >(xr_odds);
    
-   std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
-   std::vector<double> fcpp = as<std::vector<double>>(fuites);
-   std::vector<double> actifscpp = as<std::vector<double>>(actifs);
+   std::vector<float> emploisinitial = as<std::vector<float>>(emplois);
+   std::vector<float> fcpp = as<std::vector<float>>(fuites);
+   std::vector<float> actifscpp = as<std::vector<float>>(actifs);
    
-   std::vector<double> param = as< std::vector<double> >(parametres);
+   std::vector<float> param = as< std::vector<float> >(parametres);
    
    std::vector<int> _row_group = as< std::vector<int> >(group_from);
    std::vector<int> _col_group = as< std::vector<int> >(group_to);
    
    const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
-   const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
+   const std::vector<float> _xr_dist = as< std::vector<float> >(xr_dist);
    
-   std::vector<double> resultat(Nref*Kref, 0);
+   std::vector<float> resultat(Nref*Kref, 0);
    
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
    // s'il fait repasser plusieurs fois la même ligne d'actifs. Dans ce cas, on
@@ -242,7 +304,7 @@ inline std::vector<double> _repartir_continu(
    std::size_t NNboot = floor( Nboot / ntr);
    if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
-   std::vector< std::vector<double> > liaisons(ntr, std::vector<double> (Nref * Kref));
+   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nref * Kref));
    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
      std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
    }
@@ -258,14 +320,14 @@ inline std::vector<double> _repartir_continu(
       // Initialisation de l'ordre de départ des actifs et de l'emploi
       // disponible au début.
       
-      std::vector<double> emp(emploisinitial);  // deep copy.
+      std::vector<float> emp(emploisinitial);  // deep copy.
       
       for (auto from : ishuf[iboot]) {
         
         // Construction de l'accessibilité dite pénalisée.
         std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
         std::size_t k_valid = fin - debut;
-        std::vector<double> facteur_attraction(k_valid, 1.0), 
+        std::vector<float> facteur_attraction(k_valid, 1.0), 
         emplois_libres(k_valid),
         repartition(k_valid, 0);
         
@@ -304,9 +366,9 @@ inline std::vector<double> _repartir_continu(
           emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
         }
         
-        double actifspartant = actifscpp[from] / freq_actifs[from];
+        float actifspartant = actifscpp[from] / freq_actifs[from];
         
-        std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
+        std::vector<float> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
         repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
         
         // Impact sur l'emploi disponible total et sommation sur les emplois pris.
@@ -322,6 +384,7 @@ inline std::vector<double> _repartir_continu(
       } // shuf
     } // iboot
   } // Iboot
+  
 #pragma omp for
   for (std::size_t i = 0; i < Nref; ++i) {
     for (std::size_t j = 0; j < Kref; ++j) {
@@ -334,37 +397,36 @@ inline std::vector<double> _repartir_continu(
   }
 } // omp
 timer.step("OMP");
-NumericVector out(Nref*Kref);
-IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
+std::vector<float> out(Nref*Kref);
+std::vector<float> res_i(Nref*Kref), res_j(Nref*Kref);
 for (std::size_t i = 0; i < Nref; ++i) {
   for (std::size_t j = 0; j < Kref; ++j) {
     for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-      out(i*Kref + j) += liaisons[Iboot][i * Kref + j ] / Nboot;
+      out[i*Kref + j] += liaisons[Iboot][i * Kref + j ] / Nboot;
     }
-    res_i(i*Kref + j) = i;
-    res_j(i*Kref + j) = j;
+    res_i[i*Kref + j] = i;
+    res_j[i*Kref + j] = j;
   }
 }
 timer.step("res");
 
 if (cible.isNull()) {
-  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out,
+  return List::create(_("i") = wrap(res_i), _("j") = wrap(res_j), _("flux") = wrap(out),
                       _("timer") = wrap(timer));
 } 
-return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out,
-                      _("timer") = wrap(timer));
-std::vector<double> p_cible = as< std::vector<double> >(cible);
-std::vector<double> p_flux= as< std::vector<double> >(out);
+
+std::vector<float> p_cible = as< std::vector<float> >(cible);
+std::vector<float> p_flux = out;
 if(p_cible.size() != p_flux.size())
   stop("La cible n'a pas la bonne longueur");
 // Calcul du KL
-double tot_flux = std::accumulate(out.begin(), out.end(), 0.0);
-double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
+float tot_flux = std::accumulate(out.begin(), out.end(), 0.0);
+float tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
 
 if (tot_flux == 0) stop("Les flux groupés sont tous nuls");
 
-double kl = 0;
-double kl_term;
+float kl = 0;
+float kl_term;
 for (auto k = 0; k < Nref * Kref; ++k) {
   if (p_flux[k] == 0) {
     continue; 
@@ -376,42 +438,11 @@ for (auto k = 0; k < Nref * Kref; ++k) {
   kl += kl_term;
 }
 timer.step("KL");
-return List::create(_("i") = res_i , _("j") = res_j,
-                    _("flux") = out, _("kl") = wrap(kl),
+return List::create(_("i") = wrap(res_i) , _("j") = wrap(res_j),
+                    _("flux") = wrap(out), _("kl") = kl,
                     _("timer") = wrap(timer));
 
  } // fonction
-
-// Métrique pour comparer les flux agrégés estimés et des flux cibles.
-// On calcule plus simplement sur les effectifs que sur les probabilités. Ne fait que translater le résultat.
-// Si on note Ne = sum(estim) et Nc = sum(cible), on a :
-// objectif_kl = Ne.KL + Ne.log(Ne/Nc)
-// Attention : les flux estimés f_ij qui n'ont pas de flux cible correspondant (cible_ij = 0) sortent du calcul.
-double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero = 1e-3) {
-  
-  if (estim.nrow() != cible.nrow()) stop("Pb sur le nombre de lignes agrégées.");
-  if (estim.ncol() != cible.ncol()) stop("Pb sur le nombre de colonnes agrégées");
-  const double KL_LIMIT = 1e-6;
-  double tot = 0;
-  for (auto i = 0; i < cible.nrow(); ++i)
-    for (auto j = 0; j < cible.ncol(); ++j) {
-      if (estim(i,j) != 0) {
-        double lc;
-        if(cible(i,j) < KL_LIMIT) 
-          lc = log(KL_LIMIT);
-        else 
-          lc = log(cible(i,j));
-        tot += estim(i,j) * (log(estim(i,j)) - lc);
-      }
-    }
-    return tot;
-}
-
-//'
- // [[Rcpp::export]]
- IntegerVector max_threads() {
-   return(wrap(omp_get_max_threads()));
- }
 
 //' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
@@ -440,7 +471,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
  //' @return renvoie une matrice avec les estimations des flux regroupés.
  
  // [[Rcpp::export]]
- List multishuf_oc_cpp(
+ List multishuf_oc_fpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
@@ -455,7 +486,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    
    Timer timer;
    timer.step("start");
-   
+
    const std::size_t N = actifs.size(), Nx  = xr_dist.size(),
      Nboot = shuf.nrow(), Ns = shuf.ncol();
    
@@ -485,18 +516,18 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
      }
    }
    
-   std::vector<double> xr_lor = as< std::vector<double> >(xr_odds);
+   std::vector<float> xr_lor = as< std::vector<float> >(xr_odds);
    
-   std::vector<double> emploisinitial = as< std::vector<double> >(emplois);
-   std::vector<double> fcpp = as< std::vector<double> >(fuites);
-   std::vector<double> actifscpp = as< std::vector<double> >(actifs);
+   std::vector<float> emploisinitial = as< std::vector<float> >(emplois);
+   std::vector<float> fcpp = as< std::vector<float> >(fuites);
+   std::vector<float> actifscpp = as< std::vector<float> >(actifs);
    
-   std::vector<double> param = as< std::vector<double> >(parametres);
+   std::vector<float> param = as< std::vector<float> >(parametres);
    
    const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
-   const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
-   const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
+   const std::vector<float> _xr_dist = as< std::vector<float> >(xr_dist);
+   const std::vector<float> _xr_odds = as< std::vector<float> >(xr_odds);
    
    std::vector<float> resultat(Nx);
    std::fill( resultat.begin(), resultat.end(), 0 );
@@ -515,11 +546,11 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    // Lancement du bootstrap.
    Progress p(Nboot*Ns, verbose);
    
-   std::size_t NNboot = floor( Nboot / ntr );
+   int NNboot = floor( Nboot / ntr );
    if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
    std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nx));
-   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+   for(auto Iboot = 0; Iboot < ntr; ++Iboot) {
      std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
    }
    timer.step("init");
@@ -527,16 +558,16 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
 #pragma omp parallel num_threads(ntr) 
 {
 #pragma omp for schedule(static)
-  for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-    size_t max_i = (Iboot+1)*NNboot;
+  for(auto Iboot = 0; Iboot < ntr; ++Iboot) {
+    int max_i = (Iboot+1)*NNboot;
     if(Iboot==ntr-1) max_i = Nboot;
-    size_t min_i = Iboot*NNboot;
+    int min_i = Iboot*NNboot;
     if(min_i<max_i) {
       for (size_t iboot = min_i; iboot < max_i; ++iboot) {
         // Initialisation de l'ordre de départ des actifs et de l'emploi
         // disponible au début.
         
-        std::vector<double> emp(emploisinitial);  // deep copy.
+        std::vector<float> emp = emploisinitial;  // deep copy.
         
         for (auto from : ishuf[iboot]) {
           // check interrupt & progress
@@ -545,55 +576,54 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
             Progress::check_abort();
           
           // Construction de l'accessibilité dite pénalisée.
-          std::size_t debut = _p_dist[from], fin = _p_dist[from + 1L];
-          std::size_t k_valid = fin - debut;
-          std::vector<double> facteur_attraction(k_valid, 1.0), 
+          int debut = _p_dist[from], fin = _p_dist[from + 1L];
+          int k_valid = fin - debut;
+          std::vector<float> facteur_attraction(k_valid, 1.0), 
           emplois_libres(k_valid),
           repartition(k_valid, 0);
           
           if (attraction == "marche") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
             }}
           
           if (attraction == "marche_liss") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
             }}
           
           if (attraction == "double_marche_liss") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k]  = double_marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
             }}
           
           if (attraction == "decay") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
             }}
           
           if (attraction == "logistique") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
             }}
           
           if (attraction == "odds") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
+            for (auto k = 0; k < k_valid; ++k) {
               facteur_attraction[k] = exp( _xr_odds[debut + k] );
-            } 
-          }
+            }}
           
-          for (std::size_t k = 0; k < k_valid; ++k) {
+          for (auto k = 0; k < k_valid; ++k) {
             emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
           }
           
-          double actifspartant = actifscpp[from] / freq_actifs[from];
+          float actifspartant = actifscpp[from] / freq_actifs[from];
           
-          std::vector<double> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
+          std::vector<float> dist(_xr_dist.begin() + debut, _xr_dist.begin() + fin);
           repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
           
-          for (std::size_t k = 0; k < k_valid; ++k) {
+          for (auto k = 0; k < k_valid; ++k) {
             emp[ jr_dist[debut + k] ] -= repartition[k];
-            liaisons[Iboot][ debut + k ] += repartition[k];
+            liaisons[ Iboot ][ debut + k ] += repartition[k];
           }
         } // if min_i<max_i
       } // shuf
@@ -601,25 +631,27 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
   } // Iboot
   
   timer.step("OMP");
-#pragma omp for schedule(static)
-  for (std::size_t i = 0; i < Nx; ++i) {
-    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-      resultat[i] += liaisons[Iboot][i] / Nboot;
-    }
-  }
-  timer.step("aggrégation boot");
 } // omp parallel
 
-IntegerVector res_i(Nx);
-std::size_t ii = 0;
-for (std::size_t i = 0; i < N; ++i) {
-  for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
+return List::create(_("timer") = wrap(timer));
+
+for (auto i = 0; i < Nx; ++i) {
+  for(auto Iboot = 0; Iboot < ntr; ++Iboot) {
+    resultat[i] += liaisons[Iboot][i] / Nboot;
+  }
+}
+timer.step("aggrégation boot");
+
+std::vector<int> res_i(Nx);
+int ii = 0;
+for (auto i = 0; i < N; ++i) {
+  for (auto k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
     res_i[ii] = i;
     ii++;
   }
 }
 timer.step("transformation res");
-return List::create(_("i") = res_i,
+return List::create(_("i") = wrap(res_i),
                     _("j") = jr_dist,
                     _("flux") = wrap(resultat),
                     _("timer") = wrap(timer));
