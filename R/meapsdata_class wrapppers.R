@@ -219,6 +219,11 @@ multishuf_oc_grouped <- function(
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
+  cible <- MeapsDataGroup@cible |> 
+    complete(group_from, group_to, fill = list(value = 0)) |> 
+    arrange(group_from, group_to) |> 
+    pull(value)
+  
   res <- multishuf_oc_group_cpp(
     jr_dist = MeapsDataGroup@j_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -229,6 +234,7 @@ multishuf_oc_grouped <- function(
     actifs = MeapsDataGroup@actifs,
     fuites = MeapsDataGroup@fuites,
     shuf = MeapsDataGroup@shuf,
+    cible = cible,
     parametres = parametres,
     xr_odds = odds,
     attraction = attraction,
@@ -236,17 +242,21 @@ multishuf_oc_grouped <- function(
   
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  colnames(res) <- g_tos
-  res |>
-    tibble::as_tibble() |> 
-    dplyr::mutate(group_from = g_froms) |> 
-    tidyr::pivot_longer(cols = -group_from, names_to = "group_to", values_to = "value") |>  
-    filter(value>0) |> 
-    left_join(MeapsDataGroup@cible |> rename(target = value), 
-              by = c("group_from", "group_to")) |> 
-    mutate(target = replace_na(target, 0),
-           value = replace_na(value, 0)) |> 
-    arrange(desc(value))
+  flux <- tibble::tibble(
+    group_from = g_froms[res$i+1L],
+    group_to = g_tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0)
+  if(!is.null(MeapsDataGroup@cible))
+    flux <- flux |> left_join(MeapsDataGroup@cible |> rename(cible=value),
+                              by=c("group_from", "group_to")) |>
+    mutate(flux = replace_na(flux, 0),
+           cible = replace_na(cible, 0)) |> 
+    filter(flux>0|cible>0) 
+  
+  flux <- flux |> arrange(desc(flux))
+  
+  return( list(flux = flux, kl = res$kl) )
 }
 
 

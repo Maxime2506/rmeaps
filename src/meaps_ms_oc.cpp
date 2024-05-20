@@ -157,7 +157,7 @@ inline std::vector<double> _repartir_continu(
  
  // [[Rcpp::export]]
  
- NumericMatrix multishuf_oc_group_cpp(
+ List multishuf_oc_group_cpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
@@ -169,10 +169,12 @@ inline std::vector<double> _repartir_continu(
      const IntegerVector group_to,
      const NumericVector parametres,
      const NumericVector xr_odds,
+     const Nullable<NumericVector> cible = R_NilValue,
      const std::string attraction = "constant",
      int nthreads = 0, bool verbose = true) {
    
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
+   const double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
    
    auto Nref = *std::max_element(group_from.begin(), group_from.end());
    Nref = Nref + 1L;
@@ -328,13 +330,47 @@ inline std::vector<double> _repartir_continu(
   }
 } // omp
 
-NumericMatrix out(Nref, Kref);
+NumericVector out(Nref*Kref);
+IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
 for (std::size_t i = 0; i < Nref; ++i) {
   for (std::size_t j = 0; j < Kref; ++j) {
-    out(i,j) = resultat[i * Kref + j ];
+    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+      out(i*Kref + j) += liaisons[Iboot][i * Kref + j ] / Nboot;
+    }
+    res_i(i*Kref + j) = i;
+    res_j(i*Kref + j) = j;
   }
 }
-return out;
+
+if (cible.isNull()) {
+  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
+} 
+
+std::vector<double> p_cible = as< std::vector<double> >(cible);
+std::vector<double> p_flux= as< std::vector<double> >(out);
+if(p_cible.size() != p_flux.size())
+  stop("La cible n'a pas la bonne longueur");
+// Calcul du KL
+double tot_flux = std::accumulate(out.begin(), out.end(), 0.0);
+double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
+
+if (tot_flux == 0) stop("Les flux groupés sont tous nuls");
+
+double kl = 0;
+double kl_term;
+for (auto k = 0; k < Nref * Kref; ++k) {
+  if (p_flux[k] == 0) {
+    continue; 
+  }
+  p_cible[k] /= tot_cible;
+  p_flux[k] /= tot_flux;
+  if (p_cible[k] < PLANCHER_KL) p_cible[k] = PLANCHER_KL;
+  kl_term = p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+  kl += kl_term;
+}
+
+return List::create(_("i") = res_i , _("j") = res_j,
+                    _("flux") = out, _("kl") = wrap(kl));
  }
 
 // Métrique pour comparer les flux agrégés estimés et des flux cibles.
