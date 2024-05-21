@@ -65,7 +65,7 @@ md <- new("MeapsData", dist_triplet, actifs = actifs, emplois = emplois, fuite =
 #              attraction = "constant", nthreads = 0, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3)
 # 
 
-all_in(md, nthreads = 1L)
+#all_in(md, nthreads = 1L)
 all_in(md, attraction = "logistique", parametres = c(1,1,.1))
 
 les_communes <- c(1,1,1, 2,2,2, 3,3,3) |> as.character()

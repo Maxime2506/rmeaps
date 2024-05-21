@@ -3,7 +3,6 @@
 #endif
 // [[Rcpp::plugins(openmp)]]
 #include <Rcpp.h>
-#include <cstddef>
 #include <algorithm>
 #include <memory>
 
@@ -40,21 +39,20 @@ using namespace Rcpp;
  //' @return renvoie les flux au format triplet.
  // [[Rcpp::export]]
  List meapsclass(const IntegerVector jr_dist, 
-            const IntegerVector p_dist, 
-            const NumericVector xr_dist, 
-            const NumericVector emplois,
-            const NumericVector actifs, 
-            const NumericVector fuites, 
-            const NumericVector parametres,
-            const std::string attraction = "constant",
-            const Nullable<IntegerVector> group_from = R_NilValue,
-            const Nullable<IntegerVector> group_to = R_NilValue,
-            const Nullable<NumericVector> cible = R_NilValue,
-            const int nthreads = 0L, 
-            const bool verbose = true) {
+                 const IntegerVector p_dist, 
+                 const NumericVector xr_dist, 
+                 const NumericVector emplois,
+                 const NumericVector actifs, 
+                 const NumericVector fuites, 
+                 const NumericVector parametres,
+                 const std::string attraction = "constant",
+                 const Nullable<IntegerVector> group_from = R_NilValue,
+                 const Nullable<IntegerVector> group_to = R_NilValue,
+                 const Nullable<NumericVector> cible = R_NilValue,
+                 const int nthreads = 0L, 
+                 const bool verbose = true) {
    
-   const unsigned int N = actifs.size(), K = emplois.size();
-   const unsigned long Ndata = xr_dist.size();
+   const int N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
    
    // Instantation de la fonction d'attraction.
    const std::vector<double> param = as< std::vector<double> >(parametres);
@@ -62,8 +60,8 @@ using namespace Rcpp;
    auto fct_attraction = type_att.create(param, attraction);
    
    
-   const std::vector<unsigned int> jr_dist_ = as< std::vector<unsigned int> >(jr_dist);
-   const std::vector<unsigned long> p_dist_ = as< std::vector<unsigned long> >(p_dist);
+   const std::vector<int> jr_dist_ = as< std::vector<int> >(jr_dist);
+   const std::vector<int> p_dist_ = as< std::vector<int> >(p_dist);
    const std::vector<double> xr_dist_ = as< std::vector<double> >(xr_dist);
    const std::vector<double> emplois_ = as< std::vector<double> >(emplois);
    const std::vector<double> actifs_ = as< std::vector<double> >(actifs);
@@ -110,7 +108,7 @@ for (auto from = 0; from < N; ++from) {
   if (urb.actifs_libres[from] < LIMITE_PRECISION_3) continue;
   
   Urban::Residents res(urb, from);
-  unsigned int n_sites = res.col_dispo.size();
+  int n_sites = res.col_dispo.size();
   std::vector<double> attirances(n_sites), cumul_att(n_sites);
   
   attirances = attractivite(res, fct_attraction);
@@ -193,10 +191,13 @@ if (group_from.isNull() || group_to.isNull()) {
   // sortie du résultat agrégé. création de vecteurs thread safe.
   const std::vector<int> ts_group_from = as< std::vector<int> >(group_from);
   const std::vector<int> ts_group_to = as< std::vector<int> >(group_to);
-  int Nref = ts_group_from.size(), Kref = ts_group_to.size();
   
-  NumericVector res_i(Nref * Kref), res_j(Nref * Kref);
-  std::vector<float> flux(Nref * Kref);
+  auto Nref = 1L + *std::max_element(ts_group_from.begin(), ts_group_from.end());
+  auto Kref = 1L + *std::max_element(ts_group_to.begin(), ts_group_to.end());
+  int Lref = Nref * Kref;
+  
+  NumericVector res_i(Lref), res_j(Lref);
+  std::vector<float> flux(Lref);
   
 #pragma omp declare reduction(vsumf : std::vector<float> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
   std::plus<float>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))

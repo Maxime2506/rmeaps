@@ -1,8 +1,5 @@
 #' Définition d'une classe d'objet rmeaps de préparation des données.
 #' 
-#' 
-#' 
-#' 
 
 # Class de base pour les données meaps.
 setClass("MeapsData", 
@@ -28,10 +25,10 @@ setMethod(f = "initialize", signature = "MeapsData",
           definition = function(.Object, triplet, actifs, emplois, fuites) {
             fromidINS <- dplyr::distinct(triplet, fromidINS) |> 
               dplyr::pull()
-            # le tri est vérifié par ailleurs.
             toidINS <- dplyr::distinct(triplet, toidINS) |>
               dplyr::arrange(toidINS) |> 
-              dplyr::pull()
+              dplyr::pull() |> 
+              sort()
             .Object@triplet <- triplet
             .Object@actifs <- actifs[fromidINS]
             .Object@emplois <- emplois[toidINS]
@@ -117,7 +114,8 @@ setClass("MeapsDataGroup",
 setMethod(f = "initialize", signature = "MeapsDataGroup",
           definition = function(.Object, triplet, actifs, emplois, fuites,
                                 froms, tos, group_from, group_to, cible) {
-            
+            froms <- sort(froms)
+            tos <- sort(tos)
             .Object@triplet <- triplet
             .Object@actifs <- actifs[froms]
             .Object@emplois <- emplois[tos]
@@ -126,7 +124,7 @@ setMethod(f = "initialize", signature = "MeapsDataGroup",
             .Object@tos <- tos
             .Object@group_from <- group_from[froms]
             .Object@group_to <- group_to[tos]
-            .Object@cible <- cible |> arrange(group_from, group_to)
+            .Object@cible <- cible |> dplyr::arrange(group_from, group_to)
             
             check_meapsdata(.Object, abort = TRUE)
             check_meapsdatagroup(.Object, abort = TRUE)
@@ -151,17 +149,18 @@ setMethod("show", "MeapsDataGroup", function(object) {
 })
 
 # Constructeur
+#'@import dplyr
 meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
   
   new("MeapsDataGroup", MeapsData@triplet, MeapsData@actifs, MeapsData@emplois, MeapsData@fuites,
       MeapsData@froms, MeapsData@tos,
-      group_from[froms], group_to[tos],
-      cible |> arrange(group_from, group_to)
+      group_from[MeapsData@froms], group_to[MeapsData@tos],
+      cible |> dplyr::arrange(group_from, group_to)
   )
 }
 
-#' @import dplyr
-all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
+#'
+.prep_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
   # Validation des paramètres
@@ -172,8 +171,7 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
-  #froms <- unique(MeapsDataGroup@triplet$fromidINS)
-  tos <- unique(MeapsDataGroup@triplet$toidINS) |> sort()
+  tos <- MeapsDataGroup@tos
   
   jlab <- seq_along(tos) - 1L
   names(jlab) <- tos
@@ -194,35 +192,51 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres 
   index_gfrom <- gf_lab[MeapsDataGroup@group_from]
   index_gto <- gt_lab[MeapsDataGroup@group_to]
   
-  meapsclass(jr_dist = les_j,
-             p_dist = p_dist,
-             xr_dist = MeapsDataGroup@triplet$metric,
-             emplois = MeapsDataGroup@emplois,
-             actifs = MeapsDataGroup@actifs,
-             fuites = MeapsDataGroup@fuites,
-             parametres = parametres,
-             attraction = attraction,
-             group_from = index_gfrom,
-             group_to = index_gto,
-             cible = MeapsDataGroup@cible$value,
-             nthreads = nthreads, verbose = verbose)
+  index_value <- expand_grid(data.frame(index_from = gf_lab, group_from = names(gf_lab)),
+                             data.frame(index_to = gt_lab, group_to = names(gt_lab))) |> 
+    left_join(cible, by = c("group_from", "group_to")) |> 
+    transmute(value = replace_na(value, 0)) |> 
+    pull(value)
+  
+  return(list(jr_dist = les_j,
+              p_dist = p_dist,
+              xr_dist = MeapsDataGroup@triplet$metric,
+              emplois = MeapsDataGroup@emplois,
+              actifs = MeapsDataGroup@actifs,
+              fuites = MeapsDataGroup@fuites,
+              parametres = parametres,
+              attraction = attraction,
+              group_from = index_gfrom,
+              group_to = index_gto,
+              cible = index_value,
+              nthreads = nthreads, verbose = verbose))
+}
+
+
+#' @import dplyr
+all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
+  
+  les_args <- .prep_grouped(MeapsDataGroup = MeapsDataGroup, attraction = attraction, parametres = parametres, 
+                nthreads = nthreads, verbose = verbose)
+  
+  do.call(meapsclass, les_args)
+  
 }
 
 meaps_optim <- function(MeapsDataGroup,  attraction, parametres, 
                         method = "L-BFGS-B", objective = "KL", lower = NULL, upper = NULL,
-                        nthreads = 0L, progress = TRUE) { 
+                        nthreads = 0L, progress = TRUE, control = NULL) { 
   
-  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
-  if (!attraction %in% c("marche", "marche_liss", "decay", "logistique")) cli::cli_abort("Pas de fonction choisi ou fonction non paramètrique.")
+  les_args <- .prep_grouped(MeapsDataGroup = MeapsDataGroup, attraction = attraction, parametres = parametres, 
+                        nthreads = nthreads, verbose = FALSE)
   
-  arg <- list(MeapsDataGroup, attraction = attraction, nthreads = nthreads, verbose = FALSE)
-  
+  les_args$parametres <- NULL
   env <- environment()
   fn <- switch(
     objective, 
     "KL" = function(par) {
-      if (progress) cli::cli_progress_update(.envir = env)
-      do.call(all_in_grouped, args = append(arg, list(parametres = par)))$kl
+      if (progress) cli::cli_progress_update(.envir = env, status = par)
+      do.call(meapsclass, args = append(les_args, list(parametres = par)))$kl
     }
   )
   
@@ -233,7 +247,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres,
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   
   cli::cli_progress_bar(.envir = env, clear = FALSE)
-  stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper)
+  stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper, control = control)
   cli::cli_progress_done(.envir = env)
 }
 

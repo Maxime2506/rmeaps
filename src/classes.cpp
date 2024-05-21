@@ -1,6 +1,5 @@
 //#include <type_traits>
 #include <vector>
-#include <cstddef>
 #include <iterator>
 #include <algorithm>
 
@@ -12,8 +11,8 @@ Urban::Urban() {};
 
 Urban::Urban(Rcpp::IntegerVector jr_, Rcpp::IntegerVector p_, Rcpp::NumericVector xr_, 
              Rcpp::NumericVector actifs_, Rcpp::NumericVector emplois_, Rcpp::NumericVector fuites_):
-            jr(Rcpp::as< std::vector<unsigned int> >(jr_)), 
-            p(Rcpp::as< std::vector<unsigned long> >(p_)), 
+            jr(Rcpp::as< std::vector<int> >(jr_)), 
+            p(Rcpp::as< std::vector<int> >(p_)), 
             xr(Rcpp::as< std::vector<double> >(xr_)), 
             actifs(Rcpp::as< std::vector<double> >(actifs_)), 
             emplois(Rcpp::as< std::vector<double> >(emplois_)), 
@@ -24,7 +23,7 @@ Urban::Urban(Rcpp::IntegerVector jr_, Rcpp::IntegerVector p_, Rcpp::NumericVecto
             std::copy(emplois.begin(), emplois.end(), emplois_libres.begin());
 };
 
-Urban::Urban(const std::vector<unsigned int> jr_, const std::vector<unsigned long> p_, const std::vector<double> xr_, 
+Urban::Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::vector<double> xr_, 
       const std::vector<double> actifs_, const std::vector<double> emplois_, const std::vector<double> fuites_):
     jr(jr_), p(p_), xr(xr_), actifs(actifs_), emplois(emplois_), fuites(fuites_) {
   actifs_libres.resize(actifs_.size());
@@ -33,13 +32,13 @@ Urban::Urban(const std::vector<unsigned int> jr_, const std::vector<unsigned lon
     std::copy(emplois.begin(), emplois.end(), emplois_libres.begin());
 };
 
-Urban::Residents::Residents(Urban& urbs_, unsigned int from_): 
+Urban::Residents::Residents(Urban& urbs_, int from_): 
     urbs(urbs_), from(from_), col_dispo(map_col_dispo(urbs_, from_)) {};
 
-std::vector<unsigned int> map_col_dispo(Urban& urbs_, unsigned int from_) {
-    unsigned long debut = urbs_.p[from_];
-    unsigned long fin = urbs_.p[from_ + 1];
-    std::vector<unsigned int> col_dispo;
+std::vector<int> map_col_dispo(Urban& urbs_, int from_) {
+    int debut = urbs_.p[from_];
+    int fin = urbs_.p[from_ + 1];
+    std::vector<int> col_dispo;
     col_dispo.reserve(fin - debut);
     for(auto k = 0; k < fin - debut; ++k) {
         auto pos = urbs_.jr[debut + k];
@@ -51,7 +50,7 @@ std::vector<unsigned int> map_col_dispo(Urban& urbs_, unsigned int from_) {
 std::vector<double> attractivite(Urban::Residents& res, 
                                  std::shared_ptr<fonction_attraction>& fct) {
     // Calcul de l'attractivité.
-    unsigned int n_sites = res.col_dispo.size();
+    int n_sites = res.col_dispo.size();
     std::vector<double> attract(n_sites);
     for (auto k = 0; k < n_sites; ++k) {
         auto index = res.col_dispo[k];
@@ -84,7 +83,7 @@ std::vector<double> calc_repartition(Urban::Residents& res,
                                      std::vector<double>& cumul) {
     // Calcul de l'absorption sur la ligne from considérée.
     double absorption = -log(res.urbs.fuites[res.from]) / cumul.back();
-    unsigned int n_sites = cumul.size();
+    int n_sites = cumul.size();
 
     // Calcul des actifs absorbés par sites.
     std::vector<double> jobtakers(n_sites + 1, res.urbs.actifs_libres[res.from]);
