@@ -28,7 +28,7 @@ data <- meapsdata(
 cible <- all_in(data) |> arrange(desc(flux)) |> 
   rename(group_from = fromidINS, group_to = toidINS, value = flux)
 
-multishuf_oc(data, verbose = TRUE) |> pull(flux) |> sum()
+multishuf_oc(data, verbose = TRUE)
 all_in(data) |> pull(flux) |> sum()
 data_g <- meapsdatagroup(data, group_from = set_names(names(actifs)), group_to = set_names(names(emplois)), cible = cible)
 

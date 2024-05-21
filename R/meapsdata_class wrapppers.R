@@ -135,10 +135,15 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = ntr, verbose = verbose) |>
-    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
-    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
-    dplyr::select(fromidINS, toidINS, flux)
+    nthreads = ntr, verbose = verbose)
+  
+  res <- list(
+    flux = tibble::tibble(
+      fromidINS = MeapsData@froms[res$i+1L],
+      toidINS = MeapsData@tos[res$j+1L],
+      flux = res$flux) |> 
+      filter(flux>0) |> 
+      arrange(desc(flux)))
   if(large) gc()
   return(res)
 }
@@ -153,12 +158,23 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant",
   if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
   
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) cli::cli_abort("vecteur odds invalide.") 
-  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
-  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
-  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
-  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
-  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  if (attraction == "odds" && length(odds) != nrow(MeapsDataGroup@triplet) ) 
+    cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour double_marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour logistique invalide.")
+  
+  cible <- MeapsDataGroup@cible |> 
+    complete(group_from, group_to, fill = list(value = 0)) |> 
+    arrange(group_from, group_to) |> 
+    pull(value)
   
   res <- all_in_optim(jr_dist = MeapsDataGroup@j_dist,
                       p_dist = MeapsDataGroup@p_dist,
@@ -168,6 +184,7 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant",
                       emplois = MeapsDataGroup@emplois,
                       actifs = MeapsDataGroup@actifs,
                       fuites = MeapsDataGroup@fuites,
+                      cible = cible,
                       parametres = parametres,
                       xr_odds = odds,
                       attraction = attraction,
@@ -175,13 +192,21 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant",
   
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-  expand_grid(group_from = g_froms, group_to = g_tos)|> 
-    mutate(value = res) |>
-    left_join(MeapsDataGroup@cible |> rename(target=value),
-              by = c("group_from", "group_to")) |> 
-    mutate( value = replace_na(value, 0),
-            target = replace_na(target, 0)) |> 
-    arrange(desc(value))
+  flux <- tibble::tibble(
+    group_from = g_froms[res$i+1L],
+    group_to = g_tos[res$j+1L],
+    flux = res$flux) |> 
+    filter(flux>0)
+  if( !is.null(MeapsDataGroup@cible) )
+    flux <- flux |> left_join(MeapsDataGroup@cible |> rename(cible=value),
+                              by=c("group_from", "group_to")) |>
+    mutate(flux = replace_na(flux, 0),
+           cible = replace_na(cible, 0)) |> 
+    filter(flux>0|cible>0) 
+  
+  flux <- flux |> arrange(desc(flux))
+  
+  return( list(flux = flux, kl = res$kl) )
 }
 
 
@@ -290,10 +315,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
       estim <- do.call(
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
-      kl <- entropie_relative(
-        estim$value, 
-        estim$target, 
-        floor = 1e-6 * sum(estim$value) / length(estim$value) )
+      kl <- estim$kl
       mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
       cli::cli_progress_output(mes, .envir = env)
       return(kl)

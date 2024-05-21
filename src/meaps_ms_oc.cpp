@@ -13,7 +13,6 @@
 #include "fcts_penal.h"
 using namespace Rcpp;
 
-
 inline std::vector<double> _one_distrib_continu(
     const double entrants, 
     const double fuite,
@@ -424,7 +423,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
  //' @return renvoie une matrice avec les estimations des flux regroupés.
  
  // [[Rcpp::export]]
- DataFrame multishuf_oc_cpp(
+ List multishuf_oc_cpp(
      const IntegerVector jr_dist, 
      const IntegerVector p_dist, 
      const NumericVector xr_dist, 
@@ -478,9 +477,6 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
    const std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
-   
-   std::vector<float> resultat(Nx);
-   std::fill( resultat.begin(), resultat.end(), 0 );
    
    // 
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist
@@ -580,14 +576,16 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
       } // shuf
     } // iboot
   } // Iboot
-  
-#pragma omp for schedule(static)
-  for (std::size_t i = 0; i < Nx; ++i) {
-    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
-      resultat[i] += liaisons[Iboot][i] / Nboot;
-    }
-  }
 } // omp parallel
+
+std::vector<float> resultat(Nx, 0);
+
+#pragma omp parallel for
+for (std::size_t i = 0; i < Nx; ++i) {
+  for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+    resultat[i] += liaisons[Iboot][i] / Nboot;
+  }
+}
 
 IntegerVector res_i(Nx);
 std::size_t ii = 0;
@@ -597,8 +595,7 @@ for (std::size_t i = 0; i < N; ++i) {
     ii++;
   }
 }
-
-return DataFrame::create(_("i") = res_i,
-                         _("j") = jr_dist,
-                         _("flux") = wrap(resultat));
+return List::create(_("i") = res_i,
+                    _("j") = jr_dist,
+                    _("flux") = wrap(resultat));
  }
