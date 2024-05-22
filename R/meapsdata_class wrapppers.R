@@ -288,7 +288,7 @@ multishuf_oc_grouped <- function(
 meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
                         meaps_fun = "all_in",
                         method = "L-BFGS-B", objective = "KL",
-                        lower = NULL, upper = NULL,
+                        lower = NULL, upper = NULL, 
                         nthreads = 0L, progress = TRUE) { 
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup"))
@@ -332,7 +332,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   res <- stats::optim(
     par = parametres,
     fn = fn,
-    method = method, lower = lower, upper = upper)
+    method = method, lower = lower, upper = upper, control = list(ndeps = c(0.1, 0.01)))
   cli::cli_progress_done(.envir = env)
   res
 }
