@@ -17,15 +17,21 @@ multishuf <- function(MeapsData, attraction = "constant", parametres = 0, odds =
   
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
   # Validation des paramètres
-  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
-  
+  if (!attraction %in% c("constant", "marche", "marche_liss", "double_marche_liss","decay", "logistique"))
+    cli::cli_abort("Fonction attraction inconnue")
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-  if (attraction == "odds" && length(odds) != nrow(object@triplet) ) cli::cli_abort("vecteur odds invalide.") 
-  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
-  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
-  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) cli::cli_abort("Parametres pour double_marche_liss invalide.")
-  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
-  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  if (attraction == "odds" && length(odds) != nrow(object@triplet) ) 
+    cli::cli_abort("vecteur odds invalide.") 
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "double_marche_liss" && (length(parametres) != 4 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour double_marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) 
+    cli::cli_abort("Parametres pour logistique invalide.")
   
   froms <- MeapsData@froms
   tos <- MeapsData@tos
