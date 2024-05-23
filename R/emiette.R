@@ -17,27 +17,19 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, var = "actifs", weighted=
       dplyr::pull(var, name = idINS)
   if(rlang::is_vector(les_actifs))
     act <- les_actifs
+  
   freq <- act %/% seuil + 1
-  ll <- sum(freq)
-  k <- 0
-  set <- numeric(ll)
-  w <- numeric(ll)
-  noms <- character(ll)
-  for(i in 1:length(freq)) {
-    j <- freq[i]
-    set[(k+1):(k+j)] <-  rep(i, j)
-    w[(k+1):(k+j)] <- rep(act[i]/j, j)
-    noms[(k+1):(k+j)] <- rep(names(act)[i], j)
-    k <- k+j
-  }
+  les_labels <- rep(act, freq)
+  
   shuf <- matrix(NA, ncol = sum(freq), nrow = nshuf)
   if(weighted==FALSE)
     w <- NULL
   for(i in 1:nshuf) 
     shuf[i, ] <- sample(set, sum(freq), prob = w, replace=FALSE)
-  colnames(shuf) <- noms
+  colnames(shuf) <- les_labels
   return(shuf)
 }
+
 
 #' Recalcule la matrice shuf sur un nouvel ordre d'actifs (l'initial est dans les colnames)
 #'
@@ -67,3 +59,4 @@ reordonne_shuf <- function(shuf, actifs) {
   colnames(new_shuf) <- col_names
   return(new_shuf)
 }
+

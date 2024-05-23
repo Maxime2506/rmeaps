@@ -19,9 +19,9 @@ dist <- dist |> filter(toidINS %in% names(group_to))
 LR <- new("MeapsData", dist, actifs = actifs, emplois = emplois, fuite = fuites)
 LRG <- meapsdatagroup(LR, group_from, group_to, cible)
 
-all_in(LR)
+res <- all_in(LR)
 all_in(LR, attraction = "logistique", parametres = c(1,1,.1))
 
 all_in_grouped(LRG)
 
-meaps_optim(LRG, attraction = "logistique", parametres = c(1,1,.1), control = list(maxit = 20))
+meaps_optim(LRG, attraction = "marche", parametres = c(1,.1), control = list(maxit = 20))
