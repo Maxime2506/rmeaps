@@ -58,6 +58,37 @@ std::vector<double> attractivite(Urban::Residents& res,
     }
     return attract;
 }
+
+
+std::vector<double> repartition_directe(Urban::Residents& res, 
+                                  std::vector<double>& attract) {
+  double total = std::accumulate(attract.begin(), attract.end(), 0.0);
+  double absorption = -log(res.urbs.fuites[res.from]) / total;
+  int n_sites = attract.size();
+  
+  // Calcul des actifs absorbés par sites.
+  std::vector<double> jobtakers(attract);
+  total = 0.0;
+  double passants = res.urbs.actifs_libres[res.from];
+  double anciens, facteur;
+  
+  for (auto index = 0; index < n_sites;) {
+    auto pos = index + 1;
+    while (pos != n_sites && res.urbs.xr[ res.col_dispo[index] ] == res.urbs.xr[ res.col_dispo[pos] ]) ++pos;
+    total = std::accumulate(attract.begin() + index, attract.begin() + pos, 0.0);
+    anciens = passants;
+    passants *= exp(-absorption * total);
+    facteur = (anciens - passants) / total;
+    for (auto k = index; k < pos; ++k) {
+      jobtakers[k] *= facteur;
+    }
+    index = pos;
+  }
+  return(jobtakers);
+}
+
+
+
 std::vector<double> attract_cumul(Urban::Residents& res, 
                                   std::vector<double>& attract) {
     // Calcul du cumul avec la même valeur pour les équidistants.

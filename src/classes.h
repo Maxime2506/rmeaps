@@ -36,6 +36,8 @@ public:
         
         friend std::vector<int> map_col_dispo(Urban& urbs_, int from_);
         friend std::vector<double> attractivite(Urban::Residents& res, std::shared_ptr<fonction_attraction>& fct);
+        friend std::vector<double> repartition_directe(Urban::Residents& res, 
+                                                 std::vector<double>& attract);
         friend std::vector<double> attract_cumul(Urban::Residents& res, 
                                                  std::vector<double>& attract);
         friend std::vector<double> calc_repartition(Urban::Residents& res, 

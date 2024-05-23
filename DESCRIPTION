@@ -11,11 +11,10 @@ Description: 'MEAPS est un modèle ergodique d'absorption avec priorité et satu
 License: CeCILL-B
 Encoding: UTF-8
 Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4), Matrix, methods, dplyr
-LinkingTo: Rcpp, RcppParallel, RcppProgress, Matrix
+LinkingTo: Rcpp, RcppParallel, RcppProgress, rcpptimer, Matrix
+Depends: data.table
 SystemRequirements: GNU make
 RoxygenNote: 7.3.1
-Depends:
-  data.table
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

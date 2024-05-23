@@ -19,7 +19,7 @@ dist <- dist |> filter(toidINS %in% names(group_to))
 LR <- new("MeapsData", dist, actifs = actifs, emplois = emplois, fuite = fuites)
 LRG <- meapsdatagroup(LR, group_from, group_to, cible)
 
-all_in(LR)
+all_in(LR, nthreads = 1)
 all_in(LR, attraction = "logistique", parametres = c(1,1,.1))
 
 all_in_grouped(LRG)

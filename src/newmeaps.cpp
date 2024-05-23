@@ -5,6 +5,10 @@
 #include <Rcpp.h>
 #include <algorithm>
 #include <memory>
+#include <array>
+
+//[[Rcpp::depends(rcpptimer)]]
+#include <rcpptimer.h>
 
 #include "constants.h"
 #include "classes.h"
@@ -52,26 +56,21 @@ using namespace Rcpp;
                  const int nthreads = 0L, 
                  const bool verbose = true) {
    
+   Rcpp::Timer timer;
+   timer.tic("all");
+   
    const int N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
    
    // Instantation de la fonction d'attraction.
    const std::vector<double> param = as< std::vector<double> >(parametres);
    mode_attraction type_att;
    auto fct_attraction = type_att.create(param, attraction);
-   
-   
-   const std::vector<int> jr_dist_ = as< std::vector<int> >(jr_dist);
-   const std::vector<int> p_dist_ = as< std::vector<int> >(p_dist);
-   const std::vector<double> xr_dist_ = as< std::vector<double> >(xr_dist);
-   const std::vector<double> emplois_ = as< std::vector<double> >(emplois);
-   const std::vector<double> actifs_ = as< std::vector<double> >(actifs);
-   const std::vector<double> fuites_ = as< std::vector<double> >(fuites);
-   
-   Urban urb(jr_dist_, p_dist_, xr_dist_, actifs_, emplois_, fuites_);
+
+   Urban urb(jr_dist, p_dist, xr_dist, actifs, emplois, fuites);
    
    // Initialisation de la matrice origines-destination.
    std::vector< std::vector<float> > liaisons(N, std::vector<float> (K));
-   
+
    double tot_actifs_libres = std::accumulate(urb.actifs_libres.begin(), urb.actifs_libres.end(), 0.0);
    double tot_actifs = tot_actifs_libres, old_tot;
    
@@ -92,16 +91,20 @@ using namespace Rcpp;
    
 #pragma omp declare reduction(vsum : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
    std::plus<double>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-     
+
+timer.tic("loops");   
+
 #pragma omp parallel num_threads(ntr) 
 { // DEBUT DE LA PARALLELISATION
   do { // DEBUT DES BOUCLES DO-WHILE
-    
+
+timer.tic("loop_" + std::to_string(nloop));
 #pragma omp single
 {
   nloop++;
   if (verbose == TRUE) REprintf("\nBoucle %i: ", nloop);
 }
+
 #pragma omp for schedule(static, 2)
 for (auto from = 0; from < N; ++from) {
   
@@ -109,13 +112,11 @@ for (auto from = 0; from < N; ++from) {
   
   Urban::Residents res(urb, from);
   int n_sites = res.col_dispo.size();
-  std::vector<double> attirances(n_sites), cumul_att(n_sites);
+  std::vector<double> attirances(n_sites);
   
   attirances = attractivite(res, fct_attraction);
-  cumul_att = attract_cumul(res, attirances);
   
-  // Attention : attirances stocke temporairement le résultat de la répartition des emplois.
-  attirances = calc_repartition(res, attirances, cumul_att);
+  attirances = repartition_directe(res, attirances);
   
   for (auto k = 0; k < n_sites; ++k) {
     liaisons[from][ res.col_dispo[k] ] += static_cast<float>(attirances[k]);
@@ -129,7 +130,23 @@ for (auto from = 0; from < N; ++from) {
   std::fill(retours.begin(), retours.end(), 0);
 }
 
-// Traitement des dépassements en colonnes.
+timer.tic("depass_" + std::to_string(nloop));
+//Traitement des dépassements en colonnes.
+// #pragma omp for reduction(vsum: retours)
+// for (auto j = 0; j < K; ++j) {
+//   if (urb.emplois_libres[j] < 0) {
+//     double tx_depassement = urb.emplois[j] / (urb.emplois[j] - urb.emplois_libres[j]);
+//     // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
+//     // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas
+//     // uniquement à proportion de la dernière vague d'arrivants.
+//     for (auto i = 0; i < N; ++i) {
+//       retours[i] += (double) liaisons[i][j] * (1 - tx_depassement);
+//       liaisons[i][j] = liaisons[i][j] * tx_depassement;
+//     }
+//     urb.emplois_libres[j] = 0;
+//   }
+// }
+
 #pragma omp for reduction(vsum: retours)
 for (auto j = 0; j < K; ++j) {
   urb.emplois_libres[j] = urb.emplois[j];
@@ -138,21 +155,23 @@ for (auto j = 0; j < K; ++j) {
   }
   if (urb.emplois_libres[j] < 0) {
     double tx_depassement = urb.emplois[j] / (urb.emplois[j] - urb.emplois_libres[j]);
-    
+
     // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
-    // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas 
+    // CHOIX METHODO : le renvoi à domicile est à proportion du total des actifs en place, et non pas
     // uniquement à proportion de la dernière vague d'arrivants.
     for (auto i = 0; i < N; ++i) {
       retours[i] += (double) liaisons[i][j] * (1 - tx_depassement);
-      liaisons[i][j] = liaisons[i][j] * static_cast<float>(tx_depassement); 
+      liaisons[i][j] = liaisons[i][j] * static_cast<float>(tx_depassement);
     }
     urb.emplois_libres[j] = 0;
   }
 }
+timer.toc("depass_" + std::to_string(nloop));
 
 #pragma omp single
 {   
   std::copy(retours.begin(), retours.end(), urb.actifs_libres.begin());
+  //urb.actifs_libres = std::move(retours);
   if (verbose == TRUE) 
     REprintf("%.0f actifs non occupés (soit %.1f %%)", tot_actifs_libres, 100 * tot_actifs_libres/tot_actifs);
   
@@ -164,6 +183,7 @@ for (auto i = 0; i < N; ++i) {
   urb.actifs_libres[i] /= (1 - urb.fuites[i]); // Ne pas oublier de renvoyer aussi à domicile les fuyards des actifs renvoyés.
   tot_actifs_libres += urb.actifs_libres[i];
 }
+timer.toc("loop_" + std::to_string(nloop));
 
   } while (tot_actifs_libres/tot_actifs > LIMITE_PRECISION_1 &&
     std::abs(tot_actifs_libres - old_tot)/tot_actifs > LIMITE_PRECISION_2 && 
@@ -171,9 +191,13 @@ for (auto i = 0; i < N; ++i) {
   
 } // fin clause omp parallel
 
+timer.toc("loops");
+
 // Mise en forme du résultat selon présence ou non de groupes et d'une cible.
 if (group_from.isNull() || group_to.isNull()) {
   
+timer.tic("sortie");
+
   // Format de sortie
   std::vector<float> res_xr(Ndata);
   std::vector<int> res_i(Ndata);
@@ -186,6 +210,9 @@ if (group_from.isNull() || group_to.isNull()) {
       res_i[k] = i;
     }
   }
+
+  timer.toc("sortie");
+  timer.toc("all");
   return List::create(_("i") = wrap(res_i), _("j") = jr_dist, _("flux") = wrap(res_xr));
 } else {
   // sortie du résultat agrégé. création de vecteurs thread safe.
