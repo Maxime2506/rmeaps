@@ -15,7 +15,8 @@ dcltbis <- intersect(cible$group_to, group_to)
 cible <- cible |> filter(group_to %in% dcltbis)
 dist <- dist |> filter(toidINS %in% names(group_to))
 
-
+dist <- as.data.frame(dist)
+cible <- as_tibble(cible)
 LR <- new("MeapsData", dist, actifs = actifs, emplois = emplois, fuite = fuites)
 LRG <- meapsdatagroup(LR, group_from, group_to, cible)
 

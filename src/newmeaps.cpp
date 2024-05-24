@@ -53,7 +53,7 @@ using namespace Rcpp;
                  const int nthreads = 0L, 
                  const bool verbose = true) {
    
-   const int N = actifs.size(), K = emplois.size(), Ndata = xr_dist.size();
+   const int N = actifs.size(), K = emplois.size();
    
    // Instantation de la fonction d'attraction.
    const std::vector<double> param = as< std::vector<double> >(parametres);
@@ -169,70 +169,21 @@ if (verbose == TRUE) {
 // Mise en forme du résultat selon présence ou non de groupes et d'une cible.
 if (group_from.isNull() || group_to.isNull()) {
   
-  // Format de sortie
-  std::vector<float> res_xr(Ndata);
-  std::vector<int> res_i(Ndata);
-  
-  // sortie au format xr_dist.
-#pragma omp parallel for
-  for (auto i = 0; i < N; ++i) {
-    for (auto k = urb.p[i]; k < urb.p[i + 1]; ++k) {
-      res_xr[k] = liaisons[i][ urb.jr[k] ];
-      res_i[k] = i;
-    }
-  }
-  return List::create( _("i") = wrap(res_i), _("j") = jr_dist, _("flux") = wrap(res_xr) );
+  return urb.procurer(liaisons); // Retour de la matrice détaillée au format triplet.
+
 } else {
-  // sortie du résultat agrégé. création de vecteurs thread safe.
-  const std::vector<int> ts_group_from = as< std::vector<int> >(group_from);
-  const std::vector<int> ts_group_to = as< std::vector<int> >(group_to);
+  std::vector<int> gfrom = as< std::vector<int> >(group_from);
+  std::vector<int> gto = as< std::vector<int> >(group_to);
+
+  Urban::SubRegion districts(urb, gfrom, gto);
   
-  auto Nref = 1L + *std::max_element(ts_group_from.begin(), ts_group_from.end());
-  auto Kref = 1L + *std::max_element(ts_group_to.begin(), ts_group_to.end());
-  int Lref = Nref * Kref;
-  
-  NumericVector res_i(Lref), res_j(Lref);
-  std::vector<float> flux(Lref);
-  
-#pragma omp declare reduction(vsumf : std::vector<float> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
-  std::plus<float>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-#pragma omp parallel for reduction(vsumf: flux) collapse(2)
-    for (auto i = 0; i < N; ++i) {
-      for (auto j = 0; j < K; ++j) {
-        flux[ ts_group_from[i] * Kref + ts_group_to[j] ] += liaisons[i][j];
-      }
-    }
-    
-    for (auto i = 0; i < Nref; ++i) {
-      for (auto j = 0; j < Kref; ++j) {
-        res_i[i * Kref + j] = i;
-        res_j[i * Kref + j] = j;
-      }
-    }
-    
-    if (cible.isNull()) {
-      return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux));
+  if (cible.isNull()) {
+    return districts.procurer(liaisons); // Retour de la matrice agrégrée au format triplet.
     } else {
-      std::vector<float> p_cible = as< std::vector<float> >(cible);
-      std::vector<float> p_flux(flux);
-      // Calcul du KL
-      float tot_flux = std::accumulate(flux.begin(), flux.end(), 0.0);
-      float tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
-      
-      if (tot_flux == 0) stop("Les flux groupés sont tous nuls.");
-      
-      float kl = 0;
-      
-      for (auto k = 0; k < Nref * Kref; ++k) {
-        p_cible[k] /= tot_cible;
-        p_flux[k] /= tot_flux;
-        if (p_cible[k] < PLANCHER_KL) p_cible[k] = PLANCHER_KL;
-        if (p_flux[k] != 0) kl += p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
-      }
-      
-      return List::create(_("i") = res_i, _("j") = res_j, _("flux") = wrap(flux), _("kl") = kl);
-    }
+    std::vector<float> ref = as< std::vector<float> >(cible);
+    return districts.procurer(liaisons, ref); // Retour de la matrice agrégrée au format triplet + KL.
+  }
 }
- }
+}
  
  
