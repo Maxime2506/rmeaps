@@ -294,7 +294,7 @@ multishuf_oc_grouped <- function(
 meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
                         meaps_fun = "all_in",
                         method = "L-BFGS-B", objective = "KL",
-                        lower = NULL, upper = NULL, 
+                        lower = NULL, upper = NULL, control = NULL,
                         nthreads = 0L, progress = TRUE) { 
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup"))
@@ -313,6 +313,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
     "all_in" = all_in_grouped,
     "multishuf" = multishuf_oc_grouped)
   env <- environment()
+  
   fn <- switch(
     objective, 
     "KL" = function(par) {
@@ -331,6 +332,36 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   if (is.null(fn)) 
     cli::cli_abort("Erreur : la fonction objective est non définie")
   
+  if(attraction == "marche") {
+    nb_par <- length(parametres)-1
+    
+    if (is.null(lower)) lower <- rep(0, nb_par)
+    if (is.null(upper)) upper <- rep(Inf, nb_par)
+    d_min <- lower[[1]]
+    d_max <- upper[[1]]
+    if(d_min==0) d_min <- 5
+    if(d_max>100) d_max <- 15
+    cli::cli_progress_bar(.envir = env, clear = FALSE)
+    bf <- map_dfr(d_min:d_max, \(d) { 
+      opt <- stats::optim(
+        par = parametres[[2]],
+        fn = \(x) fn(c(d, x)),
+        method = "Brent", lower = lower[[2]], upper = upper[[2]])
+      tibble(d = d, x = opt$par, kl = opt$value, 
+             convergence = opt$convergence, mes = opt$message)})
+    cli::cli_progress_done(.envir = env)
+    best <- bf |> filter(kl == min(kl)) |> slice(1)  
+    res <- list(
+      par = c(best$d, best$x),
+      value = best$kl,
+      counts = NA, 
+      convergence = best$convergence,
+      message = best$message,
+      all_iter = bf
+    )
+    return(res)  
+  }
+  
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
@@ -338,7 +369,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   res <- stats::optim(
     par = parametres,
     fn = fn,
-    method = method, lower = lower, upper = upper, control = list(ndeps = c(0.1, 0.01)))
+    method = method, lower = lower, upper = upper, control = control)
   cli::cli_progress_done(.envir = env)
   res
 }
