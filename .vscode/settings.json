@@ -52,6 +52,12 @@
         "valarray": "cpp",
         "variant": "cpp",
         "algorithm": "cpp",
-        "numeric": "cpp"
+        "numeric": "cpp",
+        "csetjmp": "cpp",
+        "deque": "cpp",
+        "iomanip": "cpp",
+        "list": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp"
     }
 }

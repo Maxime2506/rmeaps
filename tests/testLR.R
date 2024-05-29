@@ -25,4 +25,6 @@ all_in(LR, attraction = "logistique", parametres = c(1,1,.1))
 
 all_in_grouped(LRG)
 
+multishuf(LR, nshuf = 8)
+
 meaps_optim(LRG, attraction = "marche", parametres = c(1,.1), control = list(maxit = 20))

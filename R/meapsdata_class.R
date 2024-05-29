@@ -1,7 +1,11 @@
 #' Définition d'une classe d'objet rmeaps de préparation des données.
-#' 
-
-# Class de base pour les données meaps.
+#' MeapsData permet d'unifier un jeu de données en effectuant un examen de validation, garantissant que les données sont dans les bons formats et le bon ordre avant d'être invoqué dans la procédure rmeaps.
+#' @slot triplet Matrice des distances (ou temps ou encore coûts généralisés) entre des départs et des arrivées. La matrice est donnée sous forme de triplet (une data.frame avec les colonnes fromidINS, toidINS et metric). Un tri lexicographique sur fromidINS, puis metric, est attendu.
+#' @slot actifs Vecteur des résidents actifs au départ des fromidINS. Le vecteur doit être labélisé par les fromidINS.
+#' @slot emplois Vecteurs des emplois à chacune des destinations. Le vecteur doit être labélisé par les toidINS.
+#' @slot fuites Vecteurs des proportions d'actifs qui travaillent hors de la zone d'étude. Le vecteur doit être labélisé par les fromidINS.
+#' @slot froms Vecteur des fromidINS dans l'ordre attendu par les différentes méthodes (automatique).
+#' @slot tos Vecteur des toidINS dans l'ordre attendu par les différentes méthodes (automatique).
 setClass("MeapsData", 
          representation = list(
            triplet = "data.frame",
@@ -21,6 +25,7 @@ setClass("MeapsData",
          )
 )
 
+#' Méthode d'initialisation pour MeapsData.
 setMethod(f = "initialize", signature = "MeapsData",
           definition = function(.Object, triplet, actifs, emplois, fuites) {
             fromidINS <- dplyr::distinct(triplet, fromidINS) |> 
@@ -41,11 +46,16 @@ setMethod(f = "initialize", signature = "MeapsData",
             return(.Object)
           })
 
-# Constructeur
+#' Constructeur de MeapsData.
+#' @param triplet Un triplet (fromidINS, toidINS, metric) trié lexicographiquement selon fromidINS et metric.
+#' @param actifs Un vecteur du nombre d'actifs, labélisé par fromidINS.
+#' @param emplois Un vecteur du nombre d'emplois, labélisé par toidINS.
+#' @param fuites Un vecteur de la proportion de fuite, labélisé selon fromidINS.
 meapsdata <- function(triplet, actifs, emplois, fuites) {
   new("MeapsData", triplet, actifs, emplois, fuites)
 }
 
+#' Méthode implicite show pour MeapsData.
 setMethod("show", "MeapsData", function(object) {
   N <- length(object@froms)
   K <- length(object@tos)
@@ -57,6 +67,13 @@ setMethod("show", "MeapsData", function(object) {
   cat("Nombre de fuyards =", sum(object@fuites * object@actifs))
 })
 
+#' Fonction all_in. Applique rmeaps dans sa version "tous les actifs partent en même temps".
+#' @param MeapsData Un jeu de données MeapsData décrivant la zone d'étude.
+#' @param attraction Choix du mode d'attraction. Par défaut, "constant". Les autres modes possibles sont : "marche", "marche_liss", "decay" et "logistique". Chacune applique une pénalité selon la distance (au-delà de la simple logique des rangs, qui correspond au mode "constant").
+#' @param parametres Un vecteur avec les valeurs initiales des paramètres. Dépend du mode d'attraction retenu.
+#' @param nthreads Le nombre de threads pour mener les calculs parallélisés. Par defaut, le nombre maximal.
+#' @param verbose TRUE par defaut.
+#' 
 #' @import dplyr
 all_in <- function(MeapsData, attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
   
@@ -96,7 +113,10 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, nthreads 
   
 }
 
-# Class pour les regroupements
+#' Définition d'une sous-classe MeapsDataGroup qui ajoute à MeapsData des données pour regrouper les zones de départs et d'arrivées (notamment par IRIS ou par commune). 
+#' @slot group_from Le vecteur des codes de regroupement des actifs (à l'iris ou à la commune) labélisé selon les fromidINS.
+#' @slot group_to Le vecteur des codes de regroupement des emplois (à l'iris ou à la commune) labélisé selon les toidINS.
+#' @slot cible Un triplet (avec les colonnes group_from, group_to et value) des flux attendus.
 setClass("MeapsDataGroup", 
          representation = list(
            group_from = "character",
@@ -110,7 +130,7 @@ setClass("MeapsDataGroup",
          ),
          contains = "MeapsData")
 
-
+#' Méthode d'initialisation pour MeapsDataGroup.
 setMethod(f = "initialize", signature = "MeapsDataGroup",
           definition = function(.Object, triplet, actifs, emplois, fuites,
                                 froms, tos, group_from, group_to, cible) {
@@ -132,6 +152,7 @@ setMethod(f = "initialize", signature = "MeapsDataGroup",
             return(.Object)
           })
 
+#' Methode implicite show pour MeapsDataGroup.
 setMethod("show", "MeapsDataGroup", function(object) {
   N <- length(object@froms)
   K <- length(object@tos)
@@ -148,7 +169,12 @@ setMethod("show", "MeapsDataGroup", function(object) {
   cat("Flux observés (cible) =", sum(object@cible$value))
 })
 
-# Constructeur
+#' Constructeur de MeapsDataGroup.
+#' @param MeapsData Un objet MeapsData qui décrit la zone d'étude.
+#' @param group_from Un vecteur des codes de regroupement, labélisé par fromidINS.
+#' @param group_to Un vecteur des codes de regroupement, labélisé par toidINS.
+#' @param cible Un triplet (group_from, group_to, value) décrivant les flux groupés de référence.
+#' 
 #'@import dplyr
 meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
   
@@ -159,7 +185,7 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
   )
 }
 
-#'
+#' Méthode de préparation des données de MeapsDataGroup pour rmeaps.
 .prep_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
@@ -212,7 +238,7 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
               nthreads = nthreads, verbose = verbose))
 }
 
-
+#' Fonction all_in_grouped applique meaps à un objet MeapsDataGroup et renvoie les flux estimés regroupés.
 #' @import dplyr
 all_in_grouped <- function(MeapsDataGroup,  attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
   
@@ -249,6 +275,49 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres,
   cli::cli_progress_bar(.envir = env, clear = FALSE)
   stats::optim(par = parametres, fn = fn, method = method, lower = lower, upper = upper, control = control)
   cli::cli_progress_done(.envir = env)
+}
+
+
+multishuf <- function(MeapsData, nshuf = 64, seuil = 40, attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
+  
+  shuf <- emiette(MeapsData@actifs, nshuf = nshuf, seuil = seuil)
+  paste("seed du shuf =", attr(shuf, "seed")) |> print()
+  
+  if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.") 
+  # Validation des paramètres
+  if (!attraction %in% c("constant", "marche", "marche_liss", "decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  
+  froms <- MeapsData@froms
+  tos <- MeapsData@tos
+  
+  jlab <- seq_along(tos) - 1L
+  names(jlab) <- tos
+  
+  les_j <- jlab[MeapsData@triplet$toidINS]
+  
+  p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
+  p_dist <- c(0L, p_dist)
+  
+  newmultishuf(jr_dist = les_j,
+             p_dist = p_dist,
+             xr_dist = MeapsData@triplet$metric,
+             emplois = MeapsData@emplois,
+             actifs = MeapsData@actifs,
+             fuites = MeapsData@fuites,
+             parametres = parametres,
+             shuf = shuf,
+             attraction = attraction,
+             nthreads = nthreads, verbose = verbose) |> 
+    as.data.frame() |> 
+    dplyr::left_join(data.frame(i = seq_along(froms) - 1L, fromidINS = froms), by = "i") |>
+    dplyr::left_join(data.frame(j = seq_along(tos) - 1L, toidINS = tos), by = "j") |>
+    dplyr::select(fromidINS, toidINS, flux)
+  
 }
 
 

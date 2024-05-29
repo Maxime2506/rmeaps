@@ -1,83 +1,20 @@
 library(tidyverse)
 library(sf)
 library(Matrix)
+devtools::load_all()
 
 
-#----- Définition des points -----
-actifs_points <- tribble(
-  ~fromidINS, ~x, ~y,
-  1, -10, -1,
-  2, -10, 0,
-  3, -10, 1,
-  4, 0, 1,
-  5, 0, 0,
-  6, 5, 1,
-  7, 10, 0,
-  8, 10, -1,
-  9, 10, 1
-) |> st_as_sf(coords = c("x", "y"))
+jr = c(0:4,4:0)
+p = c(0,5,10)
+xr= c(1, 2, 2, 3, 4, 2, 2, 3, 4, 4)
+actifs = c(5.5, 11)
+emplois = c(3,3,3,3,3)
 
-emplois_points <- tribble(
-  ~toidINS, ~x, ~y,
-  1, -10, 0,
-  2, -5, 0,
-  3, 0, 0,
-  4, 0, 1,
-  5, 0, 2,
-  6, 0, -4,
-  7, 10, 0,
-  8, 10, 2,
-  9, -15, 5,
-  10, 15, -5,
-  11, 0, 8,
-  12, 0, -8
-) |> st_as_sf(coords = c("x", "y")) 
+fuites = c(.1, .1)
+shuf = matrix(c(0:1, 1:0), byrow = TRUE, nrow = 2)
 
-dist <- st_distance(actifs_points, emplois_points) 
+newmultishuf(jr, p, xr, emplois, actifs, fuites, parametres = 0, shuf, nthreads = 1)
 
-# Introduction de NA sur des distances longues.
-dist[dist > 22] <- NA
-dist[dist == 0] <- .5
-
-temp <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
-dist_triplet <- tibble(fromidINS = as.character(temp@i), toidINS = as.character(temp@j), metric = temp@x) |> 
-  drop_na() |> 
-  arrange(fromidINS, metric, toidINS)
-
-froms <- dist_triplet$fromidINS |> unique() |> sort()
-tos <- dist_triplet$toidINS |> unique() |> sort()
-
-actifs <- c(5, 5 , 5 , 10, 25, 10, 5, 4, 2)
-emplois <- c(2, 2, 2, 8, 10, 15, 6, 4, 2, 4, 2, 3)
-names(actifs) <- froms
-names(emplois) <- tos
-
-f <- 1 - sum(emplois) / sum(actifs)
-fuites <- rep(f, 9)
-names(fuites) <- froms
-
-MeapsData <- new("MeapsData", dist_triplet, actifs = actifs, emplois = emplois, fuite = fuites)
-
-froms <- MeapsData@froms
-tos <- MeapsData@tos
-
-jlab <- seq_along(tos) - 1L
-names(jlab) <- tos
-
-les_j <- jlab[MeapsData@triplet$toidINS]
-
-p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
-p_dist <- c(0L, p_dist)
-
-arg <- list(jr_dist = les_j,
-             p_dist = p_dist,
-             xr_dist = MeapsData@triplet$metric,
-             emplois = MeapsData@emplois,
-             actifs = MeapsData@actifs,
-             fuites = MeapsData@fuites,
-             parametres = 1.0,
-            nthreads = 1L,
-            verbose = TRUE)
 
 
 

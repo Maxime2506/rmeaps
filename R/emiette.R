@@ -11,7 +11,7 @@
 #' @export
 #'
 
-emiette <- function(les_actifs, nshuf = 256, seuil=40, seed = NULL, var = "actifs") {
+emiette <- function(les_actifs, nshuf = 256, seuil=40, seed = NULL, cpp = TRUE, var = "actifs") {
   if(tibble::is_tibble(les_actifs))
     act <- les_actifs |> 
       dplyr::pull(var, name = idINS)
@@ -19,17 +19,16 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, seed = NULL, var = "actif
     act <- les_actifs
   
   freq <- act %/% seuil + 1
-  les_miettes <- purrr::map2_dbl(rep(act, freq), rep(freq, freq), \(n, f) n/f)
-  
-  N <- length(les_miettes)
+  miettes <- rep(act, freq)
+  pond <- purrr::map2_dbl(miettes, rep(freq, freq), \(n, f) n/f)
   
   if(is.null(seed)) seed <- round(runif(1, 1, 1000))
   set.seed(seed)
   
-  shuf <- matrix(NA, ncol = N, nrow = nshuf)
+  shuf <- matrix(NA, ncol = length(miettes), nrow = nshuf)
+  if (cpp) miettes <- miettes - 1
   for(i in 1:nshuf) 
-    shuf[i, ] <- sample(0:(N-1L), sum(freq), prob = les_miettes, replace = FALSE) |> as.integer()
-  colnames(shuf) <- names(les_miettes)
+    shuf[i, ] <- sample(miettes, sum(freq), prob = pond, replace = FALSE) |> as.integer()
   
   attr(shuf, "seed") <- seed
   attr(shuf, "seuil") <- seuil
