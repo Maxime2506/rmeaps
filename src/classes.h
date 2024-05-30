@@ -23,7 +23,7 @@ public:
       Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::vector<double> xr_, 
             const std::vector<double> actifs_, const std::vector<double> emplois_, const std::vector<double> fuites_);
 
-      Rcpp::List format_sortie(std::vector< std::vector<float> >& liens);
+      Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens);
 
       const int n_from() const { return actifs.size(); }
       const int n_to() const { return emplois.size(); }
@@ -36,11 +36,11 @@ public:
             Residents() = delete;
             Residents(Urban& urb_, int from_);
 
-            std::vector<int> map_col_dispo(std::vector<double>& emplois_libres);
-            std::vector<double> attractivite(std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct);
-            std::vector<double> attractivite(std::vector<double>& emplois_libres, std::vector<int>& col_dispo, std::shared_ptr<fonction_attraction>& fct);
-            std::vector<double> repartition_nolimit(std::vector<int>& col_dispo, std::vector<double>& attract, double actifs_restants);
-            std::vector<double> repartition_limited(std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract);
+            std::vector<int> map_col_dispo(const std::vector<double>& emplois_libres);
+            std::vector<double> attractivite(const std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct);
+            std::vector<double> attractivite(const std::vector<double>& emplois_libres, const std::vector<int>& col_dispo, std::shared_ptr<fonction_attraction>& fct);
+            std::vector<double> repartition_nolimit(const std::vector<int>& col_dispo, const std::vector<double>& attract, double actifs_restants);
+            std::vector<double> repartition_limited(const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract);
       };
 
       class SubRegion
@@ -56,10 +56,10 @@ public:
             const int ng_from() const { return 1L + *std::max_element(group_from.begin(), group_from.end()); };
             const int ng_to() const { return 1L + *std::max_element(group_to.begin(), group_to.end()); };
 
-            std::vector<float> regrouper(std::vector< std::vector<float> >& liens);
-            Rcpp::List format_sortie(std::vector< std::vector<float> >& liens);
-            Rcpp::List format_sortie(std::vector< std::vector<float> >& liens, std::vector<float>& cible);
+            std::vector<float> regrouper(const std::vector< std::vector<float> >& liens);
+            Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens);
+            Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens, const std::vector<float>& cible);
       };
 };
 
-#endif // __CLASSES__
+#endif // __CLASSES__>

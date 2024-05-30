@@ -28,19 +28,15 @@ Urban::Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::v
     : jr(jr_), p(p_), xr(xr_), actifs(actifs_), emplois(emplois_), fuites(fuites_) {};
 
 // Sortie : produit le triplet de la matrice détaillée des flux estimées par meaps.
-Rcpp::List Urban::format_sortie(std::vector<std::vector<float> >& liens) {
-  std::vector<float> res_xr(xr.size());
-  std::vector<int> res_i(xr.size());
+Rcpp::List Urban::format_sortie(const std::vector<std::vector<float> >& liens) {
+  Rcpp::NumericVector resultat(xr.size());
 
-#pragma omp parallel for
-  for (auto i = 0; i < n_from(); ++i) {
-    for (auto k = p[i]; k < p[i + 1]; ++k) {
-      res_xr[k] = liens[i][jr[k]];
-      res_i[k] = i;
+for (auto i = 0; i < n_from(); ++i) {
+  for (auto k = p[i]; k < p[i + 1]; ++k) {
+      resultat[k] = liens[i][jr[k]];
     }
   }
-  return Rcpp::List::create(Rcpp::Named("i") = Rcpp::wrap(res_i), Rcpp::Named("j") = Rcpp::wrap(jr),
-                            Rcpp::Named("flux") = Rcpp::wrap(res_xr));
+  return Rcpp::List::create(Rcpp::Named("flux") = resultat);
 };
 
 // Constructeur Residents.
@@ -54,7 +50,7 @@ Urban::SubRegion::SubRegion(Urban& urb_, Rcpp::IntegerVector gfrom, Rcpp::Intege
     : urb(urb_), group_from(Rcpp::as<std::vector<int> >(gfrom)), group_to(Rcpp::as<std::vector<int> >(gto)){};
 
 // Produit le vecteur des colonnes d'emplois disponibles, dans l'ordre des rangs pour les résidents considérées.
-std::vector<int> Urban::Residents::map_col_dispo(std::vector<double>& emplois_libres) {
+std::vector<int> Urban::Residents::map_col_dispo(const std::vector<double>& emplois_libres) {
   int debut = urb.p[from];
   int fin = urb.p[from + 1];
   std::vector<int> col_dispo;
@@ -68,7 +64,7 @@ std::vector<int> Urban::Residents::map_col_dispo(std::vector<double>& emplois_li
 
 // Calcul de l'attractivité des différents sites d'emplois disponible.
 // RQ : Le repérage des colonnes disponibles est effectué implicitement.
-std::vector<double> Urban::Residents::attractivite(std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct) {
+std::vector<double> Urban::Residents::attractivite(const std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct) {
   std::vector<int> col_dispo;
   col_dispo = map_col_dispo(emplois_libres);
   int n_sites = col_dispo.size();
@@ -82,8 +78,8 @@ std::vector<double> Urban::Residents::attractivite(std::vector<double>& emplois_
 
 // Calcul de l'attractivité des différents sites d'emplois disponible.
 // RQ : Le repérage des colonnes disponibles doit être fourni (pour éviter des recalculs inutiles).
-std::vector<double> Urban::Residents::attractivite(std::vector<double>& emplois_libres,
-                                                   std::vector<int>& col_dispo,
+std::vector<double> Urban::Residents::attractivite(const std::vector<double>& emplois_libres,
+                                                   const std::vector<int>& col_dispo,
                                                    std::shared_ptr<fonction_attraction>& fct) {
   int n_sites = col_dispo.size();
   std::vector<double> attract(n_sites);
@@ -98,7 +94,7 @@ std::vector<double> Urban::Residents::attractivite(std::vector<double>& emplois_
 // i-e la répartition est menée sans égard pour les limitations de places sur chacun des sites
 // i-e "ça peut déborder".
 // Le mode de calcul est continu.
-std::vector<double> Urban::Residents::repartition_nolimit(std::vector<int>& col_dispo, std::vector<double>& attract,
+std::vector<double> Urban::Residents::repartition_nolimit(const std::vector<int>& col_dispo, const std::vector<double>& attract,
                                                           double actifs_restants) {
   double total = std::accumulate(attract.begin(), attract.end(), 0.0);
   double absorption = -log(urb.fuites[from]) / total;
@@ -124,7 +120,7 @@ std::vector<double> Urban::Residents::repartition_nolimit(std::vector<int>& col_
 }
 
 // retourner modifie par mutation le vecteur repartition et renvoie le nombre d'actifs sur le retour.
-double retourner(std::vector<double>& repartition, std::vector<double>& places_libres) {
+double retourner(std::vector<double>& repartition, const std::vector<double>& places_libres) {
   double retour = 0;
   for (auto k = 0; k < repartition.size(); ++k) {
     if (repartition[k] > places_libres[k]) {
@@ -137,7 +133,8 @@ double retourner(std::vector<double>& repartition, std::vector<double>& places_l
 
 // Calcule la répartition des résidents sur les sites en tenant compte des limites de places.
 // Distribue le nombre d'actifs initiaux (= urb.actifs).
-std::vector<double> Urban::Residents::repartition_limited(std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract) {
+// Modifie col_dispo et attract, qui deviennent inutilisable.
+std::vector<double> Urban::Residents::repartition_limited(const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract) {
   int n_sites = col_dispo.size();
   std::vector<double> repartition(n_sites), places_restantes(n_sites);
   double actifs_restants = urb.actifs[this->from];
@@ -178,10 +175,10 @@ std::vector<double> Urban::Residents::repartition_limited(std::vector<double>& e
 }
 
 // regrouper ramasse les flux estimés selon les groupes de SubRegion.
-std::vector<float> Urban::SubRegion::regrouper(std::vector<std::vector<float> >& liens) {
-  const int N = ng_from();
-  const int K = ng_to();
-  std::vector<float> flux(N * K);
+std::vector<float> Urban::SubRegion::regrouper(const std::vector<std::vector<float> >& liens) {
+  const int Ng = ng_from();
+  const int Kg = ng_to();
+  std::vector<float> flux(Ng * Kg);
 
 #pragma omp declare reduction(vsumf : std::vector<float> : std::transform(                    \
         omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<float>())) \
@@ -189,55 +186,55 @@ std::vector<float> Urban::SubRegion::regrouper(std::vector<std::vector<float> >&
 #pragma omp parallel for reduction(vsumf : flux) collapse(2)
   for (auto i = 0; i < urb.n_from(); ++i) {
     for (auto j = 0; j < urb.n_to(); ++j) {
-      flux[group_from[i] * K + group_to[j]] += liens[i][j];
+      flux[group_from[i] * Kg + group_to[j]] += liens[i][j];
     }
   }
   return flux;
 }
 
 // Sortie des flux regroupés.
-Rcpp::List Urban::SubRegion::format_sortie(std::vector<std::vector<float> >& liens) {
-  const int N = ng_from();
-  const int K = ng_to();
-  const int taille = N * K;
+Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> >& liens) {
+  const int Ng = ng_from();
+  const int Kg = ng_to();
+  const int taille = Ng * Kg;
 
   std::vector<float> res_xr(taille);
   res_xr = regrouper(liens);
 
-  std::vector<int> res_i(taille);
-  std::vector<int> res_j(taille);
+  Rcpp::IntegerVector res_i(taille);
+  Rcpp::IntegerVector res_j(taille);
 
-  for (auto i = 0; i < N; ++i) {
-    for (auto j = 0; j < K; ++j) {
-      res_i[i * K + j] = i;
-      res_j[i * K + j] = j;
+  for (auto i = 0; i < Ng; ++i) {
+    for (auto j = 0; j < Kg; ++j) {
+      res_i[i * Kg + j] = i;
+      res_j[i * Kg + j] = j;
     }
   }
-  return Rcpp::List::create(Rcpp::Named("i") = Rcpp::wrap(res_i), Rcpp::Named("j") = Rcpp::wrap(res_j),
-                            Rcpp::Named("flux") = Rcpp::wrap(res_xr));
+  return Rcpp::List::create(Rcpp::Named("i") = res_i, Rcpp::Named("j") = res_j, Rcpp::Named("flux") = Rcpp::wrap(res_xr));
 }
 
-// Sortie des flux regroupés et entropie relative avec les flux de référence.
-Rcpp::List Urban::SubRegion::format_sortie(std::vector<std::vector<float> >& liens, std::vector<float>& cible) {
-  const int N = ng_from();
-  const int K = ng_to();
-  const int taille = N * K;
+// Sortie des flux regroupés et de l'entropie relative avec la cible.
+Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> >& liens, const std::vector<float>& cible) {
+  const int Ng = ng_from();
+  const int Kg = ng_to();
+  const int taille = Ng * Kg;
 
   std::vector<float> res_xr(taille);
   res_xr = regrouper(liens);
 
-  std::vector<int> res_i(taille);
-  std::vector<int> res_j(taille);
+  Rcpp::IntegerVector res_i(taille);
+  Rcpp::IntegerVector res_j(taille);
 
-  for (auto i = 0; i < N; ++i) {
-    for (auto j = 0; j < K; ++j) {
-      res_i[i * K + j] = i;
-      res_j[i * K + j] = j;
+  for (auto i = 0; i < Ng; ++i) {
+    for (auto j = 0; j < Kg; ++j) {
+      res_i[i * Kg + j] = i;
+      res_j[i * Kg + j] = j;
     }
   }
 
   float kl = entropie_relative<float>(res_xr, cible);
 
-  return Rcpp::List::create(Rcpp::Named("i") = Rcpp::wrap(res_i), Rcpp::Named("j") = Rcpp::wrap(res_j),
+  return Rcpp::List::create(Rcpp::Named("i") = res_i, Rcpp::Named("j") = res_j,
                             Rcpp::Named("flux") = Rcpp::wrap(res_xr), Rcpp::Named("kl") = kl);
 }
+
