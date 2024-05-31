@@ -61,6 +61,10 @@ List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const
   // Initialisation de la matrice origines-destination.
   std::vector<std::vector<float> > liaisons(N, std::vector<float>(K));
 
+  // pointeurs vers les lignes pour la clause depend de openmp.
+  std::vector<const float*> ptr_liaisons(N);
+  for (auto i=0; i<N; ++i) ptr_liaisons[i] = liaisons[i].data();
+
 #ifdef _OPENMP
   int ntr = nthreads;
   if (ntr == 0) {
@@ -93,7 +97,7 @@ List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const
 
           repartition = res.attractivite(emplois_libres, col_dispo, fct_attraction);  // Calcul de l'attirance.
           repartition = res.repartition_limited(emplois_libres, col_dispo, repartition);
-#pragma omp task depend(inout : liaisons[from][:]) 
+#pragma omp task depend(inout : *ptr_liaisons[from]) 
         {
           for (auto k = 0; k < n_sites; ++k) {
             liaisons[from][col_dispo[k]] += static_cast<float>(repartition[k]);
