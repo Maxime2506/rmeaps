@@ -295,7 +295,8 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
                         meaps_fun = "all_in",
                         method = "L-BFGS-B", objective = "KL",
                         lower = NULL, upper = NULL, control = NULL,
-                        nthreads = 0L, progress = TRUE) { 
+                        nthreads = 0L, progress = TRUE,
+                        quiet = TRUE) { 
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup"))
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
@@ -317,14 +318,14 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   fn <- switch(
     objective, 
     "KL" = function(par) {
-      if (progress) 
-        cli::cli_progress_update(.envir = env)
       estim <- do.call(
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
       kl <- estim$kl
       mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
-      cli::cli_progress_output(mes, .envir = env)
+      if (progress) 
+        cli::cli_progress_update(.envir = env)
+      if(!quiet) cli::cli_progress_output(mes, .envir = env)
       return(kl)
     }
   )
