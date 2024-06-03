@@ -67,10 +67,11 @@ r2kl2 <- function(estime, observe, seuil = .99, bruit=1e-6) {
   return(list(r2kl = r2kln0, r2kl_l = r2klnb))
 }
 
-kl <- function(x,y) {
-  yn <- y/sum(y)
-  xn <- x/sum(x)
-  sum( yn * log(yn/xn) )
+kl <- function(x,y, seuil = 1e-6) {
+  yn <- y[x>0]/sum(y[x>0])
+  yn[yn<seuil] <- seuil
+  xn <- x[x>0]/sum(x)
+  sum( xn * log(xn/yn) )
 }
 
 #' Un bête khi2

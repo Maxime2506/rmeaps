@@ -569,7 +569,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
           repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
           
           for (std::size_t k = 0; k < k_valid; ++k) {
-            emp[ jr_dist[debut + k] ] -= repartition[k];
+            emp[ _jr_dist[debut + k] ] -= repartition[k];
             liaisons[Iboot][ debut + k ] += repartition[k];
           }
         } // if min_i<max_i
@@ -578,24 +578,14 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
   } // Iboot
 } // omp parallel
 
-std::vector<float> resultat(Nx, 0);
+NumericVector resultat(Nx);
+resultat.fill(0.0);
 
-#pragma omp parallel for
 for (std::size_t i = 0; i < Nx; ++i) {
   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
     resultat[i] += liaisons[Iboot][i] / Nboot;
   }
 }
 
-IntegerVector res_i(Nx);
-std::size_t ii = 0;
-for (std::size_t i = 0; i < N; ++i) {
-  for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
-    res_i[ii] = i;
-    ii++;
-  }
-}
-return List::create(_("i") = res_i,
-                    _("j") = jr_dist,
-                    _("flux") = wrap(resultat));
+return List::create(_("flux") = resultat);
  }
