@@ -97,10 +97,10 @@ ref_multishuf <- c(ligne1, emplois1) |>
 
 # ----- 3. Construction des objets MeapsData -----
 md <- meapsdata(triplet, actifs, emplois, fuites)
-mds <- meapsdata(triplet, actifs, emplois, fuites, nshuf = 1)
+mds <- meapsdata(triplet, actifs, emplois, fuites, nshuf = 1, seuil = 100)
 
 # ----- 4. Tests des différentes methodes -----
-estim_oc <- multishuf_oc(mds)
+estim <- multishuf_task(mds)
 
 
 
