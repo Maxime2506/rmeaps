@@ -19,19 +19,22 @@ emiette <- function(les_actifs, nshuf = 256, seuil=40, seed = NULL, cpp = TRUE, 
     act <- les_actifs
   
   freq <- act %/% seuil + 1
-  miettes <- rep(act, freq)
-  pond <- purrr::map2_dbl(miettes, rep(freq, freq), \(n, f) n/f)
+  miettes <- rep(seq_along(act), freq)
+  if (cpp) miettes <- miettes - 1
+  pond <- rep(act/freq, freq)
   
   if(is.null(seed)) seed <- round(runif(1, 1, 1000))
   set.seed(seed)
   
   shuf <- matrix(NA, ncol = length(miettes), nrow = nshuf)
-  if (cpp) miettes <- miettes - 1
   for(i in 1:nshuf) 
     shuf[i, ] <- sample(miettes, sum(freq), prob = pond, replace = FALSE) |> as.integer()
-  
+
+  colnames(shuf) <- rep(names(act), freq) 
+
   attr(shuf, "seed") <- seed
   attr(shuf, "seuil") <- seuil
+  attr(shuf, "cpp") <- cpp
   
   return(shuf)
 }

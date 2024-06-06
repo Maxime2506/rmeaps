@@ -40,7 +40,7 @@ public:
             std::vector<double> attractivite(const std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct);
             std::vector<double> attractivite(const std::vector<double>& emplois_libres, const std::vector<int>& col_dispo, std::shared_ptr<fonction_attraction>& fct);
             std::vector<double> repartition_nolimit(const std::vector<int>& col_dispo, const std::vector<double>& attract, double actifs_restants);
-            std::vector<double> repartition_limited(const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract);
+            std::vector<double> repartition_limited(double actifs_restants, const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract);
       };
 
       class SubRegion

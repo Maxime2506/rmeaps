@@ -35,7 +35,7 @@ using namespace Rcpp;
 //'
 //' @return renvoie les flux au format triplet.
 // [[Rcpp::export]]
-List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist,
+List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist,
                   const NumericVector emplois, const NumericVector actifs, const NumericVector fuites,
                   const NumericVector parametres, const IntegerMatrix shuf, const std::string attraction = "constant",
                   const Nullable<IntegerVector> group_from = R_NilValue,
@@ -56,6 +56,14 @@ List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const
     for (auto j = 0; j < Ns; ++j) {
       ishuf[i][j] = shuf_onedim[i + j * Nboot];
     }
+  }
+  // Le vecteur shuf peut être plus long que le nombre de lignes d'actifs s'il fait repasser plusieurs fois
+  // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
+  // poids de la ligne par cette fréquence.
+  // Même fréquence pour toutes les lignes. Donc on fait sur la première.
+  std::vector<int> freq_actifs(N, 0L);
+  for (auto i : ishuf[0]) {
+    freq_actifs[i]++;
   }
 
   // Initialisation de la matrice origines-destination.
@@ -87,7 +95,7 @@ List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const
 #pragma omp taskloop grainsize(1)
     for (auto iboot = 0; iboot < Nboot; ++iboot) {
       std::vector<double> emplois_libres(urb.emplois);
-      for (auto& from : ishuf[iboot]) {
+      for (auto from : ishuf[iboot]) {
 
           Urban::Residents res(urb, from);
           std::vector<int> col_dispo = res.map_col_dispo(emplois_libres);
@@ -96,7 +104,7 @@ List newmultishuf(const IntegerVector jr_dist, const IntegerVector p_dist, const
           std::vector<double> repartition(n_sites);
 
           repartition = res.attractivite(emplois_libres, col_dispo, fct_attraction);  // Calcul de l'attirance.
-          repartition = res.repartition_limited(emplois_libres, col_dispo, repartition);
+          repartition = res.repartition_limited(urb.actifs[from]/freq_actifs[from], emplois_libres, col_dispo, repartition);
 #pragma omp task depend(inout : *ptr_liaisons[from]) 
         {
           for (auto k = 0; k < n_sites; ++k) {

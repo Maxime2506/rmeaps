@@ -132,12 +132,10 @@ double retourner(std::vector<double>& repartition, const std::vector<double>& pl
 }
 
 // Calcule la répartition des résidents sur les sites en tenant compte des limites de places.
-// Distribue le nombre d'actifs initiaux (= urb.actifs).
 // Modifie col_dispo et attract, qui deviennent inutilisable.
-std::vector<double> Urban::Residents::repartition_limited(const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract) {
+std::vector<double> Urban::Residents::repartition_limited(double actifs_restants, const std::vector<double>& emplois_libres, std::vector<int> col_dispo, std::vector<double> attract) {
   int n_sites = col_dispo.size();
   std::vector<double> repartition(n_sites), places_restantes(n_sites);
-  double actifs_restants = urb.actifs[this->from];
 
   for (auto k = 0; k < n_sites; ++k) places_restantes[k] = emplois_libres[col_dispo[k]];
 

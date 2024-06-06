@@ -1,3 +1,6 @@
+#' Définition d'une classe d'objet rmeaps de préparation des données.
+#' Fonctions de validation de MeapsData et MeapsDataGroup
+
 is_triplet_meaps <- function(object, quiet = TRUE) {
   
   if (!inherits(object, "data.frame") || length(object) != 3) {
@@ -110,12 +113,20 @@ is_meaps_normalized <- function(object, just_a_warning = TRUE, seuil = 1e-4) {
   invisible(delta <= seuil)
 }
 
-check_meapsdata <- function(object, abort = FALSE) {
-  status <- is_triplet_meaps(object@triplet, quiet = FALSE) && 
-    is_triplet_ordered(object@triplet, quiet = FALSE) && 
-    is_meapsdata_valid(object, quiet = FALSE) &&
-    is_meaps_normalized(object)
-  
+meaps_has_shuf <- function(object, quiet = TRUE) {
+  res <- !is.null(object@shuf)
+  if(!quiet) {
+    if(res) cli::cli_alert_info("un shuf est présent ({nrow(object@shuf)} tirages)")
+  }
+  res
+}
+
+check_meapsdata <- function(object, abort = FALSE, quiet = FALSE) {
+  status <- is_triplet_meaps(object@triplet, quiet = quiet) && 
+    is_triplet_ordered(object@triplet, quiet = quiet) && 
+    is_meapsdata_valid(object, quiet = quiet) &&
+    is_meaps_normalized(object) 
+  meaps_has_shuf(object, quiet = quiet)
   if (abort && !status) {cli::cli_abort("Invalide.")} else { return(status)}
 }
 
@@ -143,7 +154,7 @@ is_meapsdatagroup_valid <- function(object, quiet = FALSE)  {
   invisible(status==1)
 }
 
-check_meapsdatagroup <- function(object, abort = FALSE){
+check_meapsdatagroup <- function(object, abort = FALSE, quiet = FALSE){
   
   status <- is_meapsdatagroup_valid(object@cible)
   
@@ -193,3 +204,14 @@ check_meapsdatagroup <- function(object, abort = FALSE){
   invisible(status)
 }
 
+
+check_fct_attraction <- function(attraction, parametres) {
+  
+  if (!attraction %in% c("constant", "marche", "marche_liss", "decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  
+  if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
+  if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
+  if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
+  invisible(TRUE)
+}

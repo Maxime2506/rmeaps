@@ -1,7 +1,7 @@
-#ifndef __MEAPS_CLASS__
-#define __MEAPS_CLASS__
+#ifndef __MEAPS_ALL_IN__
+#define __MEAPS_ALL_IN__
 
-Rcpp::List meapsclass(const Rcpp::IntegerVector jr_dist, 
+Rcpp::List meaps_all_in_cpp(const Rcpp::IntegerVector jr_dist, 
                 const Rcpp::IntegerVector p_dist, 
                 const Rcpp::NumericVector xr_dist, 
                 const Rcpp::NumericVector emplois,
@@ -15,4 +15,4 @@ Rcpp::List meapsclass(const Rcpp::IntegerVector jr_dist,
                 const int nthreads = 0L, 
                 const bool verbose = true);
 
-#endif // __MEAPS_CLASS__
+#endif // __MEAPS_ALL_IN__

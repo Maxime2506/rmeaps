@@ -35,13 +35,13 @@ using namespace Rcpp;
 //'
 //' @return renvoie les flux au format triplet.
 // [[Rcpp::export]]
-List meapsmode(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist,
+List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist,
                 const NumericVector emplois, const NumericVector actifs, const NumericVector fuites,
-                const IntegerVector j_mode, const NumericVector parametres, const std::string attraction = "constant",
+                const NumericVector parametres, const std::string attraction = "constant",
                 const Nullable<IntegerVector> group_from = R_NilValue,
                 const Nullable<IntegerVector> group_to = R_NilValue, const Nullable<NumericVector> cible = R_NilValue,
                 const int nthreads = 0L, const bool verbose = true) {
-  const int N = actifs.size(), K = j_mode.size(), Nsites = emplois.size();
+  const int N = actifs.size(), K = emplois.size();
 
   // Instantation de la fonction d'attraction.
   const std::vector<double> param = as<std::vector<double> >(parametres);
@@ -50,17 +50,8 @@ List meapsmode(const IntegerVector jr_dist, const IntegerVector p_dist, const Nu
 
   Urban urb(jr_dist, p_dist, xr_dist, actifs, emplois, fuites);
 
-  // Correspondance j (toidINS) vers j_mode.
-  std::vector< std::vector<int> > col_mode(Nsites);
-  for (auto j = 0; j < K; ++j) {
-    col_mode[ j_mode[j] ].push_back(j);
-  }
-
   std::vector<double> emplois_libres(urb.emplois);
-  std::vector<double> emplois_distribues(K); // les emplois distribuées sur l'ensemble des colonnes avec mode.
   std::vector<double> actifs_libres(urb.actifs);
-
-  for (auto j = 0; j < K; ++j) emplois_distribues[j] = emplois_libres[ j_mode[j] ];
 
   // Initialisation de la matrice origines-destination.
   std::vector<std::vector<float> > liaisons(N, std::vector<float>(K));
@@ -102,11 +93,11 @@ List meapsmode(const IntegerVector jr_dist, const IntegerVector p_dist, const Nu
         Urban::Residents res(urb, from);
 
         // Repérage des colonnes disponibles rangées selon la distance pour les résidents res.
-        std::vector<int> col_dispo = res.map_col_dispo(emplois_distribues);
+        std::vector<int> col_dispo = res.map_col_dispo(emplois_libres);
         int n_sites = col_dispo.size();
 
         // Evaluation de l'attirance de chaque site.
-        std::vector<double> attirances = res.attractivite(emplois_distribues, col_dispo, fct_attraction);
+        std::vector<double> attirances = res.attractivite(emplois_libres, col_dispo, fct_attraction);
 
         // Puis répartition sans prise en compte des limites de places.
         attirances = res.repartition_nolimit(col_dispo, attirances, actifs_libres[from]);
@@ -124,23 +115,17 @@ List meapsmode(const IntegerVector jr_dist, const IntegerVector p_dist, const Nu
 
 // Traitement des dépassements en colonnes.
 #pragma omp for reduction(vsum : actifs_libres)
-      for (auto j = 0; j < Nsites; ++j) {
-        double tot = 0;
-        for (auto m: col_mode[j]) {
-          emplois_distribues[m] = urb.emplois[j];
-          for (auto i = 0; i < N; ++i) emplois_distribues[m] -= liaisons[i][m];
-          tot += emplois_distribues[m];
-        }
-
-        if (tot > urb.emplois[j]) {
-          double tx = urb.emplois[j] / tot;
-          for (auto m: col_mode[j]) {
-            for (auto i = 0; i < N; ++i) {
-              actifs_libres[i] += (double)liaisons[i][m] * (1 - tx);
-              liaisons[i][m] *= tx;
-            }
-            emplois_distribues[m] = 0;
+      for (auto j = 0; j < K; ++j) {
+        emplois_libres[j] = urb.emplois[j];
+        for (auto i = 0; i < N; ++i) emplois_libres[j] -= liaisons[i][j];
+        if (emplois_libres[j] < 0) {
+          double tx_depassement = urb.emplois[j] / (urb.emplois[j] - emplois_libres[j]);
+          // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
+          for (auto i = 0; i < N; ++i) {
+            actifs_libres[i] += (double)liaisons[i][j] * (1 - tx_depassement);
+            liaisons[i][j] *= tx_depassement;
           }
+          emplois_libres[j] = 0;
         }
       }
 

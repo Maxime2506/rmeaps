@@ -9,8 +9,8 @@ NULL
 
 #'
 #' @return renvoie les flux au format triplet.
-meapsclass <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_meapsclass`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
+meaps_all_in_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_meaps_all_in_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
 }
 
 #' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des
@@ -21,7 +21,45 @@ NULL
 
 #'
 #' @return renvoie les flux au format triplet.
-newmultishuf <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, shuf, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_newmultishuf`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, shuf, attraction, group_from, group_to, cible, nthreads, verbose)
+meapsmode_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, j_mode, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_meapsmode_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, j_mode, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
+}
+
+#' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+NULL
+
+#' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
+NULL
+
+multishuf_oc_group_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, cible = NULL, attraction = "constant", nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_oc_group_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, group_from, group_to, parametres, xr_odds, cible, attraction, nthreads, verbose)
+}
+
+#'
+max_threads <- function() {
+    .Call(`_rmeaps_max_threads`)
+}
+
+multishuf_oc_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_oc_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose)
+}
+
+#' La fonction MEAPS sur plusieurs shufs
+NULL
+
+multishuf_origin_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_origin_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode, oddssubjectifs, nthreads, verbose)
+}
+
+#' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des
+NULL
+
+#' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2
+NULL
+
+#'
+#' @return renvoie les flux au format triplet.
+multishuf_task_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, shuf, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_multishuf_task_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, shuf, attraction, group_from, group_to, cible, nthreads, verbose)
 }
 

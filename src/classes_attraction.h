@@ -13,7 +13,7 @@ class fonction_attraction {
 
 class constant : public fonction_attraction {
     public:
-    virtual double operator()(double x) override { return x; }
+    virtual double operator()(double x) override { return 1.0; }
 };
 
 // 1 avant rayon (p0), plancher (p1) après.
