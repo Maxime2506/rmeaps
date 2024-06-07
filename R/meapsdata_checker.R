@@ -207,11 +207,12 @@ check_meapsdatagroup <- function(object, abort = FALSE, quiet = FALSE){
 
 check_fct_attraction <- function(attraction, parametres) {
   
-  if (!attraction %in% c("constant", "marche", "marche_liss", "decay", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  if (!attraction %in% c("constant", "marche", "marche_liss", "decay", "decay2", "logistique")) cli::cli_abort("Fonction attraction inconnue")
   
   if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
   if (attraction == "marche_liss" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche_liss invalide.")
   if (attraction == "decay" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
+  if (attraction == "decay2" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour decay invalide.")
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   invisible(TRUE)
 }
