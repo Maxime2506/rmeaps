@@ -1,6 +1,7 @@
 library(tidyverse)
 library(sf)
 library(Matrix)
+devtools::load_all()
 
 #----- Définition des points -----
 actifs_points <- tribble(
@@ -35,41 +36,73 @@ emplois_points <- tribble(
 dist <- st_distance(actifs_points, emplois_points) 
 
 # Introduction de NA sur des distances longues.
-#dist[dist > 22] <- NA
+dist[dist > 22] <- NA
 dist[dist == 0] <- .5
 
 temp <- as(as(as(dist, "dMatrix"), "generalMatrix"), "TsparseMatrix")
-dist_triplet <- tibble(fromidINS = temp@i, toidINS = temp@j, dist = temp@x) |> 
-  drop_na()
+dist_triplet <- tibble(fromidINS = as.character(temp@i), toidINS = as.character(temp@j), metric = temp@x) |> 
+  drop_na() |> 
+  arrange(fromidINS, metric, toidINS)
 
+froms <- dist_triplet$fromidINS |> unique() |> sort()
+tos <- dist_triplet$toidINS |> unique() |> sort()
 
-marges_actifs <- c(5, 5 , 5 , 10, 25, 10, 5, 4, 2)
-marges_emplois <- c(2, 2, 2, 8, 10, 15, 6, 4, 2, 4, 2, 3)
-f <- 1 - sum(marges_emplois) / sum(marges_actifs)
+actifs <- c(5, 5 , 5 , 10, 25, 10, 5, 4, 2)
+emplois <- c(2, 2, 2, 8, 10, 15, 6, 4, 2, 4, 2, 3)
+names(actifs) <- froms
+names(emplois) <- tos
+
+f <- 1 - sum(emplois) / sum(actifs)
 fuites <- rep(f, 9)
+names(fuites) <- froms
 
-shuf <- matrix(NA, ncol = 9, nrow = 64)
-for (i in 1:64) shuf[i, ] <- sample(1:9)
-colnames(shuf) <- actifs_points$fromidINS - 1L
-names(marges_actifs) <- actifs_points$fromidINS -1L
-#----
+md <- new("MeapsData", dist_triplet, actifs = actifs, emplois = emplois, fuite = fuites)
 
-res_another <- another_meaps(dist_triplet, marges_emplois, marges_actifs, fuites, attraction = "constant", nthreads = 1L)
-res_continu <- meaps_continu(dist_triplet, marges_emplois, marges_actifs, fuites, shuf, attraction = "constant")
-
-
-res_another |> summarise(flux = sum(flux))
-sum(marges_emplois)
-sum(marges_actifs)
-sum(marges_actifs * (1-fuites))
-
-res_another |> group_by(fromidINS) |> summarise(flux = sum(flux)) |> mutate(actifs_occ = marges_actifs * (1-fuites) ) 
-res_another |> group_by(toidINS) |> summarise(flux = sum(flux)) |> mutate(emplois = marges_emplois)
+# p_dist <- aggregate(md@distances$i, by = list(md@distances$i), FUN = length)$x |> cumsum()
+# p_dist <- c(0L, p_dist)
+# 
+# meaps_all_in(md@distances$j, p_dist, md@distances$value, md@emplois, md@actifs, md@fuite, parametres = 1.0, xr_odds = 1.0,
+#              attraction = "constant", nthreads = 0, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3)
+# 
 
 
-m_another <- sparseMatrix(i = res_another$fromidINS + 1L, j = res_another$toidINS + 1L, x = res_another$flux)
-m_another |> as.matrix() |> rowSums()
-m_another |> as.matrix() |> colSums()
+multishuf(md, nthreads = 1)
 
-another_meaps(dist_triplet, marges_emplois, marges_actifs, fuites, attraction = "logistique", param = c(1, 1, .1)) |> summarise(sum(flux))
+
+all_in(md, nthreads = 1L)
+all_in(md)
+
+les_communes <- c(1,1,1, 2,2,2, 3,3,3) |> as.character()
+names(les_communes) <- froms
+les_dclts <- c(rep(1L, 4), rep(2L,4), rep(3L, 4)) |> as.character()
+names(les_dclts) <- tos
+
+mobpro <- expand.grid(group_to = 1:3, group_from = 1:3) |> 
+  mutate(value = 60/9)
+
+# mdg <- new("MeapsDataGroup", dist_triplet, group_from = les_communes, group_to = les_dclts, 
+#            actifs = actifs, emplois = emplois, fuite = fuites, cible = mobpro)
+
+
+mdg <- meapsdatagroup(md, group_from = les_communes, group_to = les_dclts, cible = mobpro)
+
+
+all_in_grouped(mdg)
+
+meaps_optim(mdg, attraction = "logistique", parametres = c(1,1,.1), method = "L-BFGS-B")
+
+
+
+
+
+# test faux objet
+faux_triplet <- dist_triplet |> arrange(metric)
+new("MeapsData")
+new("MeapsData", faux_triplet, actifs = actifs, emplois = emplois, fuite = fuites) 
+new("MeapsData", faux_triplet, actifs = actifs, emplois = emplois, fuite = fuites) |> check_meapsdata()
+
+meapsdatagroup(new("MeapsData", faux_triplet, actifs = actifs, emplois = emplois, fuite = fuites),  group_from = les_communes, group_to = les_dclts, cible = mobpro) |> check_meapsdatagroup(
+  
+)
+
 

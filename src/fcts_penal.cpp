@@ -1,3 +1,4 @@
+
 // Fonctions de pénalités utilisées pour modifier l'attractivité d'un site dans MEAPS.
 // Remarque : il suffit de définir ces fonctions à un facteur près en raison d'un renormalisation implicite dans MEAPS.
 #include <cmath>
@@ -34,7 +35,7 @@
 //' @param plancher point bas après la marche.
 //' 
 //' @return un facteur d'attraction
- double marche_liss(double x, const double r1, const double r2,
+ double double_marche_liss(double x, const double r1, const double r2,
                     const double o1, const double o2) {
    if (x > ceil(r1+r2)) return 1;
    if (x <= floor(r1)) return o1;

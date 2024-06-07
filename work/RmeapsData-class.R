@@ -3,44 +3,59 @@
 #' 
 #' 
 #' 
-is_triplet_meaps <- function(obj) {
-  if (!inherits(obj, "data.frame")) return(FALSE)
-  if (!setequal(names(obj), c("fromidINS", "toidINS", "distances"))) stop("Les variables doivent être fromidINS, toidINS et distances.")
-  if (!is.integer(obj$fromidINS) | !is.integer(obj$toidINS) | !is.numeric(obj$distance)) return(FALSE)
-  TRUE
-}
 
 # Class de base pour les données meaps.
+
+is.meapsdata.ordered <- function(data) {
+  if (is.unsorted(data$i)) return(FALSE)
+  sortx <- by(data, INDICES = data$i, \(x) is.unsorted(x$x)) |> any(na.rm = TRUE)
+  if (sortx) return(FALSE)
+  sortj <- by(data, INDICES = list(data$i, data$x), \(x) is.unsorted(x$j)) |> any(na.rm = TRUE)
+  if (sortj) return(FALSE)
+  return(TRUE)
+}
+
+is.meapsdata.triplet <- function(data) {
+  if ( !inherits(data, "data.frame") ) return(FALSE)
+  if ( !setequal(c("i", "j", "x"), names(data)) ) return(FALSE)
+  if ( !is.integer(data$i) | !is.integer(data$j) | !is.numeric(data$x)) return(FALSE)
+  if ( min(data$i) != 0 | min(data$j) != 0 | min(data$x) <= 0) return(FALSE)
+  return(TRUE)
+}
+
 setClass("MeapsData", 
          representation = list(
            distances = "data.frame",
-           habitants = "data.frame",
-           opportunites = "data.frame",
-           fuite = "data.frame"
+           actifs = "numeric",
+           emplois = "numeric",
+           fuites = "numeric"
          ),
          prototype = list(
            distances = NULL,
-           habitants = data.frame(),
-           opportunites = data.frame(),
-           fuite = data.frame()
+           actifs = numeric(),
+           emplois = numeric(),
+           fuites = numeric()
          )
         )
 
 setMethod(f = "initialize", signature = "MeapsData",
-          definition = function(.Object, distances, habitants, opportunites, fuite) {
+          definition = function(.Object, distances, actifs, emplois, fuites) {
             
-            if (!is_triplet_meaps(distances)) stop("distances n'est pas un triplet valide.")
-            N <- unique(distances$fromidINS) |> length()
-            K <- unique(distances$toidINS) |> length()
+            if (!is.meapsdata.triplet(distances)) stop("distances n'est pas un triplet valide.")
+            if (!is.meapsdata.ordered(distances)) stop("distances n'est pas triés comme attendu.")
+            N <- unique(distances$i) |> length()
+            K <- unique(distances$j) |> length()
             
-            if (nrow(habitants) != N) stop("habitants et distances ne correspondent pas.")
-            if (nrow(opportunites) != K) stop("opportunities et distances ne correspondent pas.")
-            if (nrow(fuite) != N) stop("habitants et fuite n'ont pas la même longueurs.")
+            if (length(actifs) != N) stop("actifs et distances ne correspondent pas.")
+            if (length(emplois) != K) stop("emplois et distances ne correspondent pas.")
+            if (length(fuites) != N) stop("fuite  et distances ne correspondent pas.")
+            
+            if ( abs(sum(actifs * (1 - fuites)) / sum(emplois) - 1) > 1e-5 ) warning("actifs non fuyants ne correspondent pas aux emplois.")
                 
             .Object@distances <- distances
-            .Object@habitants <- habitants
-            .Object@opportunites <- opportunites
-            .Object@fuite <- fuite
+            .Object@actifs <- actifs
+            .Object@emplois <- emplois
+            .Object@fuites <- fuites
             
             return(.Object)
           })
