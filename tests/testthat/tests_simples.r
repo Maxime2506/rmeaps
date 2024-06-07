@@ -98,7 +98,7 @@ ref_multishuf <- c(ligne1, emplois1) |>
 # ----- 3. Construction des objets MeapsData -----
 md <- meapsdata(triplet, actifs, emplois, fuites)
 mds <- meapsdata(triplet, actifs, emplois, fuites, nshuf = 1, seuil = 100)
-
+mds16 <- meapsdata(triplet, actifs, emplois, fuites, nshuf = 16, seuil = 100)
 # ----- 4. Tests des différentes methodes -----
 estim_allin <- all_in(md)
 
@@ -124,6 +124,17 @@ estim_multi_oc <- multishuf_oc(mds)$flux |> arrange(fromidINS, toidINS, flux)
 
 test_that("Meaps multishuf oc cas simple", {
   expect_equal(estim_multi_oc, ref_multishuf, tolerance = 1e-3)}
+)
+
+# 16 shufs
+estim_multi_origin16 <- multishuf_origin(mds16) |> arrange(fromidINS, toidINS, flux)
+
+estim_multi_task16 <- multishuf_task(mds16) |> as_tibble() |> arrange(fromidINS, toidINS, flux)
+
+estim_multi_oc16 <- multishuf_oc(mds16)$flux |> arrange(fromidINS, toidINS, flux)
+
+test_that("Meaps multishuf oc cas simple", {
+  expect_equal(estim_multi_oc16, estim_multi_task16, tolerance = 1e-3)}
 )
 
 
