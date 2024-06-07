@@ -43,6 +43,15 @@ public:
     virtual double operator()(double x) override { return (exp(-parametres[0] * log(x)) + parametres[1]);};
 };
 
+// Decay2 = coût fixe puis coût relatif constant donne une fonction de fréquence des déplacements selon la distance :
+// y -> [(p0 + p1 * x)]^(-p2)
+class decay2 : public fonction_attraction {
+public:
+    std::vector<double> parametres;
+    decay2(std::vector<double> param): parametres(param) {};
+    virtual double operator()(double x) override { return ( exp(-parametres[2] * log(parametres[0] + parametres[1] * x)) );};
+};
+
 
 // logistique qui bascule autour du rayon (p0) avec une amplitude (p1) pour tendre vers un plancher (p2).
 class logistique : public fonction_attraction {
