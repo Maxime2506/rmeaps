@@ -1,3 +1,4 @@
+
 #ifndef __FONCTIONS_NEWTON__
 #define __FONCTIONS_NEWTON__
 

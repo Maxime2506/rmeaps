@@ -1,18 +1,22 @@
 {
+    "version": "0.2.0",
     "configurations": [
-        {
-            "name": "C/C++: clang Générer et déboguer le fichier actif",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb",
-            "preLaunchTask": "C/C++: clang générer le fichier actif"
-        }
-    ],
-    "version": "2.0.0"
-}
+      {
+        "name": "(lldb) Launch",
+        "type": "lldb",
+        "request": "launch",
+        "program": "/Library/Frameworks/R.framework/Resources/bin/exec/R",
+        "args": [
+          "--vanilla",
+          "-e",
+          "source('tests/test.R')"
+        ],
+        "env": {
+          "R_HOME" : "/Library/Frameworks/R.framework/Resources"
+        },
+        "terminal": "console",
+        "stopOnEntry": false
+      }
+    ]
+  }
+  

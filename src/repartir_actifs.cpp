@@ -4,11 +4,11 @@
 using namespace Rcpp;
 
 std::vector<double> repartir_actifs(std::vector<double>& placeslibres, 
-                                    std::vector<double>& attractivites,
-                                    std::vector<double>& od,
-                                    double& fuite, 
-                                    double& actifs,
-                                    double seuil_newton = 1e-6) {
+                                 std::vector<double>& attractivites,
+                                 std::vector<double>& od,
+                                 double& fuite, 
+                                 double& actifs,
+                                 double seuil_newton = 1e-6) {
   
   int k_valid = placeslibres.size();
   

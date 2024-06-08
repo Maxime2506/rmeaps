@@ -1,3 +1,4 @@
+
 // Fonctions de pénalités utilisées pour modifier l'attractivité d'un site dans MEAPS.
 // Remarque : il suffit de définir ces fonctions à un facteur près en raison d'un renormalisation implicite dans MEAPS.
 #include <cmath>

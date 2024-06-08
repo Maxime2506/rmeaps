@@ -198,7 +198,7 @@ inline std::vector<double> _repartir_continu(
    std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
    for (std::size_t i = 0; i < Nboot; ++i) {
      for (std::size_t j = 0; j < Ns; ++j) {
-       ishuf[i][j] = shuf(i, j) - 1L;
+       ishuf[i][j] = shuf(i, j);
        if (ishuf[i][j] >= N) {
          stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
        }
@@ -383,11 +383,13 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
   if (estim.ncol() != cible.ncol()) stop("Pb sur le nombre de colonnes agrégées");
   
   double tot = 0;
-  for (auto i = 0; i < cible.nrow(); ++i)
+  for (auto i = 0; i < cible.nrow(); ++i){
     for (auto j = 0; j < cible.ncol(); ++j) {
       if (cible(i,j) != 0 && estim(i,j) != 0) tot += estim(i,j) * (log(estim(i,j)) - log(cible(i,j)));
     }
-    return tot;
+  }
+  
+  return tot;
 }
 
 //'
@@ -458,7 +460,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
    for (std::size_t i = 0; i < Nboot; ++i) {
      for (std::size_t j = 0; j < Ns; ++j) {
-       ishuf[i][j] = shuf(i, j)- 1L;
+       ishuf[i][j] = shuf(i, j);
        if (ishuf[i][j] >= N) {
          stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
        }
@@ -569,7 +571,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
           repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
           
           for (std::size_t k = 0; k < k_valid; ++k) {
-            emp[ _jr_dist[debut + k] ] -= repartition[k];
+            emp[ jr_dist[debut + k] ] -= repartition[k];
             liaisons[Iboot][ debut + k ] += repartition[k];
           }
         } // if min_i<max_i
@@ -578,14 +580,24 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
   } // Iboot
 } // omp parallel
 
-NumericVector resultat(Nx);
-resultat.fill(0.0);
+std::vector<float> resultat(Nx, 0);
 
+#pragma omp parallel for
 for (std::size_t i = 0; i < Nx; ++i) {
   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
     resultat[i] += liaisons[Iboot][i] / Nboot;
   }
 }
 
-return List::create(_("flux") = resultat);
+IntegerVector res_i(Nx);
+std::size_t ii = 0;
+for (std::size_t i = 0; i < N; ++i) {
+  for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
+    res_i[ii] = i;
+    ii++;
+  }
+}
+return List::create(_("i") = res_i,
+                    _("j") = jr_dist,
+                    _("flux") = wrap(resultat));
  }

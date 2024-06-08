@@ -1,21 +1,28 @@
-Package: rmeaps
 Type: Package
-Title: MEAPS : Estimation de la distribution statistique des trajets entre des origines et des destinations
+Package: rmeaps
+Title: MEAPS : Estimation de la distribution statistique des trajets entre
+    des origines et des destinations
 Version: 1.0
 Date: 2023-01-31
 Authors@R: c(
-  person("Maxime", "Parodi", email = "maxime.parodi@sciencespo.fr", role = c("aut", "cre")),
-  person("Xavier", "Timbeau", email = "xavier.timbeau@sciencespo.fr", role = "aut")
+    person("Maxime", "Parodi", , "maxime.parodi@sciencespo.fr", role = c("aut", "cre")),
+    person("Xavier", "Timbeau", , "xavier.timbeau@sciencespo.fr", role = "aut")
   )
-Description: 'MEAPS est un modèle ergodique d'absorption avec priorité et saturation. Il estime la distribution des trajets entre des points de départs, typiquement le lieu de résidence, et des points d'intérêts, par exemple des zones d'emplois.'
+Description: 'MEAPS est un modèle ergodique d'absorption avec priorité et
+    saturation. Il estime la distribution des trajets entre des points de
+    départs, typiquement le lieu de résidence, et des points d'intérêts,
+    par exemple des zones d'emplois.'
 License: CeCILL-B
-Encoding: UTF-8
-Imports: Rcpp (>= 1.0.9), RcppParallel (>= 5.1.6), RcppProgress (>= 0.4), Matrix, methods, dplyr
-LinkingTo: Rcpp, RcppParallel, RcppProgress, Matrix
-SystemRequirements: GNU make
-RoxygenNote: 7.3.1
-Depends:
-  data.table
+Imports: 
+    dplyr,
+    Matrix,
+    methods,
 Suggests: 
     testthat (>= 3.0.0)
+LinkingTo: 
+    Rcpp,
+    RcppProgress
 Config/testthat/edition: 3
+Encoding: UTF-8
+RoxygenNote: 7.3.1
+SystemRequirements: GNU make
