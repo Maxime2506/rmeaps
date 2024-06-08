@@ -99,12 +99,12 @@ multishuf_grouped <- function(MeapsDataGroup, attraction = "constant",
                    nthreads = nthreads, verbose = verbose) 
 
   res_grouped <- res$flux |>
-    mutate(group_from = MeapsDataGroup@group_from[fromidINS],
+    dplyr::mutate(group_from = MeapsDataGroup@group_from[fromidINS],
            group_to = MeapsDataGroup@group_to[toidINS]) |> 
-    group_by(group_from, group_to) |> 
-    summarize(flux = sum(flux)) |> 
-    left_join(MeapsDataGroup@cible, by = c("group_from", "group_to")) |> 
-    arrange(desc(flux))
+    dplyr::group_by(group_from, group_to) |> 
+    dplyr::summarize(flux = sum(flux)) |> 
+    dplyr::left_join(MeapsDataGroup@cible, by = c("group_from", "group_to")) |> 
+    dplyr::arrange(desc(flux))
   
   return(list(flux = res_grouped,
               kl = kl(res_grouped$flux, res_grouped$value)))
@@ -182,8 +182,8 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
       fromidINS = MeapsData@triplet$fromidINS,
       toidINS = MeapsData@triplet$toidINS,
       flux = res$flux) |> 
-      filter(flux>0) |> 
-      arrange(desc(flux)))
+      dplyr::filter(flux>0) |> 
+      dplyr::arrange(desc(flux)))
   if(large) gc()
   return(res)
 }
@@ -212,9 +212,9 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant",
     cli::cli_abort("Parametres pour logistique invalide.")
   
   cible <- MeapsDataGroup@cible |> 
-    complete(group_from, group_to, fill = list(value = 0)) |> 
-    arrange(group_from, group_to) |> 
-    pull(value)
+    tidyr::complete(group_from, group_to, fill = list(value = 0)) |> 
+    dplyr::arrange(group_from, group_to) |> 
+    dplyr::pull(value)
   
   res <- all_in_optim(jr_dist = MeapsDataGroup@j_dist,
                       p_dist = MeapsDataGroup@p_dist,
@@ -236,15 +236,15 @@ all_in_grouped <- function(MeapsDataGroup,  attraction = "constant",
     group_from = g_froms[res$i+1L],
     group_to = g_tos[res$j+1L],
     flux = res$flux) |> 
-    filter(flux>0)
+    dplyr::filter(flux>0)
   if( !is.null(MeapsDataGroup@cible) )
     flux <- flux |> left_join(MeapsDataGroup@cible |> rename(cible=value),
                               by=c("group_from", "group_to")) |>
-    mutate(flux = replace_na(flux, 0),
+    dplyr::mutate(flux = replace_na(flux, 0),
            cible = replace_na(cible, 0)) |> 
-    filter(flux>0|cible>0) 
+    dplyr::filter(flux>0|cible>0) 
   
-  flux <- flux |> arrange(desc(flux))
+  flux <- flux |> dplyr::arrange(dplyr::desc(flux))
   
   return( list(flux = flux, kl = res$kl) )
 }
@@ -285,9 +285,9 @@ multishuf_oc_grouped <- function(
   if (attraction == "logistique" && (length(parametres) != 3 || !is.numeric(parametres))) cli::cli_abort("Parametres pour logistique invalide.")
   
   cible <- MeapsDataGroup@cible |> 
-    complete(group_from, group_to, fill = list(value = 0)) |> 
-    arrange(group_from, group_to) |> 
-    pull(value)
+    tidyr::complete(group_from, group_to, fill = list(value = 0)) |> 
+    dplyr::arrange(group_from, group_to) |> 
+    dplyr::pull(value)
   
   res <- multishuf_oc_group_cpp(
     jr_dist = MeapsDataGroup@j_dist,
@@ -311,15 +311,15 @@ multishuf_oc_grouped <- function(
     group_from = g_froms[res$i+1L],
     group_to = g_tos[res$j+1L],
     flux = res$flux) |> 
-    filter(flux>0)
+    dplyr::filter(flux>0)
   if(!is.null(MeapsDataGroup@cible))
-    flux <- flux |> left_join(MeapsDataGroup@cible |> rename(cible=value),
+    flux <- flux |> dplyr::left_join(MeapsDataGroup@cible |> dplyr::rename(cible=value),
                               by=c("group_from", "group_to")) |>
-    mutate(flux = replace_na(flux, 0),
-           cible = replace_na(cible, 0)) |> 
-    filter(flux>0|cible>0) 
+    dplyr::mutate(flux = tidyr::replace_na(flux, 0),
+           cible = tidyr::replace_na(cible, 0)) |> 
+    dplyr::filter(flux>0|cible>0) 
   
-  flux <- flux |> arrange(desc(flux))
+  flux <- flux |> dplyr::arrange(dplyr::desc(flux))
   
   return( list(flux = flux, kl = res$kl) )
 }
@@ -336,7 +336,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.") 
   if (!attraction %in% c("marche", "marche_liss", "double_marche_liss","decay", "logistique")) 
     cli::cli_abort("Pas de fonction choisi ou fonction non paramètrique.")
-  if (!meaps_fun %in% c("all_in", "multishuf")) 
+  if (!meaps_fun %in% c("all_in", "multishuf", "multishuf_discret")) 
     cli::cli_abort("meaps_fun doit être soit 'all_in', soit 'multishuf'")
   
   arg <- list(
@@ -346,7 +346,8 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
   meaps_fun_ <- switch(
     meaps_fun,
     "all_in" = all_in_grouped,
-    "multishuf" = multishuf_oc_grouped)
+    "multishuf" = multishuf_oc_grouped,
+    "multishuf_discret" = multishuf_grouped)
   env <- environment()
   
   fn <- switch(
@@ -356,7 +357,7 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
         meaps_fun_, 
         args = append(arg, list(parametres = par)))
       kl <- estim$kl
-      mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+      mes <- glue::glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
       if (progress) 
         cli::cli_progress_update(.envir = env)
       if(!quiet) cli::cli_progress_output(mes, .envir = env)
@@ -377,15 +378,15 @@ meaps_optim <- function(MeapsDataGroup,  attraction, parametres, odds = 1,
     if(d_min==0) d_min <- 5
     if(d_max>100) d_max <- 15
     cli::cli_progress_bar(.envir = env, clear = FALSE)
-    bf <- map_dfr(d_min:d_max, \(d) { 
+    bf <- purrr::map_dfr(d_min:d_max, \(d) { 
       opt <- stats::optim(
         par = parametres[[2]],
         fn = \(x) fn(c(d, x)),
         method = "Brent", lower = lower[[2]], upper = upper[[2]])
-      tibble(d = d, x = opt$par, kl = opt$value, 
+      tibble::tibble(d = d, x = opt$par, kl = opt$value, 
              convergence = opt$convergence, mes = opt$message)})
     cli::cli_progress_done(.envir = env)
-    best <- bf |> filter(kl == min(kl)) |> slice(1)  
+    best <- bf |> dplyr::filter(kl == min(kl)) |> dplyr::slice(1)  
     res <- list(
       par = c(best$d, best$x),
       value = best$kl,
@@ -433,7 +434,7 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1,
   
   les_j <- jlab[MeapsData@triplet$toidINS]
   
-  p_dist <- MeapsData@triplet |> group_by(fromidINS) |> summarize(n()) |> pull() |> cumsum()
+  p_dist <- MeapsData@triplet |> dplyr::group_by(fromidINS) |> dplyr::summarize(n()) |> dplyr::pull() |> cumsum()
   p_dist <- c(0L, p_dist)
   
   meaps_all_in(jr_dist = les_j,
