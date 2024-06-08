@@ -8,8 +8,8 @@ meaps_all_in <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, para
     .Call(`_rmeaps_meaps_all_in`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, xr_odds, attraction, nthreads, verbose)
 }
 
-all_in_optim <- function(jr_dist, p_dist, xr_dist, group_from, group_to, emplois, actifs, fuites, parametres, xr_odds, cible = NULL, attraction = "constant", nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_all_in_optim`, jr_dist, p_dist, xr_dist, group_from, group_to, emplois, actifs, fuites, parametres, xr_odds, cible, attraction, nthreads, verbose)
+.another_meaps <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuite, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_another_meaps_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuite, param, jr_odds, p_odds, xr_odds, attraction, nthreads, verbose, normalisation, fuite_min)
 }
 
 #' La fonction meaps_continu qui ne renvoit que le KL de l'estimation en référence à une distribution connue. 
@@ -27,14 +27,77 @@ max_threads <- function() {
     .Call(`_rmeaps_max_threads`)
 }
 
-multishuf_oc_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction = "constant", nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_multishuf_oc_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, parametres, xr_odds, attraction, nthreads, verbose)
+#' La fonction communaliser effectue un regroupement de la matrice des flux (résultant de meaps) selon des groupes origines et destinations.
+#' @param flux La matrice des flux de fromid vers toid.
+#' @param group_orig Un vecteur d'integers (par ex. code commune) donnant le code du groupe de départ.
+#' @param group_dest Un vecteur d'integers (par ex. code commune) donnant le code du groupe d'arrivée.
+#' 
+#' @return Une matrice contenant les flux agrégés selon les groupes de départ et d'arrivée. 
+communaliser <- function(flux, group_orig, group_dest) {
+    .Call(`_rmeaps_communaliser`, flux, group_orig, group_dest)
+}
+
+#' La fonction MEAPS sur un shuf
+#' version optimisée
+#' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+#' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param mode Choix du rôle de l'emploi disponible au cours du processus. Default : continu. Autre choix : discret, subjectif_c ou _d...
+#' @param odds_subjectifs Attractivité des sites proches des actifs, pour le mode defini. default : null.
+#' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' 
+#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
+meaps_oneshuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "continu", oddssubjectifs = NULL, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_oneshuf`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, normalisation, fuite_min, seuil_newton)
+}
+
+#' La fonction meaps en mode continu sur plusieurs shufs avec en entrée une Row Sparse Matrix destructurée selon ses éléments.
+NULL
+
+.meaps_continu <- function(j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_meaps_continu_cpp`, j_dist, p_dist, x_dist, emplois, actifs, f, shuf, param, j_odds, p_odds, x_odds, attraction, nthreads, progress, normalisation, fuite_min)
 }
 
 #' La fonction MEAPS sur plusieurs shufs
 NULL
 
-meaps_multishuf_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, verbose = TRUE) {
-    .Call(`_rmeaps_meaps_multishuf_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, shuf, attraction, parametres, xr_odds, mode, oddssubjectifs, nthreads, verbose)
+meaps_multishuf <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6) {
+    .Call(`_rmeaps_meaps_multishuf`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton)
+}
+
+.meaps_optim <- function(jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction = "constant", nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_meaps_optim_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, f, shuf, row_group, col_group, param, jr_odds, p_odds, xr_odds, attraction, nthreads, progress, normalisation, fuite_min)
+}
+
+#' MEAPS en calculant la tension sur les opportunités, 
+#' c'est-à-dire le rang moyen sur les shufs juste avant saturation.
+#' version optimisée
+#' @param rkdist La matrice des rangs dans lequel les colonnes j sont passées en revue pour chacune des lignes i.
+#' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes).
+#' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+#' @param modds La matrice des odds modifiant la chance d'absorption de chacun des sites j pour des résidents en i.
+#' @param f Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude.
+#' @param shuf Le vecteur de priorité des actifs pour choisir leur site d'arrivée. Il est possible de segmenter les départs d'une ligne i en répétant cette ligne à plusieurs endroits du shuf et en répartissant les poids au sein du vecteurs actifs.
+#' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto.
+#' @param progress Ajoute une barre de progression. Default : true.
+#' @param normalisation Calage des emplois disponibles sur le nombre d'actifs travaillant sur la zone. Default : false.
+#' @param fuite_min Seuil minimal pour la fuite d'un actif. Doit être supérieur à 0. Défault = 1e-3.
+#' @param seuil_newton Seuil relatif pour la convergence par newton du calage de la probabilité d'absorption. Défault = 1e-6.
+#' @param seuil_dispo seuil absolu à partir duquel une opportunité est réputée saturée. Défaut 0.1
+#' 
+#' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j ($flux) ainsi que le rang au moment de la saturation ($tension)
+meaps_tension <- function(rkdist, emplois, actifs, modds, f, shuf, mode = "continu", oddssubjectifs = NULL, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3, seuil_newton = 1e-6, seuil_dispo = 0.1) {
+    .Call(`_rmeaps_meaps_tension`, rkdist, emplois, actifs, modds, f, shuf, mode, oddssubjectifs, nthreads, progress, normalisation, fuite_min, seuil_newton, seuil_dispo)
+}
+
+#' Fonction de pénalité "marche" : vaut 1 sur un rayon fixé, et decru au-delà.
+NULL
+
+meaps_continu_test <- function(j_dist, p_dist, x_dist, emplois, actifs, f, shuf, attraction = "constant", alpha = 10, beta = 1, nthreads = 0L, progress = TRUE, normalisation = FALSE, fuite_min = 1e-3) {
+    .Call(`_rmeaps_meaps_continu_test`, j_dist, p_dist, x_dist, emplois, actifs, f, shuf, attraction, alpha, beta, nthreads, progress, normalisation, fuite_min)
 }
 
