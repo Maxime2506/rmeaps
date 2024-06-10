@@ -438,6 +438,7 @@ multishuf_task_grouped <- function(MeapsDataGroup, attraction = "constant",
     fuites = MeapsDataGroup@fuites,
     cible = cible,
     parametres = parametres,
+    shuf = MeapsDataGroup@shuf,
     attraction = attraction,
     nthreads = nthreads, verbose = verbose
   )
