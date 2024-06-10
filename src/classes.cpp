@@ -28,7 +28,7 @@ Urban::Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::v
     : jr(jr_), p(p_), xr(xr_), actifs(actifs_), emplois(emplois_), fuites(fuites_) {};
 
 // Sortie : produit le triplet de la matrice détaillée des flux estimées par meaps.
-Rcpp::List Urban::format_sortie(const std::vector<std::vector<float> >& liens) {
+Rcpp::List Urban::format_sortie(const std::vector<std::vector<double> >& liens) {
   Rcpp::NumericVector resultat(xr.size());
 
 for (auto i = 0; i < n_from(); ++i) {
@@ -175,13 +175,13 @@ std::vector<double> Urban::Residents::repartition_limited(double actifs_restants
 }
 
 // regrouper ramasse les flux estimés selon les groupes de SubRegion.
-std::vector<float> Urban::SubRegion::regrouper(const std::vector<std::vector<float> >& liens) {
+std::vector<double> Urban::SubRegion::regrouper(const std::vector<std::vector<double> >& liens) {
   const int Ng = ng_from();
   const int Kg = ng_to();
-  std::vector<float> flux(Ng * Kg);
+  std::vector<double> flux(Ng * Kg);
 
-#pragma omp declare reduction(vsumf : std::vector<float> : std::transform(                    \
-        omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<float>())) \
+#pragma omp declare reduction(vsumf : std::vector<double> : std::transform(                    \
+        omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
     initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 #pragma omp parallel for reduction(vsumf : flux) collapse(2)
   for (auto i = 0; i < urb.n_from(); ++i) {
@@ -193,12 +193,12 @@ std::vector<float> Urban::SubRegion::regrouper(const std::vector<std::vector<flo
 }
 
 // Sortie des flux regroupés.
-Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> >& liens) {
+Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<double> >& liens) {
   const int Ng = ng_from();
   const int Kg = ng_to();
   const int taille = Ng * Kg;
 
-  std::vector<float> res_xr(taille);
+  std::vector<double> res_xr(taille);
   res_xr = regrouper(liens);
 
   Rcpp::IntegerVector res_i(taille);
@@ -214,12 +214,12 @@ Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> 
 }
 
 // Sortie des flux regroupés et de l'entropie relative avec la cible.
-Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> >& liens, const std::vector<float>& cible) {
+Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<double> >& liens, const std::vector<double>& cible) {
   const int Ng = ng_from();
   const int Kg = ng_to();
   const int taille = Ng * Kg;
 
-  std::vector<float> res_xr(taille);
+  std::vector<double> res_xr(taille);
   res_xr = regrouper(liens);
 
   Rcpp::IntegerVector res_i(taille);
@@ -232,7 +232,7 @@ Rcpp::List Urban::SubRegion::format_sortie(const std::vector<std::vector<float> 
     }
   }
 
-  float kl = entropie_relative<float>(res_xr, cible);
+  double kl = entropie_relative<double>(res_xr, cible);
 
   return Rcpp::List::create(Rcpp::Named("i") = res_i, Rcpp::Named("j") = res_j,
                             Rcpp::Named("flux") = Rcpp::wrap(res_xr), Rcpp::Named("kl") = kl);

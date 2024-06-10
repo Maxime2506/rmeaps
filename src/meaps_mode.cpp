@@ -63,7 +63,7 @@ List meapsmode_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, cons
   for (auto j = 0; j < K; ++j) emplois_distribues[j] = emplois_libres[ j_mode[j] ];
 
   // Initialisation de la matrice origines-destination.
-  std::vector<std::vector<float> > liaisons(N, std::vector<float>(K));
+  std::vector<std::vector<double> > liaisons(N, std::vector<double>(K));
 
   double tot_actifs_libres = std::accumulate(urb.actifs.begin(), urb.actifs.end(), 0.0);
   double tot_actifs = tot_actifs_libres, old_tot;
@@ -113,7 +113,7 @@ List meapsmode_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, cons
 
         //
         for (auto k = 0; k < n_sites; ++k) {
-          liaisons[from][col_dispo[k]] += static_cast<float>(attirances[k]);
+          liaisons[from][col_dispo[k]] += attirances[k];
         }
       }  // fin des boucles sur les from
 
@@ -136,7 +136,7 @@ List meapsmode_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, cons
           double tx = urb.emplois[j] / tot;
           for (auto m: col_mode[j]) {
             for (auto i = 0; i < N; ++i) {
-              actifs_libres[i] += (double)liaisons[i][m] * (1 - tx);
+              actifs_libres[i] += liaisons[i][m] * (1 - tx);
               liaisons[i][m] *= tx;
             }
             emplois_distribues[m] = 0;
@@ -185,7 +185,7 @@ List meapsmode_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, cons
     if (cible.isNull()) {
       return districts.format_sortie(liaisons);  // Retour de la matrice agrégrée au format triplet.
     } else {
-      std::vector<float> ref = as<std::vector<float> >(cible);
+      std::vector<double> ref = as<std::vector<double> >(cible);
       return districts.format_sortie(liaisons, ref);  // Retour de la matrice agrégrée au format triplet + KL.
     }
   }

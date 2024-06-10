@@ -23,7 +23,7 @@ public:
       Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::vector<double> xr_, 
             const std::vector<double> actifs_, const std::vector<double> emplois_, const std::vector<double> fuites_);
 
-      Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens);
+      Rcpp::List format_sortie(const std::vector< std::vector<double> >& liens);
 
       const int n_from() const { return actifs.size(); }
       const int n_to() const { return emplois.size(); }
@@ -56,9 +56,9 @@ public:
             const int ng_from() const { return 1L + *std::max_element(group_from.begin(), group_from.end()); };
             const int ng_to() const { return 1L + *std::max_element(group_to.begin(), group_to.end()); };
 
-            std::vector<float> regrouper(const std::vector< std::vector<float> >& liens);
-            Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens);
-            Rcpp::List format_sortie(const std::vector< std::vector<float> >& liens, const std::vector<float>& cible);
+            std::vector<double> regrouper(const std::vector< std::vector<double> >& liens);
+            Rcpp::List format_sortie(const std::vector< std::vector<double> >& liens);
+            Rcpp::List format_sortie(const std::vector< std::vector<double> >& liens, const std::vector<double>& cible);
       };
 };
 

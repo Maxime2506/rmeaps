@@ -67,10 +67,10 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
   }
 
   // Initialisation de la matrice origines-destination.
-  std::vector<std::vector<float> > liaisons(N, std::vector<float>(K));
+  std::vector<std::vector<double> > liaisons(N, std::vector<double>(K));
 
   // pointeurs vers les lignes pour la clause depend de openmp.
-  std::vector<const float*> ptr_liaisons(N);
+  std::vector<const double*> ptr_liaisons(N);
   for (auto i=0; i<N; ++i) ptr_liaisons[i] = liaisons[i].data();
 
 #ifdef _OPENMP
@@ -110,7 +110,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
 //#pragma omp task depend(inout : *ptr_liaisons[from]) 
           for (auto k = 0; k < n_sites; ++k) {
             #pragma omp atomic
-            liaisons[from][col_dispo[k]] += static_cast<float>(repartition[k]) / Nboot;  
+            liaisons[from][col_dispo[k]] += repartition[k] / Nboot;  
           }      
       }
     }
@@ -130,7 +130,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
     if (cible.isNull()) {
       return districts.format_sortie(liaisons);  // Retour de la matrice agrégrée au format triplet.
     } else {
-      std::vector<float> ref = as<std::vector<float> >(cible);
+      std::vector<double> ref = as<std::vector<double> >(cible);
       return districts.format_sortie(liaisons, ref);  // Retour de la matrice agrégrée au format triplet + KL.
     }
   }

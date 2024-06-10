@@ -54,7 +54,7 @@ List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, c
   std::vector<double> actifs_libres(urb.actifs);
 
   // Initialisation de la matrice origines-destination.
-  std::vector<std::vector<float> > liaisons(N, std::vector<float>(K));
+  std::vector<std::vector<double> > liaisons(N, std::vector<double>(K));
 
   double tot_actifs_libres = std::accumulate(urb.actifs.begin(), urb.actifs.end(), 0.0);
   double tot_actifs = tot_actifs_libres, old_tot;
@@ -104,7 +104,7 @@ List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, c
 
         //
         for (auto k = 0; k < n_sites; ++k) {
-          liaisons[from][col_dispo[k]] += static_cast<float>(attirances[k]);
+          liaisons[from][col_dispo[k]] += attirances[k];
         }
       }  // fin des boucles sur les from
 
@@ -122,7 +122,7 @@ List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, c
           double tx_depassement = urb.emplois[j] / (urb.emplois[j] - emplois_libres[j]);
           // Renvoie à domicile des actifs excédentaires à proportion de leur contribution à l'excédent.
           for (auto i = 0; i < N; ++i) {
-            actifs_libres[i] += (double)liaisons[i][j] * (1 - tx_depassement);
+            actifs_libres[i] += liaisons[i][j] * (1 - tx_depassement);
             liaisons[i][j] *= tx_depassement;
           }
           emplois_libres[j] = 0;
@@ -170,7 +170,7 @@ List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, c
     if (cible.isNull()) {
       return districts.format_sortie(liaisons);  // Retour de la matrice agrégrée au format triplet.
     } else {
-      std::vector<float> ref = as<std::vector<float> >(cible);
+      std::vector<double> ref = as<std::vector<double> >(cible);
       return districts.format_sortie(liaisons, ref);  // Retour de la matrice agrégrée au format triplet + KL.
     }
   }
