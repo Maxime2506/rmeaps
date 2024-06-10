@@ -501,7 +501,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                  kl <- estim$kl
                  mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
                  if (progress) {
-                   cli::cli_progress_update(.envir = env, extra=list(mes = mes))
+                   cli::cli_progress_update(.envir = env, extra = list(mes=mes))
                  }
                  return(kl)
                }
@@ -512,7 +512,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
   }
   
   if (!is.null(discret)) {
-    nb_par <- length(parametres) - 1
+    nb_par <- length(parametres)
     
     if (is.null(lower)) lower <- rep(0, nb_par)
     if (is.null(upper)) upper <- rep(Inf, nb_par)
@@ -527,7 +527,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
       tibble::tibble(
         d = d, x = opt$par, kl = opt$value,
         convergence = opt$convergence, mes = opt$message)
-    }, .progress= tq)
+    }, .progress= tp)
     
     best <- bf |>
       dplyr::filter(kl == min(kl)) |>
@@ -548,7 +548,8 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   
   cli::cli_progress_bar(
-    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} ; {cli::pb_extra$mes}", 
+    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} (round(cli::pb_elapsed/cli::pb_current) s/iter) ; {cli::pb_extra$mes}", 
+    extra = list(mes=""),
     .envir = env, clear = FALSE)
   
   res <- stats::optim(

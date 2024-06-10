@@ -240,7 +240,7 @@ inline std::vector<double> _repartir_continu(
    std::size_t NNboot = floor( Nboot / ntr);
    if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
-   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nref * Kref));
+   std::vector< std::vector<double> > liaisons(ntr, std::vector<double> (Nref * Kref));
    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
      std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
    }
@@ -474,7 +474,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    std::size_t NNboot = floor( Nboot / ntr );
    if(NNboot == 0) NNboot = 1;
    // Un vecteur représentant la matrice des flux groupés.
-   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nx));
+   std::vector< std::vector<double> > liaisons(ntr, std::vector<double> (Nx));
    for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
      std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
    }
