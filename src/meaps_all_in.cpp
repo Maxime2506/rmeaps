@@ -155,7 +155,7 @@ List meaps_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, c
              LIMITE_PRECISION_1);
     REprintf("2 - Vitesse de convergence = %.3e (seuil : %.3e)\n", std::abs(tot_actifs_libres - old_tot) / tot_actifs,
              LIMITE_PRECISION_2);
-    REprintf("3 - Nombre de boucles = %i (seuil : %i )", nloop, LIMITE_LOOP);
+    REprintf("3 - Nombre de boucles = %i (seuil : %i )\n\n", nloop, LIMITE_LOOP);
   }
   // Mise en forme du résultat selon présence ou non de groupes et d'une cible.
   if (group_from.isNull() || group_to.isNull()) {
