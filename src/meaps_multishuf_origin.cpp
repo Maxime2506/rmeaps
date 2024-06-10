@@ -1,4 +1,3 @@
-
 #ifdef _OPENMP
 # include <omp.h>
 #endif
@@ -30,24 +29,24 @@ using namespace Rcpp;
  //' 
  //' @return renvoie une matrice avec les estimations du nombre de trajets de i vers j.
  // [[Rcpp::export]]
- NumericMatrix multishuf_origin_cpp(const IntegerVector jr_dist, 
-                               const IntegerVector p_dist, 
-                               const NumericVector xr_dist, 
-                               NumericVector emplois,
-                               const NumericVector actifs, 
-                               NumericVector fuites, 
-                               IntegerMatrix shuf,
-                               const std::string attraction,
-                               const NumericVector parametres,
-                               const NumericVector xr_odds,
-                               const std::string mode = "continu",
-                               Nullable<NumericVector> oddssubjectifs = R_NilValue,
-                               const int nthreads = 0, 
-                               const bool verbose = true) {
+ List multishuf_origin_cpp(const IntegerVector jr_dist, 
+                          const IntegerVector p_dist, 
+                          const NumericVector xr_dist, 
+                          const NumericVector emplois,
+                          const NumericVector actifs, 
+                          const NumericVector fuites, 
+                          const IntegerMatrix shuf,
+                          const std::string attraction,
+                          const NumericVector parametres,
+                          const NumericVector xr_odds,
+                          const std::string mode = "continu",
+                          const Nullable<NumericVector> oddssubjectifs = R_NilValue,
+                          const int nthreads = 0, 
+                          const bool verbose = true) {
    
    const double SEUIL_NEWTON = 1e-6;
    
-   const std::size_t N = actifs.size(), K = emplois.size(), L = xr_dist.size(),
+   const int N = actifs.size(), K = emplois.size(), L = xr_dist.size(), Nx  = xr_dist.size(),
      Ns = shuf.ncol(), Nboot = shuf.nrow();
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
@@ -93,17 +92,23 @@ using namespace Rcpp;
        ts_xr_odds[k] =  xr_odds[k]; // dans ce cas, on suppose que les odds sont passés comme avant (pas en log)
      } 
    }
-
+   
    std::vector<double> odsub;
    if ((mode == "subjectif_c"|| mode == "subjectif_d") && oddssubjectifs.isNotNull()) {
      odsub = as< std::vector<double> >(oddssubjectifs);
    }
    
-   // REMARQUE : les conversions de Numeric et IntegerVector en équivalent std::vector sont ici nécessaires car
-   // les vecteurs initiaux de sont pas thread safe dans openmp.
-   // Conversion en vecteur de vecteurs C++.
-   std::vector< std::size_t > ishuf = as< std::vector< std::size_t > >(shuf);
-
+   // Les rangs dans shuf commencent à 1.
+   std::vector< std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
+   for (std::size_t i = 0; i < Nboot; ++i) {
+     for (std::size_t j = 0; j < Ns; ++j) {
+       ishuf[i][j] = shuf(i, j);
+       if (ishuf[i][j] >= N) {
+         stop("Les rangs de shufs vont au-delà de la taille du vecteur actifs.");
+       }
+     }
+   }
+   
    // Le vecteur shuf peut être plus long que le nombre de lignes de rkdist s'il fait repasser plusieurs fois
    // la même ligne d'actifs. Dans ce cas, on compte la fréquence de passage de chaque ligne et l'on divise le
    // poids de la ligne par cette fréquence.
@@ -114,88 +119,102 @@ using namespace Rcpp;
    }
    
 #ifdef _OPENMP
-  int ntr = nthreads;
-  if (ntr == 0) {
-    ntr = omp_get_max_threads();
-  }
-  if (ntr > omp_get_max_threads()) {
-    ntr = omp_get_max_threads();
-  }
-  if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
+   int ntr = nthreads;
+   if (ntr == 0) {
+     ntr = omp_get_max_threads();
+   }
+   if (ntr > omp_get_max_threads()) {
+     ntr = omp_get_max_threads();
+   }
+   if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
    
    // Initialisation du résultat.
    // Lancement du bootstrap.
-   Progress p(Nboot * Ns, verbose);
-
-#pragma omp declare reduction(vsum : std::vector<double> :               \
-   std::transform(omp_out.begin(), omp_out.end(),                        \
-                  omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-     initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
-#pragma omp parallel for num_threads(ntr) reduction (vsum : liaisons)
-
-     for (int iboot = 0; iboot < Nboot; ++iboot) {
-       
-       std::vector<int> theshuf(ishuf.begin() + iboot * Ns, ishuf.begin() + (iboot + 1L) * Ns);
-       
-       // Initialisation de l'emploi disponible.
-       std::vector<double> emploisdisp(ts_emplois); // deep copy.
-       
-       for (std::size_t i: theshuf) {
-         
-         // Increment progress_bar.
-         p.increment();
-         
-         std::size_t debut = ts_p_dist[i], fin = ts_p_dist[i +1L];
-         std::size_t k_valid = fin - debut;
-         
-         // Cas particulier où il n'y a aucune destination valide.
-         // ATTENTION je crois que les sites sans places libres peuvent ne pas être éliminées pour la proc répartir.
-         //if (k_valid == 0) continue;
-         
-         std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
-         for (std::size_t k = 0; k < k_valid; ++k) {
-           placeslibres[k] = emploisdisp[ ts_jr_dist[debut + k] ]; 
-         }
-         
-         if (mode == "subjectif_d") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             attractivites[k] = ts_emplois[ ts_jr_dist[debut + k] ] * odsub[k]; 
-           }
-         } else if (mode== "subjectif_c") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             attractivites[k] = placeslibres[k] * odsub[k]; 
-           }
-         } else if (mode == "discret") {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             attractivites[k] = ts_emplois[ ts_jr_dist[debut + k] ]; 
-           }
-         } else {
-           for (std::size_t k = 0; k < k_valid; ++k) {
-             attractivites[k] = placeslibres[k]; // Cas continu de l'emploi homogène. attractivité liée à la proportion d'emplois disp.
-           }
-         }
-         
-         // Nombre d'actifs partant par freq_actif paquets.
-         double actifspartant = ts_actifs[i] / freq_actifs[i];
-         std::vector<double> odds(ts_xr_odds.begin() + debut, ts_xr_odds.begin() + fin);
-         repartition = repartir_actifs(placeslibres, attractivites, odds, ts_fuite[i], actifspartant, SEUIL_NEWTON);
-         
-         // Inscription des résultats locaux dans la perspective globale.
-         for(std::size_t k = 0; k < k_valid ; ++k) {
-           emploisdisp[ ts_jr_dist[debut + k] ] -= repartition[k];
-           liaisons[ i * K + ts_jr_dist[debut + k] ] += repartition[k];
-         }
-       }
-     }
-     
-     // Passage d'un array à NumericMatrix, divisées par le nombre de tirage Nboot.
-     NumericMatrix resultat(N, K);
-     for (std::size_t i = 0; i < N; ++i) {
-       for (std::size_t j = 0; j < K; ++j) {
-          resultat(i,j) = liaisons[i * K + j] / Nboot ;
-       }                   
-     }
+   Progress p(Nboot*Ns, verbose);
    
-   return resultat;
+   std::size_t NNboot = floor( Nboot / ntr );
+   if(NNboot == 0) NNboot = 1;
+   // Un vecteur représentant la matrice des flux groupés.
+   std::vector< std::vector<float> > liaisons(ntr, std::vector<float> (Nx));
+   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+     std::fill( liaisons[Iboot].begin(), liaisons[Iboot].end(), 0 );
+   }
+   
+#pragma omp parallel num_threads(ntr) 
+{
+#pragma omp for schedule(static)
+  for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
+    size_t max_i = (Iboot+1)*NNboot;
+    if(Iboot==ntr-1) max_i = Nboot;
+    size_t min_i = Iboot*NNboot;
+    if(min_i<max_i) {
+      for (size_t iboot = min_i; iboot < max_i; ++iboot) {
+        // Initialisation de l'ordre de départ des actifs et de l'emploi
+        // disponible au début.
+        
+        // Initialisation de l'emploi disponible.
+        std::vector<double> emploisdisp(ts_emplois); // deep copy.
+        
+        for (auto i: ishuf[iboot]) {
+          
+          // Increment progress_bar.
+          p.increment();
+          
+          auto debut = ts_p_dist[i], fin = ts_p_dist[i +1L];
+          auto k_valid = fin - debut;
+          
+          // Cas particulier où il n'y a aucune destination valide.
+          // ATTENTION je crois que les sites sans places libres peuvent ne pas être éliminées pour la proc répartir.
+          //if (k_valid == 0) continue;
+          
+          std::vector<double> placeslibres (k_valid), attractivites(k_valid), repartition(k_valid);
+          for (auto k = 0; k < k_valid; ++k) {
+            placeslibres[k] = emploisdisp[ ts_jr_dist[debut + k] ]; 
+          }
+          
+          if (mode == "subjectif_d") {
+            for (auto k = 0; k < k_valid; ++k) {
+              attractivites[k] = ts_emplois[ ts_jr_dist[debut + k] ] * odsub[k]; 
+            }
+          } else if (mode== "subjectif_c") {
+            for (auto k = 0; k < k_valid; ++k) {
+              attractivites[k] = placeslibres[k] * odsub[k]; 
+            }
+          } else if (mode == "discret") {
+            for (auto k = 0; k < k_valid; ++k) {
+              attractivites[k] = ts_emplois[ ts_jr_dist[debut + k] ]; 
+            }
+          } else {
+            for (auto k = 0; k < k_valid; ++k) {
+              attractivites[k] = placeslibres[k]; // Cas continu de l'emploi homogène. attractivité liée à la proportion d'emplois disp.
+            }
+          }
+          
+          // Nombre d'actifs partant par freq_actif paquets.
+          double actifspartant = ts_actifs[i] / freq_actifs[i];
+          std::vector<double> odds(ts_xr_odds.begin() + debut, ts_xr_odds.begin() + fin);
+          repartition = repartir_actifs(placeslibres, attractivites, odds, ts_fuite[i], actifspartant, SEUIL_NEWTON);
+          
+          // Inscription des résultats locaux dans la perspective globale.
+          for(auto k = 0; k < k_valid ; ++k) {
+            emploisdisp[ ts_jr_dist[debut + k] ] -= repartition[k];
+            liaisons[Iboot][ debut + k ] += repartition[k];
+          } // k_valid
+        } // ishuf
+      } // iboot
+    } // max
+  } // omp
+} // omp nthreads
+
+NumericVector resultat(Nx);
+resultat.fill(0.0);
+
+for (auto i = 0; i < Nx; ++i) {
+  for(auto Iboot = 0; Iboot < ntr; ++Iboot) {
+    resultat(i) += liaisons[Iboot][i] / Nboot;
+  }
+}
+
+return List::create(_("flux") = resultat);
  }

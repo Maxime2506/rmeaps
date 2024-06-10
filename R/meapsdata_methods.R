@@ -17,24 +17,24 @@
 multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0, odds = 1, nshuf = 16,
                              nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
-
+  
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
   if (attraction == "odds") {
     if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
-
+  
   froms <- MeapsData@froms
   tos <- MeapsData@tos
-
+  
   if (is.null(MeapsData@shuf)) {
     if (nshuf <= 0) cli::cli_abort("pas de shufs et pas d'envie de shuf")
     shuf <- emiette(MeapsData@actifs, nshuf = nshuf)
   } else {
     shuf <- MeapsData@shuf
   }
-
+  
   res <- multishuf_origin_cpp(
     jr_dist = MeapsData@jr_dist,
     p_dist = MeapsData@p_dist,
@@ -46,25 +46,19 @@ multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0,
     attraction = attraction,
     parametres = parametres,
     xr_odds = odds,
-    nthreads = nthreads, verbose = verbose
-  )
-
-  colnames(res) <- MeapsData@tos
-
-  res |>
+    nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
-    dplyr::mutate(fromidINS = MeapsData@froms) |>
-    tidyr::pivot_longer(cols = -fromidINS, names_to = "toidINS", values_to = "flux") |>
-    dplyr::filter(flux > 0) |>
-    arrange(desc(flux))
+    dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
+    dplyr::relocate(fromidINS, toidINS, flux) |> 
+    dplyr::filter(flux > 0)
 }
 
 #' Multishuf, réécrit en version continue avec une clause omp task depend.
 multishuf_task <- function(MeapsData, attraction = "constant", parametres = 0, nshuf = 16, seuil = 40, nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
-
+  
   check_fct_attraction(attraction, parametres)
-
+  
   multishuf_task_cpp(
     jr_dist = MeapsData@jr_dist,
     p_dist = MeapsData@p_dist,
@@ -75,13 +69,12 @@ multishuf_task <- function(MeapsData, attraction = "constant", parametres = 0, n
     parametres = parametres,
     shuf = MeapsData@shuf,
     attraction = attraction,
-    nthreads = nthreads, verbose = verbose
-  ) |>
-    as.data.frame() |>
+    nthreads = nthreads, verbose = verbose) |>
+    tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-    dplyr::relocate(fromidINS, toidINS, flux)
+    dplyr::relocate(fromidINS, toidINS, flux) |> 
+    dplyr::filter(flux > 0) 
 }
-
 
 #' Multishuf, la version continue
 #' algorithme original meaps, 2eme version, avec des odds continus,
@@ -101,24 +94,24 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
                          parametres = 0, odds = 1, nshuf = 16,
                          nthreads = 0L, verbose = TRUE, gbperthreads = 4) {
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
-
+  
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
   if (attraction == "odds") {
     if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
-
+  
   froms <- MeapsData@froms
   tos <- MeapsData@tos
-
+  
   if (is.null(MeapsData@shuf)) {
     if (nshuf <= 0) cli::cli_abort("pas de shufs et pas d'envie de shuf")
     shuf <- emiette(MeapsData@actifs, nshuf = nshuf)
   } else {
     shuf <- MeapsData@shuf
   }
-
+  
   # check mem
   size <- length(MeapsData@triplet$metric) / 1024^3
   large <- 4 * size > gbperthreads / 4
@@ -133,7 +126,7 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
       cli::cli_warn("le nombre de threads est réduit à {ntr}")
     }
   }
-
+  
   res <- multishuf_oc_cpp(
     jr_dist = MeapsData@jr_dist,
     p_dist = MeapsData@p_dist,
@@ -147,15 +140,14 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
     attraction = attraction,
     nthreads = ntr, verbose = verbose
   )
-
+  
   res <- list(
     flux = tibble::tibble(
       fromidINS = MeapsData@froms[res$i + 1L],
       toidINS = MeapsData@tos[res$j + 1L],
-      flux = res$flux
-    ) |>
-      filter(flux > 0) |>
-      arrange(desc(flux))
+      flux = res$flux) |>
+      dplyr::filter(flux > 0) |>
+      dplyr::arrange(dplyr::desc(flux))
   )
   if (large) gc()
   return(res)
@@ -171,9 +163,9 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
 #' @import dplyr
 all_in <- function(MeapsData, attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
-
+  
   check_fct_attraction(attraction, parametres)
-
+  
   meaps_all_in_cpp(
     jr_dist = MeapsData@jr_dist,
     p_dist = MeapsData@p_dist,
@@ -184,10 +176,9 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, nthreads 
     parametres = parametres,
     attraction = attraction,
     nthreads = nthreads,
-    verbose = verbose
-  ) |>
-    as.data.frame() |>
-    dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
+    verbose = verbose) |>
+    tibble::as_tibble() |>
+    dplyr::bind_cols(MeapsData@triplet |> dplyr::select(-metric)) |>
     dplyr::relocate(fromidINS, toidINS, flux)
 }
 
@@ -197,14 +188,14 @@ meaps <- function(
     nshuf = NULL, odds = NULL, seuil = NULL, gbperthreads = NULL) {
   
   if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
-
+  
   # RQ : le check des odds est sommaire. Ordre non vérifié.
   if (attraction == "odds") {
     if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
-
+  
   arg <- list(
     jr_dist = MeapsData@jr_dist,
     p_dist = MeapsData@p_dist,
@@ -220,34 +211,34 @@ meaps <- function(
   if (!is.null(odds)) arg <- append(arg, list(odds = odds))
   if (!is.null(nshuf)) arg <- append(arg, list(nshuf = nshuf))
   if (!is.null(gbperthreads)) arg <- append(arg, list(gbperthreads = gbperthreads))
-
+  
   meaps_fun <- switch(version,
-    "all_in" = all_in_grouped,
-    "multishuf_oc" = multishuf_oc_grouped,
-    "multishuf_task" = multishuf_task,
-    "multishuf_origin" = multishuf_origin
+                      "all_in" = all_in_grouped,
+                      "multishuf_oc" = multishuf_oc_grouped,
+                      "multishuf_task" = multishuf_task,
+                      "multishuf_origin" = multishuf_origin
   )
-
+  
   do.call(meaps_fun, arg)
 }
 
 ## METHODES POUR LES GROUPES
 meaps_grouped <- function(MeapsDataGroup, version = "all_in", attraction = "constant",
-                            parametres = 0, odds = NULL,
-                            nthreads = 0L, verbose = TRUE) {
+                          parametres = 0, odds = NULL,
+                          nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   if (attraction == "odds") {
     if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
-
+  
   if (!is.null(MeapsDataGroup@cible)) {
     cible <- MeapsDataGroup@cible |> pull(value)
   } else {
     cible <- NULL
   }
-
+  
   arg <- list(
     jr_dist = MeapsDataGroup@jr_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -267,24 +258,24 @@ meaps_grouped <- function(MeapsDataGroup, version = "all_in", attraction = "cons
   if (!is.null(gbperthreads)) arg <- append(arg, list(gbperthreads = gbperthreads))
   
   meaps_fun <- switch(version,
-    "all_in" = all_in_grouped,
-    "multishuf_oc" = multishuf_oc_grouped,
-    "multishuf_task" = multishuf_task
+                      "all_in" = all_in_grouped,
+                      "multishuf_oc" = multishuf_oc_grouped,
+                      "multishuf_task" = multishuf_task
   )
-
+  
   res <- do.call(meaps_fun, arg)
-
+  
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-
+  
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
     flux = res$flux,
     cible = cible
   ) |>
-    arrange(desc(flux))
-
+    dplyr::arrange(dplyr::desc(flux))
+  
   if (is.null(cible)) {
     return(list(flux = flux))
   } else {
@@ -313,13 +304,18 @@ multishuf_oc_grouped <- function(
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-
+  
   if (attraction == "odds") {
     if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
-
+  
+  cible <- MeapsDataGroup@cible |> 
+    tidyr::complete(group_from, group_to, fill = list(value = 0)) |> 
+    dplyr::arrange(group_from, group_to) |> 
+    dplyr::pull(value)
+  
   res <- multishuf_oc_group_cpp(
     jr_dist = MeapsDataGroup@jr_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -330,36 +326,33 @@ multishuf_oc_grouped <- function(
     actifs = MeapsDataGroup@actifs,
     fuites = MeapsDataGroup@fuites,
     shuf = MeapsDataGroup@shuf,
-    cible = MeapsDataGroup@cible,
+    cible = cible,
     parametres = parametres,
     xr_odds = odds,
     attraction = attraction,
     nthreads = nthreads, verbose = verbose
   )
-
+  
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-
+  
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
-    flux = res$flux
-  ) |>
-    filter(flux > 0)
+    flux = res$flux) |>
+    dplyr::filter(flux > 0)
   if (!is.null(MeapsDataGroup@cible)) {
     flux <- flux |>
-      left_join(MeapsDataGroup@cible |> rename(cible = value),
-        by = c("group_from", "group_to")
-      ) |>
-      mutate(
-        flux = replace_na(flux, 0),
-        cible = replace_na(cible, 0)
-      ) |>
-      filter(flux > 0 | cible > 0)
+      dplyr::left_join(MeapsDataGroup@cible |> dplyr::rename(cible = value),
+                       by = c("group_from", "group_to")) |>
+      dplyr::mutate(
+        flux = tidyr::replace_na(flux, 0),
+        cible = tidyr::replace_na(cible, 0)) |>
+      dplyr::filter(flux > 0 | cible > 0)
   }
-
-  flux <- flux |> arrange(desc(flux))
-
+  
+  flux <- flux |> dplyr::arrange(dplyr::desc(flux))
+  
   return(list(flux = flux, kl = res$kl))
 }
 
@@ -371,13 +364,13 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
                            nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   check_fct_attraction(attraction, parametres)
-
+  
   if (!is.null(MeapsDataGroup@cible)) {
-    cible <- MeapsDataGroup@cible |> pull(value)
+    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
   } else {
     cible <- NULL
   }
-
+  
   res <- meaps_all_in_cpp(
     jr_dist = MeapsDataGroup@jr_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -392,18 +385,17 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
     attraction = attraction,
     nthreads = nthreads, verbose = verbose
   )
-
+  
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-
+  
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
     flux = res$flux,
-    cible = cible
-  ) |>
-    arrange(desc(flux))
-
+    cible = cible) |>
+    dplyr::arrange(dplyr::desc(flux))
+  
   if (is.null(cible)) {
     return(list(flux = flux))
   } else {
@@ -416,17 +408,17 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
 #' Si MeapsDataGroup a défini une cible, renvoie également l'entropie relative (kl).
 #' @import dplyr
 multishuf_task_grouped <- function(MeapsDataGroup, attraction = "constant",
-                           parametres = 0, odds = 1,
-                           nthreads = 0L, verbose = TRUE) {
+                                   parametres = 0, odds = 1,
+                                   nthreads = 0L, verbose = TRUE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   check_fct_attraction(attraction, parametres)
-
+  
   if (!is.null(MeapsDataGroup@cible)) {
-    cible <- MeapsDataGroup@cible |> pull(value)
+    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
   } else {
     cible <- NULL
   }
-
+  
   res <- multishuf_task_cpp(
     jr_dist = MeapsDataGroup@jr_dist,
     p_dist = MeapsDataGroup@p_dist,
@@ -441,18 +433,18 @@ multishuf_task_grouped <- function(MeapsDataGroup, attraction = "constant",
     attraction = attraction,
     nthreads = nthreads, verbose = verbose
   )
-
+  
   g_froms <- unique(MeapsDataGroup@group_from) |> sort()
   g_tos <- unique(MeapsDataGroup@group_to) |> sort()
-
+  
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
     flux = res$flux,
     cible = cible
   ) |>
-    arrange(desc(flux))
-
+    dplyr::arrange(dplyr::desc(flux))
+  
   if (is.null(cible)) {
     return(list(flux = flux))
   } else {
@@ -467,78 +459,77 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         version = "all_in",
                         method = "L-BFGS-B", objective = "KL",
                         lower = NULL, upper = NULL, control = NULL,
+                        discret = NULL,
                         nthreads = 0L, progress = TRUE,
                         quiet = TRUE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
   check_fct_attraction(attraction, parametres)
-
+  
   if (!is.null(MeapsDataGroup@cible)) {
-    cible <- MeapsDataGroup@cible |> pull(value)
+    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
   } else {
     cible <- NULL
   }
-
+  
   arg <- list(
     MeapsDataGroup,
     attraction = attraction,
     nthreads = nthreads, verbose = FALSE
   )
   if (!is.null(odds)) arg <- append(arg, list(odds = odds))
-
+  
+  if(!version %in%c("all_in", "multishuf_oc", "multishuf_task"))
+    cli::cli_abort("moteur MEAPS inconnu")
+  
   meaps_fun_ <- switch(version,
-    "all_in" = all_in_grouped,
-    "multishuf_oc" = multishuf_oc_grouped,
-    "multishuf_task" = multishuf_task_grouped
+                       "all_in" = all_in_grouped,
+                       "multishuf_oc" = multishuf_oc_grouped,
+                       "multishuf_task" = multishuf_task_grouped
   )
+  
   env <- environment()
-
+  
   fn <- switch(objective,
-    "KL" = function(par) {
-      estim <- do.call(
-        meaps_fun_,
-        args = append(arg, list(parametres = par))
-      )
-      kl <- estim$kl
-      mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
-      if (progress) {
-        cli::cli_progress_update(.envir = env)
-      }
-      if (!quiet) cli::cli_progress_output(mes, .envir = env)
-      return(kl)
-    }
+               "KL" = function(par) {
+                 estim <- do.call(
+                   meaps_fun_,
+                   args = append(arg, list(parametres = par))
+                 )
+                 kl <- estim$kl
+                 mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+                 if (progress) {
+                   cli::cli_progress_update(.envir = env)
+                 }
+                 if (!quiet) cli::cli_progress_output(mes, .envir = env)
+                 return(kl)
+               }
   )
-
+  
   if (is.null(fn)) {
     cli::cli_abort("Erreur : la fonction objective est non définie")
   }
-
-  if (attraction == "marche") {
+  
+  if (!is.null(discret)) {
     nb_par <- length(parametres) - 1
-
+    
     if (is.null(lower)) lower <- rep(0, nb_par)
     if (is.null(upper)) upper <- rep(Inf, nb_par)
-    d_min <- lower[[1]]
-    d_max <- upper[[1]]
-    if (d_min == 0) d_min <- 5
-    if (d_max > 100) d_max <- 15
-    cli::cli_progress_bar(.envir = env, clear = FALSE)
-    bf <- map_dfr(d_min:d_max, \(d) {
+    bf <- purrr::map_dfr(discret, \(d) {
       opt <- stats::optim(
-        par = parametres[[2]],
+        par = tail(parametres, -1),
         fn = \(x) fn(c(d, x)),
-        method = "Brent", lower = lower[[2]], upper = upper[[2]]
-      )
-      tibble(
+        method = "Brent", 
+        lower = tail(lower, -1), upper = tail(upper, -1))
+      tibble::tibble(
         d = d, x = opt$par, kl = opt$value,
-        convergence = opt$convergence, mes = opt$message
-      )
-    })
-    cli::cli_progress_done(.envir = env)
+        convergence = opt$convergence, mes = opt$message)
+    }, .progress= TRUE)
+    
     best <- bf |>
-      filter(kl == min(kl)) |>
-      slice(1)
+      dplyr::filter(kl == min(kl)) |>
+      dplyr::slice(1)
     res <- list(
       par = c(best$d, best$x),
       value = best$kl,
@@ -549,19 +540,19 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
     )
     return(res)
   }
-
+  
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) upper <- rep(Inf, nb_par)
-
+  
   cli::cli_progress_bar(.envir = env, clear = FALSE)
-
+  
   res <- stats::optim(
     par = parametres,
     fn = fn,
     method = method, lower = lower, upper = upper, control = control
   )
   cli::cli_progress_done(.envir = env)
-
+  
   return(res)
 }

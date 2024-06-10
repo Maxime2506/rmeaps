@@ -330,19 +330,20 @@ inline std::vector<double> _repartir_continu(
 } // omp
 
 NumericVector out(Nref*Kref);
-IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
+// IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
 for (std::size_t i = 0; i < Nref; ++i) {
   for (std::size_t j = 0; j < Kref; ++j) {
     for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
       out(i*Kref + j) += liaisons[Iboot][i * Kref + j ] / Nboot;
     }
-    res_i(i*Kref + j) = i;
-    res_j(i*Kref + j) = j;
+//    res_i(i*Kref + j) = i;
+//    res_j(i*Kref + j) = j;
   }
 }
 
 if (cible.isNull()) {
-  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
+//  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
+  return List::create(_("flux") = out);
 } 
 
 std::vector<double> p_cible = as< std::vector<double> >(cible);
@@ -369,7 +370,7 @@ for (auto k = 0; k < Nref * Kref; ++k) {
 }
 
 return List::create(_("i") = res_i , _("j") = res_j,
-                    _("flux") = out, _("kl") = wrap(kl));
+                    _("flux") = out, _("kl") = kl);
  }
 
 // Métrique pour comparer les flux agrégés estimés et des flux cibles.
@@ -571,7 +572,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
           repartition = _repartir_continu(actifspartant, fcpp[from], facteur_attraction, dist, emplois_libres);
           
           for (std::size_t k = 0; k < k_valid; ++k) {
-            emp[ jr_dist[debut + k] ] -= repartition[k];
+            emp[ _jr_dist[debut + k] ] -= repartition[k];
             liaisons[Iboot][ debut + k ] += repartition[k];
           }
         } // if min_i<max_i
@@ -580,24 +581,24 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
   } // Iboot
 } // omp parallel
 
-std::vector<float> resultat(Nx, 0);
+NumericVector resultat(Nx);
 
-#pragma omp parallel for
 for (std::size_t i = 0; i < Nx; ++i) {
   for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
     resultat[i] += liaisons[Iboot][i] / Nboot;
   }
 }
 
-IntegerVector res_i(Nx);
-std::size_t ii = 0;
-for (std::size_t i = 0; i < N; ++i) {
-  for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
-    res_i[ii] = i;
-    ii++;
-  }
-}
-return List::create(_("i") = res_i,
-                    _("j") = jr_dist,
-                    _("flux") = wrap(resultat));
+// IntegerVector res_i(Nx);
+// std::size_t ii = 0;
+// for (std::size_t i = 0; i < N; ++i) {
+//   for (std::size_t k = p_dist[i]; k < p_dist[i + 1L]; ++k) {
+//     res_i[ii] = i;
+//     ii++;
+//   }
+// }
+return List::create(_("flux") = resultat);
+// return List::create(_("i") = res_i,
+//                     _("j") = jr_dist,
+//                     _("flux") = resultat);
  }
