@@ -137,4 +137,28 @@ test_that("Meaps multishuf oc cas simple", {
   expect_equal(estim_multi_oc16, estim_multi_task16, tolerance = 1e-3)}
 )
 
+# avec attraction
+att <- c(1,1, .1, .1)
 
+# Cas all_in
+list_distrib_a <- map(1:2, \(x) .f_distrib(x, attract = att))
+retours <- .retourner(list_distrib_a, emplois)
+
+list2_a <- map(1:2, \(x) .f_distrib(x, emp = retours$libres, act = retours$retours, attract = att))
+retours2 <- .retourner(list2_a, retours$libres)
+
+att_allin <- retours$distrib + retours2$distrib
+att_allin <- Matrix::mat2triplet(att_allin) |> as_tibble()
+att_allin <- att_allin |>
+  left_join(tibble(fromidINS = names(actifs), i = seq_along(actifs)), by = "i") |>
+  left_join(tibble(toidINS = names(emplois), j = seq_along(emplois)), by = "j") |>
+  select(-c(i,j)) 
+
+att_allin <- triplet |> 
+  relocate(fromidINS, toidINS) |> 
+  inner_join(att_allin, by = c("fromidINS", "toidINS")) |>
+  select(-metric) |> rename(flux = x)
+
+attr(att_allin, 'out.attrs') <- NULL
+
+estim_attallin <- all_in(md, attraction = "marche", parametres = c(2.5, .1))

@@ -67,11 +67,12 @@ std::vector<int> Urban::Residents::map_col_dispo(const std::vector<double>& empl
 std::vector<double> Urban::Residents::attractivite(const std::vector<double>& emplois_libres, std::shared_ptr<fonction_attraction>& fct) {
   std::vector<int> col_dispo;
   col_dispo = map_col_dispo(emplois_libres);
+  int debut = urb.p[from];
   int n_sites = col_dispo.size();
   std::vector<double> attract(n_sites);
   for (auto k = 0; k < n_sites; ++k) {
     auto index = col_dispo[k];
-    attract[k] = emplois_libres[index] * (*fct)(urb.xr[index]);  // revoir def de la fonction
+    attract[k] = emplois_libres[index] * (*fct)(urb.xr[debut + k]);  // revoir def de la fonction
   }
   return attract;
 }
@@ -82,10 +83,11 @@ std::vector<double> Urban::Residents::attractivite(const std::vector<double>& em
                                                    const std::vector<int>& col_dispo,
                                                    std::shared_ptr<fonction_attraction>& fct) {
   int n_sites = col_dispo.size();
+  int debut = urb.p[from];
   std::vector<double> attract(n_sites);
   for (auto k = 0; k < n_sites; ++k) {
     auto index = col_dispo[k];
-    attract[k] = emplois_libres[index] * (*fct)(urb.xr[index]);  // revoir def de la fonction
+    attract[k] = emplois_libres[index] * (*fct)(urb.xr[debut + k]);  // revoir def de la fonction
   }
   return attract;
 }
