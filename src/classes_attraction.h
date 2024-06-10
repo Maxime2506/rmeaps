@@ -20,7 +20,7 @@ class marche : public fonction_attraction {
  public:
   std::vector<double> parametres;
   marche(std::vector<double> param) : parametres(param){};
-  virtual double operator()(double x) override { return (x < parametres[0] ? 1 : parametres[1]); };
+  virtual double operator()(double x) override { return (x < parametres[0] ? parametres[1] : 1); };
 };
 
 // 1 avant rayon (p0), plancher (p1) après (pente sur une longueur de 1 entre les deux).

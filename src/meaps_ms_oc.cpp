@@ -9,8 +9,9 @@
 #include <progress.hpp>
 #include <progress_bar.hpp>
 // #include "repartir_continu.h"
+#include "classes_attraction.h"
 
-#include "fcts_penal.h"
+// #include "fcts_penal.h"
 using namespace Rcpp;
 
 inline std::vector<double> _one_distrib_continu(
@@ -174,7 +175,11 @@ inline std::vector<double> _repartir_continu(
    
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
    const double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
-   
+   // Instantation de la fonction d'attraction.
+  const std::vector<double> param = as<std::vector<double> >(parametres);
+  mode_attraction type_att;
+  auto fct_attraction = type_att.create(param, attraction);
+
    auto Nref = *std::max_element(group_from.begin(), group_from.end());
    Nref = Nref + 1L;
    auto Kref = *std::max_element(group_to.begin(), group_to.end());
@@ -210,8 +215,6 @@ inline std::vector<double> _repartir_continu(
    std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
    std::vector<double> fcpp = as<std::vector<double>>(fuites);
    std::vector<double> actifscpp = as<std::vector<double>>(actifs);
-   
-   std::vector<double> param = as< std::vector<double> >(parametres);
    
    std::vector<int> _row_group = as< std::vector<int> >(group_from);
    std::vector<int> _col_group = as< std::vector<int> >(group_to);
@@ -264,35 +267,8 @@ inline std::vector<double> _repartir_continu(
         emplois_libres(k_valid),
         repartition(k_valid, 0);
         
-        if (attraction == "marche") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
-          }}
-        
-        if (attraction == "marche_liss") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
-          }}
-        
-        if (attraction == "double_marche_liss") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = double_marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
-          }}
-        
-        if (attraction == "decay") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
-          }}
-        
-        if (attraction == "logistique") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
-          }}
-        
-        if (attraction == "odds") {
-          for (std::size_t k = 0; k < k_valid; ++k) {
-            facteur_attraction[k] = exp( xr_odds[debut + k] );
-          } 
+        for (std::size_t k = 0; k < k_valid; ++k) {
+          facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
         }
         
         for (std::size_t k = 0; k < k_valid; ++k) {
@@ -330,20 +306,19 @@ inline std::vector<double> _repartir_continu(
 } // omp
 
 NumericVector out(Nref*Kref);
-// IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
+IntegerVector res_i(Nref*Kref), res_j(Nref*Kref);
 for (std::size_t i = 0; i < Nref; ++i) {
   for (std::size_t j = 0; j < Kref; ++j) {
     for(size_t Iboot = 0; Iboot < ntr; ++Iboot) {
       out(i*Kref + j) += liaisons[Iboot][i * Kref + j ] / Nboot;
     }
-//    res_i(i*Kref + j) = i;
-//    res_j(i*Kref + j) = j;
+    res_i(i*Kref + j) = i;
+    res_j(i*Kref + j) = j;
   }
 }
 
 if (cible.isNull()) {
-//  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
-  return List::create(_("flux") = out);
+  return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out);
 } 
 
 std::vector<double> p_cible = as< std::vector<double> >(cible);
@@ -369,8 +344,7 @@ for (auto k = 0; k < Nref * Kref; ++k) {
   kl += kl_term;
 }
 
-return List::create(_("i") = res_i , _("j") = res_j,
-                    _("flux") = out, _("kl") = kl);
+return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out, _("kl") = kl);
  }
 
 // Métrique pour comparer les flux agrégés estimés et des flux cibles.
@@ -441,7 +415,11 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    
    const std::size_t N = actifs.size(), Nx  = xr_dist.size(),
      Nboot = shuf.nrow(), Ns = shuf.ncol();
-   
+    // Instantation de la fonction d'attraction.
+  const std::vector<double> param = as<std::vector<double> >(parametres);
+  mode_attraction type_att;
+  auto fct_attraction = type_att.create(param, attraction);
+
    int ntr = 1;
 #ifdef _OPENMP
    ntr = nthreads;
@@ -473,9 +451,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
    std::vector<double> fcpp = as<std::vector<double>>(fuites);
    std::vector<double> actifscpp = as<std::vector<double>>(actifs);
-   
-   std::vector<double> param = as< std::vector<double> >(parametres);
-   
+      
    const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
@@ -531,35 +507,8 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
           emplois_libres(k_valid),
           repartition(k_valid, 0);
           
-          if (attraction == "marche") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k]  = marche(_xr_dist[debut + k], param[0], param[1]);
-            }}
-          
-          if (attraction == "marche_liss") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k]  = marche_liss(_xr_dist[debut + k], param[0], param[1]);
-            }}
-          
-          if (attraction == "double_marche_liss") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k]  = double_marche_liss(_xr_dist[debut + k], param[0], param[1], param[2], param[3]);
-            }}
-          
-          if (attraction == "decay") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k]  = decay(_xr_dist[debut + k], param[0], param[1]);
-            }}
-          
-          if (attraction == "logistique") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k] = logistique(_xr_dist[debut + k], param[0], param[1], param[2]);
-            }}
-          
-          if (attraction == "odds") {
-            for (std::size_t k = 0; k < k_valid; ++k) {
-              facteur_attraction[k] = exp( _xr_odds[debut + k] );
-            } 
+          for (std::size_t k = 0; k < k_valid; ++k) {
+          facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
           }
           
           for (std::size_t k = 0; k < k_valid; ++k) {
