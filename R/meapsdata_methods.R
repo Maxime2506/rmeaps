@@ -414,7 +414,10 @@ multishuf_task_grouped <- function(MeapsDataGroup, attraction = "constant",
   check_fct_attraction(attraction, parametres)
   
   if (!is.null(MeapsDataGroup@cible)) {
-    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
+    cible <- MeapsDataGroup@cible |> 
+      tidyr::complete(group_from, group_to, fill = list(value = 0)) |> 
+      dplyr::arrange(group_from, group_to) |> 
+      dplyr::pull(value)
   } else {
     cible <- NULL
   }
@@ -548,7 +551,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
   if (is.null(upper)) upper <- rep(Inf, nb_par)
   
   cli::cli_progress_bar(
-    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} (round(cli::pb_elapsed/cli::pb_current) s/iter) ; {cli::pb_extra$mes}", 
+    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} {(round(cli::pb_elapsed/cli::pb_current)} s/iter) ; {cli::pb_extra$mes}", 
     extra = list(mes=""),
     .envir = env, clear = FALSE)
   

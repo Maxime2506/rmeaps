@@ -69,7 +69,7 @@ List meapsclass(const IntegerVector jr_dist,
    Urban urb(jr_dist, p_dist, xr_dist, actifs, emplois, fuites);
    
    // Initialisation de la matrice origines-destination.
-   std::vector< std::vector<float> > liaisons(N, std::vector<float> (K));
+   std::vector< std::vector<float> > liaisons(N, std::vector<double> (K));
 
    double tot_actifs_libres = std::accumulate(urb.actifs_libres.begin(), urb.actifs_libres.end(), 0.0);
    double tot_actifs = tot_actifs_libres, old_tot;
@@ -122,7 +122,7 @@ for (auto from = 0; from < N; ++from) {
   attirances = repartition_directe(res, attirances);
   
   for (auto k = 0; k < n_sites; ++k) {
-    liaisons[from][ res.col_dispo[k] ] += static_cast<float>(attirances[k]);
+    liaisons[from][ res.col_dispo[k] ] += static_cast<double>(attirances[k]);
     emplois_pris[ res.col_dispo[k] ] += attirances[k];
   }
 } // fin des boucles sur les from
@@ -202,7 +202,7 @@ timer.toc("loop_" + std::to_string(nloop));
 if (group_from.isNull() || group_to.isNull()) {
   
   // Format de sortie
-  std::vector<float> res_xr(Ndata);
+  std::vector<double> res_xr(Ndata);
   std::vector<int> res_i(Ndata);
   
   // sortie au format xr_dist.
@@ -226,9 +226,9 @@ if (group_from.isNull() || group_to.isNull()) {
   int Lref = Nref * Kref;
   
   NumericVector res_i(Lref), res_j(Lref);
-  std::vector<float> flux(Lref);
+  std::vector<double> flux(Lref);
   
-  #pragma omp declare reduction(vsumf : std::vector<float> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
+  #pragma omp declare reduction(vsumf : std::vector<double> : std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), \
   std::plus<float>())) initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 #pragma omp parallel for reduction(vsumf: flux) collapse(2)
 for (auto i = 0; i < N; ++i) {

@@ -113,7 +113,7 @@ List meapsmode_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, cons
 
         //
         for (auto k = 0; k < n_sites; ++k) {
-          liaisons[from][col_dispo[k]] += attirances[k];
+          liaisons[from][col_dispo[k]] += static_cast<double>(attirances[k]);
         }
       }  // fin des boucles sur les from
 

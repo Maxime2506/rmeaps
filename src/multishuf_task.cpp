@@ -110,7 +110,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
 //#pragma omp task depend(inout : *ptr_liaisons[from]) 
           for (auto k = 0; k < n_sites; ++k) {
             #pragma omp atomic
-            liaisons[from][col_dispo[k]] += repartition[k] / Nboot;  
+            liaisons[from][col_dispo[k]] += static_cast<double>(repartition[k]) / Nboot;  
           }      
       }
     }
