@@ -143,8 +143,8 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   
   res <- list(
     flux = tibble::tibble(
-      fromidINS = MeapsData@froms[res$i + 1L],
-      toidINS = MeapsData@tos[res$j + 1L],
+      fromidINS = MeapsData@triplet$fromidINS,
+      toidINS = MeapsData@triplet$toidINS,
       flux = res$flux) |>
       dplyr::filter(flux > 0) |>
       dplyr::arrange(dplyr::desc(flux))

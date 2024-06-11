@@ -16,32 +16,32 @@
 
 using namespace Rcpp;
 
-//' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
+ //' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des odds)
  //' doit être définie sous forme des inner et outer index d'une matrice sparse en ligne. Ceci revient à classer un data.frame
  //' avec les colonnes i, j et dist, d'abord par i, puis dist (=xr), puis j (=jr). 
  //' @param jr_dist Le vecteur des indices des colonnes non vides.
-//' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
+ //' @param p_dist Le vecteur du nombres de valeurs non nulles sur chacune des lignes.
  //' @param xr_dist Le vecteur des valeurs dans l'ordre de jr_dist.
  //' @param emplois Le vecteur des emplois disponibles sur chacun des sites j (= marge des colonnes). 
-//' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
+ //' @param actifs Le vecteur des actifs partant de chacune des lignes visées par shuf. Le vecteur doit faire la même longueur que shuf.
  //' @param fuite Le vecteur de la probabilité de fuite des actifs hors de la zone d'étude. 
  //' @param parametres Un vecteur avec les paramètres nécessaires selon la fonction d'attraction retenue;
  //' @param attraction Choix de la fonction d'attraction des différents sites, appliquée à l'accessibilité. 
-//' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
-//' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2 si x > p1.
+ //' Par défaut, "constant" où aucun site n'a plus d'attrait qu'un autre. 
+ //' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2 si x > p1.
  //' "logistique" où l'attrait décroît selon une fonction logistique avec une distance de bascule (param 1), une vitesse de bascule (param 2) 
  //' et un seuil (param p). Si h(x) = exp( (x-p1)/p2), f(x) = p3 + h(x) / (1 + h(x)).
-//' "odds" où chaque flux (from, to) se voit attribuer un odds. 
+ //' "odds" où chaque flux (from, to) se voit attribuer un odds. 
  //' @param param est un vecteur avec dans l'ordre les valeurs des paramètres.
  //' @param group_from Le vecteur des regroupements des lignes d'actifs.
  //' @param group_to Le vecteur des regroupements des colonnes d'emplois.
  //' @param cible Le vecteur des flux groupés observés dans l'ordre des index c++ de (group_from, group_to).
  //' @param nthreads Nombre de threads pour OpenMP. Default : 0 = choix auto. 
-//' @param verbose Défaut = true. 
+ //' @param verbose Défaut = true. 
  //' On doit gérer normalisation et fuite_min auparavant.
-//'
+ //'
  //' @return renvoie les flux au format triplet.
-// [[Rcpp::export]]
+ // [[Rcpp::export]]
 List meapsclass(const IntegerVector jr_dist, 
                 const IntegerVector p_dist, 
                 const NumericVector xr_dist, 
