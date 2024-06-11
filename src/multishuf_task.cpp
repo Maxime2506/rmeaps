@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <stdlib.h>
 
 #include "classes.h"
 #include "classes_attraction.h"
@@ -69,9 +70,9 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
   // Initialisation de la matrice origines-destination.
   std::vector<std::vector<double> > liaisons(N, std::vector<double>(K));
 
-  // pointeurs vers les lignes pour la clause depend de openmp.
-  std::vector<const double*> ptr_liaisons(N);
-  for (auto i=0; i<N; ++i) ptr_liaisons[i] = liaisons[i].data();
+  omp_lock_t *lock = (omp_lock_t *)malloc(N * sizeof(omp_lock_t));
+  for (auto i=0; i<N; ++i)
+        omp_init_lock(&(lock[i]));
 
 #ifdef _OPENMP
   int ntr = nthreads;
@@ -83,10 +84,6 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
   }
   if (verbose == TRUE) REprintf("Nombre de threads = %i\n", ntr);
 #endif
-
-#pragma omp declare reduction(vsum : std::vector<double> : std::transform(                     \
-        omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-    initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 
 #pragma omp parallel num_threads(ntr)
   {  // DEBUT DE LA PARALLELISATION
@@ -107,11 +104,10 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
           repartition = res.repartition_limited(urb.actifs[from]/freq_actifs[from], emplois_libres, col_dispo, repartition);
 
           for (auto k = 0; k < n_sites; ++k) emplois_libres[col_dispo[k]] -= repartition[k];
-#pragma omp task depend(inout : *ptr_liaisons[from]) 
-          for (auto k = 0; k < n_sites; ++k) {
-            //#pragma omp atomic
-            liaisons[from][col_dispo[k]] += static_cast<double>(repartition[k]) / Nboot;  
-          }      
+
+          omp_set_lock(&(lock[from]));
+          for (auto k = 0; k < n_sites; ++k) liaisons[from][col_dispo[k]] += repartition[k] / Nboot;  
+          omp_unset_lock(&(lock[from]));  
       }
     }
 

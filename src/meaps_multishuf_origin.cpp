@@ -46,7 +46,7 @@ using namespace Rcpp;
    
    const double SEUIL_NEWTON = 1e-6;
    
-   const int N = actifs.size(), K = emplois.size(), L = xr_dist.size(), Nx  = xr_dist.size(),
+   const int N = actifs.size(), L = xr_dist.size(), Nx  = xr_dist.size(),
      Ns = shuf.ncol(), Nboot = shuf.nrow();
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
