@@ -51,11 +51,11 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
 
   Urban urb(jr_dist, p_dist, xr_dist, actifs, emplois, fuites);
 
-  std::vector<int> shuf_onedim = as<std::vector<int> >(shuf);
+  
   std::vector<std::vector<int> > ishuf(Nboot, std::vector<int>(Ns));
   for (auto i = 0; i < Nboot; ++i) {
     for (auto j = 0; j < Ns; ++j) {
-      ishuf[i][j] = shuf_onedim[i + j * Nboot];
+      ishuf[i][j] = shuf(i,j);
     }
   }
   // Le vecteur shuf peut être plus long que le nombre de lignes d'actifs s'il fait repasser plusieurs fois
@@ -71,8 +71,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
   std::vector<std::vector<double> > liaisons(N, std::vector<double>(K));
 
   omp_lock_t *lock = (omp_lock_t *)malloc(N * sizeof(omp_lock_t));
-  for (auto i=0; i<N; ++i)
-        omp_init_lock(&(lock[i]));
+  for (auto i=0; i<N; ++i) omp_init_lock(&(lock[i]));
 
 #ifdef _OPENMP
   int ntr = nthreads;
@@ -112,6 +111,8 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
     }
 
   }  // fin clause omp parallel
+
+  for (auto i = 0; i < N; ++i) omp_destroy_lock(&(lock[i]));
 
   // Mise en forme du résultat selon présence ou non de groupes et d'une cible.
   if (group_from.isNull() || group_to.isNull()) {
