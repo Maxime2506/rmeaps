@@ -107,9 +107,9 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
           repartition = res.repartition_limited(urb.actifs[from]/freq_actifs[from], emplois_libres, col_dispo, repartition);
 
           for (auto k = 0; k < n_sites; ++k) emplois_libres[col_dispo[k]] -= repartition[k];
-//#pragma omp task depend(inout : *ptr_liaisons[from]) 
+#pragma omp task depend(inout : *ptr_liaisons[from]) 
           for (auto k = 0; k < n_sites; ++k) {
-            #pragma omp atomic
+            //#pragma omp atomic
             liaisons[from][col_dispo[k]] += static_cast<double>(repartition[k]) / Nboot;  
           }      
       }
