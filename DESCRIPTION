@@ -17,6 +17,7 @@ Imports:
     dplyr,
     Matrix,
     methods,
+    optimx
 Suggests: 
     testthat (>= 3.0.0)
 LinkingTo: 

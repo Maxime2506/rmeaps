@@ -564,3 +564,118 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
   
   return(res)
 }
+
+#' version optimx.
+#' Beaucoup plus de méthodes, dont certaines recommandées : nvm(), ncg(), ucminf::ucminf(), lbfgs::lbfgs(), nloptr::lbfgs()
+#' @import optimx
+meaps_optimx <- function(MeapsDataGroup, attraction, parametres, 
+                         version = "all_in",
+                         method = "nvm", objective = "KL",
+                         amplitude_max = 1000, rayon_max = 10,
+                         lower = NULL, upper = NULL, control = NULL,
+                         discret = NULL,
+                         nthreads = 0L, progress = TRUE,
+                         quiet = TRUE) {
+  if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
+    cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
+  }
+  check_fct_attraction(attraction, parametres)
+  
+  if (!is.null(MeapsDataGroup@cible)) {
+    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
+  } else {
+    cible <- NULL
+  }
+  
+  arg <- list(
+    MeapsDataGroup,
+    attraction = attraction,
+    nthreads = nthreads, verbose = FALSE
+  )
+  
+  if(!version %in%c("all_in", "multishuf_oc", "multishuf_task"))
+    cli::cli_abort("moteur MEAPS inconnu")
+  
+  meaps_fun_ <- switch(version,
+                       "all_in" = all_in_grouped,
+                       "multishuf_oc" = multishuf_oc_grouped,
+                       "multishuf_task" = multishuf_task_grouped
+  )
+  
+  env <- environment()
+  
+  fn <- switch(objective,
+               "KL" = function(par) {
+                 estim <- do.call(
+                   meaps_fun_,
+                   args = append(arg, list(parametres = par))
+                 )
+                 kl <- estim$kl
+                 mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+                 if (progress) {
+                   cli::cli_progress_update(.envir = env, extra = list(mes=mes))
+                 }
+                 return(kl)
+               }
+  )
+  
+  if (is.null(fn)) {
+    cli::cli_abort("Erreur : la fonction objective est non définie")
+  }
+  
+  if (!is.null(discret)) {
+    nb_par <- length(parametres)
+    
+    if (is.null(lower)) lower <- rep(0, nb_par)
+    if (is.null(upper)) upper <- rep(Inf, nb_par)
+    tp <- progress
+    progress <- FALSE
+    bf <- purrr::map_dfr(discret, \(d) {
+      opt <- stats::optim(
+        par = tail(parametres, -1),
+        fn = \(x) fn(c(d, x)),
+        method = "Brent", 
+        lower = tail(lower, -1), upper = tail(upper, -1))
+      tibble::tibble(
+        d = d, x = opt$par, kl = opt$value,
+        convergence = opt$convergence, mes = opt$message)
+    }, .progress= tp)
+    
+    best <- bf |>
+      dplyr::filter(kl == min(kl)) |>
+      dplyr::slice(1)
+    res <- list(
+      par = c(best$d, best$x),
+      value = best$kl,
+      counts = NA,
+      convergence = best$convergence,
+      message = best$message,
+      all_iter = bf
+    )
+    return(res)
+  }
+  
+  nb_par <- length(parametres)
+  if (is.null(lower)) lower <- rep(0, nb_par)
+  if (is.null(upper)) {
+    upper <- switch(attraction,
+      "marche" = c(rayon_max, amplitude_max),
+      "rampe" = c(rayon_max, amplitude_max),
+      "grav_exp" = c(10 + log(1 + amplitude_max), amplitude_max),
+      "grav_puiss" = c(5, .2, 2*amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
+    }
+  
+  cli::cli_progress_bar(
+    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} {(round(cli::pb_elapsed/cli::pb_current)} s/iter) ; {cli::pb_extra$mes}", 
+    extra = list(mes=""),
+    .envir = env, clear = FALSE)
+  
+  res <- optimx::optimr(
+    par = parametres,
+    fn = fn,
+    method = method, lower = lower, upper = upper, control = control
+  )
+  cli::cli_progress_done(.envir = env)
+  
+  return(res)
+}
