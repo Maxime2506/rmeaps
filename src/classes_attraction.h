@@ -4,6 +4,10 @@
 #include <memory>
 #include <vector>
 
+// Définition des fonctions d'attraction.
+// Ces fonctions étant renormalisées au sein de meaps, on les définit ici avec les conventions suivantes :
+// La limite à l'infini de chaque fonction doit être égale à 1.
+// On appelle amplitude la différence entre la valeur en O et celle à l'infini, soit f(0)-1.
 class fonction_attraction {
  public:
   virtual ~fonction_attraction(){};
@@ -15,54 +19,63 @@ class constant : public fonction_attraction {
   virtual double operator()(double x) override { return 1.0; }
 };
 
-// 1 avant rayon (p0), plancher (p1) après.
+// Fonction MARCHE.
+// marche p1+1 avant rayon (p0), 1 après.
+// amplitude = p1.
 class marche : public fonction_attraction {
  public:
   std::vector<double> parametres;
   marche(std::vector<double> param) : parametres(param){};
-  virtual double operator()(double x) override { return (x < parametres[0] ? parametres[1] : 1); };
+  virtual double operator()(double x) override { return (x < parametres[0] ? 1 + parametres[1] : 1); };
 };
 
-// 1 avant rayon (p0), plancher (p1) après (pente sur une longueur de 1 entre les deux).
-class marche_liss : public fonction_attraction {
+// Fonction RAMPE.
+// p1 + 1 en 0 puis décroissant linéairement jusqu'à x = p0, vaut 1 à partir de ce point.
+// amplitude = p1
+class rampe : public fonction_attraction {
  public:
   std::vector<double> parametres;
-  marche_liss(std::vector<double> param) : parametres(param){};
+  rampe(std::vector<double> param) : parametres(param){};
   virtual double operator()(double x) override {
     return (x < parametres[0]
-                ? 1
-                : (x > parametres[0] + 1 ? parametres[1] : 1 + (x - parametres[0]) * (parametres[1] - 1)));
+                ? 1 + parametres[1] - parametres[1] / parametres[0] * x
+                : 1);
   };
 };
 
-// ATTENTION au cas x = 0 qui n'est pas prévu.
-// décroissance puissance delta (p0) tendant vers plancher (p1).
-class decay : public fonction_attraction {
+// Fonction GRAV_EXP
+// f(x) = 1 + p1.exp(-p0.x)
+// vitesse de décroissance = p0.
+// amplitude = p1.
+class grav_exp : public fonction_attraction {
  public:
   std::vector<double> parametres;
-  decay(std::vector<double> param) : parametres(param){};
-  virtual double operator()(double x) override { return (exp(-parametres[0] * log(x)) + parametres[1]); };
+  grav_exp(std::vector<double> param) : parametres(param){};
+  virtual double operator()(double x) override { return (1 + parametres[1] * exp(-parametres[0] * x)); };
 };
 
-// Decay2 = coût fixe puis coût relatif constant donne une fonction de fréquence des déplacements selon la distance :
-// y -> [(p0 + p1 * x)]^(-p2)
-class decay2 : public fonction_attraction {
+// Fonction GRAV_PUISS
+// f(x) = 1 + p2.(x + p1)^(-p0)
+// amplitude = p2 / p1^p0.
+class grav_puiss : public fonction_attraction {
  public:
   std::vector<double> parametres;
-  decay2(std::vector<double> param) : parametres(param){};
+  grav_puiss(std::vector<double> param) : parametres(param){};
   virtual double operator()(double x) override {
-    return (exp(-parametres[2] * log(parametres[0] + parametres[1] * x)));
+    return (1 + parametres[2] * (-parametres[0] * log(x + parametres[1])));
   };
 };
 
-// logistique qui bascule autour du rayon (p0) avec une amplitude (p1) pour tendre vers un plancher (p2).
+// Fonction LOGISTIQUE
+// logistique qui bascule autour du rayon (p0) avec un smooth (p1) pour tendre vers 1.
+// en posant g(x) = exp((p0 - x)/p1), on a f(x) = 1 + p2 * g(x)/(1+g(x))
 class logistique : public fonction_attraction {
  public:
   std::vector<double> parametres;
   logistique(std::vector<double> param) : parametres(param){};
   virtual double operator()(double x) override {
     double ex = exp((parametres[0] - x) / parametres[1]);
-    return parametres[2] + ex / (ex + 1);
+    return 1 + parametres[2] * ex / (ex + 1);
   };
 };
 
@@ -75,12 +88,12 @@ class mode_attraction {
       return std::make_shared<constant>();
     } else if (type == "marche") {
       return std::make_shared<marche>(param);
-    } else if (type == "marche_liss") {
-      return std::make_shared<marche_liss>(param);
-    } else if (type == "decay") {
-      return std::make_shared<decay>(param);
-    } else if (type == "decay2") {
-      return std::make_shared<decay2>(param);
+    } else if (type == "rampe") {
+      return std::make_shared<rampe>(param);
+    } else if (type == "grav_exp") {
+      return std::make_shared<grav_exp>(param);
+    } else if (type == "grav_puiss") {
+      return std::make_shared<grav_puiss>(param);
     } else if (type == "logistique") {
       return std::make_shared<logistique>(param);
     } else {
