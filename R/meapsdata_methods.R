@@ -49,8 +49,8 @@ multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0,
     nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-    dplyr::relocate(fromidINS, toidINS, flux) |> 
-    dplyr::filter(flux > 0)
+#   dplyr::filter(flux > 0) |>
+    dplyr::relocate(fromidINS, toidINS, flux) 
 }
 
 #' Multishuf, réécrit en version continue avec une clause omp task depend.
@@ -72,8 +72,8 @@ multishuf_task <- function(MeapsData, attraction = "constant", parametres = 0, n
     nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-    dplyr::relocate(fromidINS, toidINS, flux) |> 
-    dplyr::filter(flux > 0) 
+#   dplyr::filter(flux > 0) |>
+    dplyr::relocate(fromidINS, toidINS, flux) 
 }
 
 #' Multishuf, la version continue
@@ -146,7 +146,7 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
       fromidINS = MeapsData@triplet$fromidINS,
       toidINS = MeapsData@triplet$toidINS,
       flux = res$flux) |>
-      dplyr::filter(flux > 0) |>
+#     dplyr::filter(flux > 0) |>
       dplyr::arrange(dplyr::desc(flux))
   )
   if (large) gc()

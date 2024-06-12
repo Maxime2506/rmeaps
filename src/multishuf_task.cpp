@@ -87,8 +87,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
 #pragma omp parallel num_threads(ntr)
   {  // DEBUT DE LA PARALLELISATION
 
-#pragma omp single
-#pragma omp taskloop grainsize(1)
+#pragma omp for schedule(static, 2)
     for (auto iboot = 0; iboot < Nboot; ++iboot) {
       std::vector<double> emplois_libres(urb.emplois);
       for (auto from : ishuf[iboot]) {
@@ -99,7 +98,7 @@ List multishuf_task_cpp(const IntegerVector jr_dist, const IntegerVector p_dist,
 
           std::vector<double> repartition(n_sites);
 
-          repartition = res.attractivite(emplois_libres, col_dispo, fct_attraction);  // Calcul de l'attirance.
+          repartition = res.attractivite(emplois_libres, col_dispo, fct_attraction);
           repartition = res.repartition_limited(urb.actifs[from]/freq_actifs[from], emplois_libres, col_dispo, repartition);
 
           for (auto k = 0; k < n_sites; ++k) emplois_libres[col_dispo[k]] -= repartition[k];
