@@ -759,7 +759,7 @@ meaps_opt <- function(MeapsDataGroup, attraction, parametres,
     function(par) {
       cmaes::cma_es(par = par, fn = fn, lower = lower, upper = upper, control = control) },
     function(par)  {
-      dfotpim::nmkb(par = par, fn = fn, lower = lower, upper = upper, control = control) },
+      dfoptim::nmkb(par = par, fn = fn, lower = lower, upper = upper, control = control) },
     function(par)  {
       dfoptim::mads(par = par, fn = fn, lower = lower, upper = upper, control = control) }
   )
