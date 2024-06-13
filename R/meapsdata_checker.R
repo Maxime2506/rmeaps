@@ -207,7 +207,7 @@ check_meapsdatagroup <- function(object, abort = FALSE, quiet = FALSE){
 
 check_fct_attraction <- function(attraction, parametres) {
   
-  if (!attraction %in% c("constant", "marche", "marche_liss", "decay", "decay2", "logistique")) cli::cli_abort("Fonction attraction inconnue")
+  if (!attraction %in% c("constant", "marche", "rampe", "grav_exp", "grav_puiss", "logistique")) cli::cli_abort("Fonction attraction inconnue")
   
   if (attraction == "marche" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour marche invalide.")
   if (attraction == "rampe" && (length(parametres) != 2 || !is.numeric(parametres))) cli::cli_abort("Parametres pour rampe invalide.")

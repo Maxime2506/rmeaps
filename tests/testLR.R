@@ -27,4 +27,4 @@ all_in_grouped(LRG)
 
 multishuf(LR, nshuf = 8)
 
-meaps_optim(LRG, attraction = "marche", parametres = c(1,.1), control = list(maxit = 20))
+meaps_opt(LRG, attraction = "marche", parametres = c(5,40), fct_meaps = "all_in", strategie = 1)
