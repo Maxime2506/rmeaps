@@ -736,10 +736,9 @@ meaps_opt <- function(MeapsDataGroup, attraction, parametres,
       args = append(arg, list(parametres = par))
     )
     kl <- estim$kl
-    old_kl <- get("kl", envir = env)
-    delta <- (old_kl - kl)/old_kl
-    assign("kl", estim$kl, envir = env)
-    mes <- glue::glue("kl:{signif(estim$kl, 4)} conv:{signif(100*delta, 3)}% -> {str_c(signif(par,4), collapse=', ')}")
+    min_kl <- min(get("kl", envir = env), kl)
+    assign("kl", min_kl, envir = env)
+    mes <- glue::glue("kl:{signif(kl, 4)} min:{signif(min_kl, 4)}% -> {str_c(signif(par,4), collapse=', ')}")
     if (progress) {
       cli::cli_progress_update(.envir = env, extra = list(mes=mes))
       }
