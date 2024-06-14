@@ -329,20 +329,29 @@ double tot_cible = std::accumulate(p_cible.begin(), p_cible.end(), 0.0);
 
 if (tot_flux == 0) stop("Les flux groupés sont tous nuls");
 
-double kl = 0;
-double kl_term;
+double kl = 0, lk = 0;
+double kl_term, lk_term;
 for (auto k = 0; k < Nref * Kref; ++k) {
-  if (p_flux[k] == 0) {
-    continue; 
-  }
   p_cible[k] /= tot_cible;
   p_flux[k] /= tot_flux;
-  if (p_cible[k] < PLANCHER_KL) p_cible[k] = PLANCHER_KL;
-  kl_term = p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+  if (p_flux[k]==0) 
+    kl_term = 0;
+  else if (p_cible[k] < PLANCHER_KL) 
+    kl_term = p_flux[k] * (log(p_flux[k]) - log(PLANCHER_KL));
+  else 
+    kl_term = p_flux[k] * (log(p_flux[k]) - log(p_cible[k]));
+  if (p_cible[k]==0) 
+    lk_term = 0;
+  else if (p_flux[k] < PLANCHER_KL) 
+    lk_term = p_cible[k] * (log(p_cible[k]) - log(PLANCHER_KL));
+  else 
+    lk_term = p_cible[k] * (log(p_cible[k]) - log(p_flux[k]));
   kl += kl_term;
+  lk += lk_term;
 }
 
-return List::create(_("i") = res_i, _("j") = res_j, _("flux") = out, _("kl") = kl);
+return List::create(_("i") = res_i, _("j") = res_j,
+                    _("flux") = out, _("kl") = kl, _("lk") = lk);
  }
 
 // Métrique pour comparer les flux agrégés estimés et des flux cibles.

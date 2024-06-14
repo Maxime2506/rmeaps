@@ -49,7 +49,7 @@ multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0,
     nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-#   dplyr::filter(flux > 0) |>
+    #   dplyr::filter(flux > 0) |>
     dplyr::relocate(fromidINS, toidINS, flux) 
 }
 
@@ -72,7 +72,7 @@ multishuf_task <- function(MeapsData, attraction = "constant", parametres = 0, n
     nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-#   dplyr::filter(flux > 0) |>
+    #   dplyr::filter(flux > 0) |>
     dplyr::relocate(fromidINS, toidINS, flux) 
 }
 
@@ -146,7 +146,7 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
       fromidINS = MeapsData@triplet$fromidINS,
       toidINS = MeapsData@triplet$toidINS,
       flux = res$flux) |>
-#     dplyr::filter(flux > 0) |>
+      #     dplyr::filter(flux > 0) |>
       dplyr::arrange(dplyr::desc(flux))
   )
   if (large) gc()
@@ -353,7 +353,7 @@ multishuf_oc_grouped <- function(
   
   flux <- flux |> dplyr::arrange(dplyr::desc(flux))
   
-  return(list(flux = flux, kl = res$kl))
+  return(list(flux = flux, kl = res$kl, lk=res$lk))
 }
 
 #' Fonction all_in groupé.
@@ -604,30 +604,31 @@ meaps_optimx <- function(MeapsDataGroup, attraction, parametres,
   if(!version %in%c("all_in", "multishuf_oc", "multishuf_task"))
     cli::cli_abort("moteur MEAPS inconnu")
   
-  meaps_fun_ <- switch(version,
-                       "all_in" = all_in_grouped,
-                       "multishuf_oc" = multishuf_oc_grouped,
-                       "multishuf_task" = multishuf_task_grouped
+  meaps_fun_ <- switch(
+    version,
+    "all_in" = all_in_grouped,
+    "multishuf_oc" = multishuf_oc_grouped,
+    "multishuf_task" = multishuf_task_grouped
   )
   
   env <- environment()
-  kl <- 1
-
-  fn <- switch(objective,
-               "KL" = function(par) {
-                 estim <- do.call(
-                   meaps_fun_,
-                   args = append(arg, list(parametres = par))
-                 )
-                 old_kl <- get(kl, envir = env)
-                 delta <- (old_kl - estim$kl)/old_kl
-                 assign(kl, estim$kl, envir = env)
-                 mes <- glue::glue("kl:{signif(estim$kl, 4)} conv:{signif(100*delta, 3)}% -> {str_c(signif(par,4), collapse=', ')}")
-                 if (progress) {
-                   cli::cli_progress_update(.envir = env, extra = list(mes=mes))
-                 }
-                 return(kl)
-               }
+  
+  fn <- switch(
+    objective,
+    "KL" = function(par) {
+      if(any(par<lower)|any(par>upper)) {
+        kl <- Inf} else {
+          estim <- do.call(
+            meaps_fun_,
+            args = append(arg, list(parametres = par))
+          )
+          kl <- estim$kl}
+      mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+      if (progress) {
+        cli::cli_progress_update(.envir = env, extra = list(mes=mes))
+      }
+      return(kl)
+    }
   )
   
   if (is.null(fn)) {
@@ -669,22 +670,23 @@ meaps_optimx <- function(MeapsDataGroup, attraction, parametres,
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) {
-    upper <- switch(attraction,
+    upper <- switch(
+      attraction,
       "marche" = c(rayon_max, amplitude_max),
       "rampe" = c(rayon_max, amplitude_max),
       "grav_exp" = c(10 + log(1 + amplitude_max), amplitude_max),
-      "grav_puiss" = c(5, .2, 2 * amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
-    }
+      "grav_puiss" = c(5, .2, 2*amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
+  }
   
   cli::cli_progress_bar(
-    format = "{cli::pb_spin} Estimation avec {attraction} n°{cli::pb_current} en {cli::pb_elapsed} v:{signif(cli::pb_elapsed/cli::pb_current)}s/iter : {cli::pb_extra$mes}", 
+    format = "{cli::pb_spin} Estimation de MEAPS {cli::pb_current} en {cli::pb_elapsed} ({round(1/cli::pb_rate_raw)} s/iter) ; {cli::pb_extra$mes}", 
     extra = list(mes=""),
     .envir = env, clear = FALSE)
   
   res <- optimx::optimr(
     par = parametres,
     fn = fn,
-    method = method, lower = lower, upper = upper, control = control
+    method = method, control = control
   )
   cli::cli_progress_done(.envir = env)
   
