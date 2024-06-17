@@ -465,7 +465,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         lower = NULL, upper = NULL, control = NULL,
                         discret = NULL,
                         nthreads = 0L, progress = TRUE,
-                        quiet = TRUE) {
+                        quiet = TRUE, klway = "kl") {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
@@ -504,7 +504,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
             meaps_fun_,
             args = append(arg, list(parametres = par))
           )
-          kl <- estim$kl}
+          kl <- estim[[klway]]}
       mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
       if (progress) {
         cli::cli_progress_update(.envir = env, extra = list(mes=mes))
@@ -733,14 +733,19 @@ meaps_opt <- function(MeapsDataGroup, attraction, parametres,
   kl <- 1
 
   fn <- function(par) {
-    estim <- do.call(
-      meaps_fun_,
-      args = append(arg, list(parametres = par))
-    )
+    
+    if(any(par<lower)|any(par>upper)) {
+      kl <- Inf} else {
+        estim <- do.call(
+          meaps_fun_,
+          args = append(arg, list(parametres = par))
+        )
+        kl <- estim$kl}
+    
     kl <- estim$kl
     min_kl <- min(get("kl", envir = env), kl)
     assign("kl", min_kl, envir = env)
-    mes <- glue::glue("kl:{signif(kl, 4)} min:{signif(min_kl, 4)}% -> {str_c(signif(par,4), collapse=', ')}")
+    mes <- glue::glue("\nmin:{signif(min_kl, 4)} kl:{signif(kl, 4)} -> {str_c(signif(par,4), collapse=', ')}")
     if (progress) {
       cli::cli_progress_update(.envir = env, extra = list(mes=mes))
       }
