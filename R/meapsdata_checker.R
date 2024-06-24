@@ -2,12 +2,15 @@
 #' Fonctions de validation de MeapsData et MeapsDataGroup
 
 is_triplet_meaps <- function(object, quiet = TRUE) {
-  
-  if (!inherits(object, "data.frame") || length(object) != 3) {
+  expect_names <- c("fromidINS", "toidINS", "metric")
+  ob_n <- names(object)
+  if (!inherits(object, "data.frame") || length(object) < 3) {
     status <- 2L
-  } else if (!setequal(names(object), c("fromidINS", "toidINS", "metric"))) {
+  } else if (!setequal(intersect(expect_names, ob_n), expect_names)) {
     status <- 3L
-  } else if (any(is.na(object))) { 
+  } else if (any(is.na(object$fromidINS))||
+             any(is.na(object$toidINS))||
+             any(is.na(object$metric))) { 
     status <- 4L 
   } else {
     status <- 1L
@@ -96,16 +99,17 @@ is_meapsdata_valid <- function(object, quiet = TRUE) {
     if (!quiet) { cli::cli_alert_warning("Le vecteur fuite a des valeurs invalides.") }
   }
   
-  if (status) { cli::cli_alert_success("Le MeapsData est valide.") }
+  if (status&!quiet) { cli::cli_alert_success("Le MeapsData est valide.") }
   
   invisible(status)
 }
 
-is_meaps_normalized <- function(object, just_a_warning = TRUE, seuil = 1e-4) {
+is_meaps_normalized <- function(object, just_a_warning = TRUE, seuil = 1e-4, quiet = FALSE) {
   delta <- (sum(object@actifs * (1 - object@fuites)) - sum(object@emplois))/sum(object@emplois)
   if (delta > seuil) {
     if (just_a_warning) { 
-      cli::cli_alert_warning("Les actifs restant dans la zone et les emplois divergent de {round(100 * delta, digits = 2)}%.")
+      if(!quiet) cli::cli_alert_warning(
+        "Les actifs restant dans la zone et les emplois divergent de {round(100 * delta, digits = 2)}%.")
     } else {
       cli::cli_abort("Les actifs restant dans la zone et les emplois divergent de {round(100 * delta, digits = 2)}%.")
     }
@@ -125,7 +129,7 @@ check_meapsdata <- function(object, abort = FALSE, quiet = FALSE) {
   status <- is_triplet_meaps(object@triplet, quiet = quiet) && 
     is_triplet_ordered(object@triplet, quiet = quiet) && 
     is_meapsdata_valid(object, quiet = quiet) &&
-    is_meaps_normalized(object) 
+    is_meaps_normalized(object, quiet = quiet) 
   meaps_has_shuf(object, quiet = quiet)
   if (abort && !status) {cli::cli_abort("Invalide.")} else { return(status)}
 }
@@ -156,24 +160,24 @@ is_meapsdatagroup_valid <- function(object, quiet = FALSE)  {
 
 check_meapsdatagroup <- function(object, abort = FALSE, quiet = FALSE){
   
-  status <- is_meapsdatagroup_valid(object@cible)
+  status <- is_meapsdatagroup_valid(object@cible, quiet=quiet)
   
   if (length(object@group_from) != length(object@actifs)) {
     status <- FALSE
-    cli::cli_alert_warning("group_from et actifs ne font pas la même longueur.")
+    if(!quiet) cli::cli_alert_warning("group_from et actifs ne font pas la même longueur.")
   }
   if (length(object@group_to) != length(object@emplois)) {
     status <- FALSE
-    cli::cli_alert_warning("group_to et emplois ne font pas la même longueur.")
+    if(!quiet) cli::cli_alert_warning("group_to et emplois ne font pas la même longueur.")
   }
   
   if (is.null(names(object@group_from))) {
     status <- FALSE
-    cli::cli_alert_warning("group_from n'est pas labelisé")
+    if(!quiet) cli::cli_alert_warning("group_from n'est pas labelisé")
   }
   if (is.null(names(object@group_to))) {
     status <- FALSE
-    cli::cli_alert_warning("group_to n'est pas labelisé.")
+    if(!quiet) cli::cli_alert_warning("group_to n'est pas labelisé.")
   }
   
   if (!setequal(names(object@group_from), names(object@actifs))) {
@@ -182,21 +186,21 @@ check_meapsdatagroup <- function(object, abort = FALSE, quiet = FALSE){
   }
   if (!setequal(names(object@group_to), names(object@emplois))) {
     status <- FALSE
-    cli::cli_alert_warning("group_to et emplois n'ont pas la même liste de toidINS.")
+    if(!quiet) cli::cli_alert_warning("group_to et emplois n'ont pas la même liste de toidINS.")
   }
   
   if (!setequal(object@cible$group_from, object@group_from)) {
     status <- FALSE
-    cli::cli_alert_warning("group_from et cible ne correspondent pas.")
+    if(!quiet) cli::cli_alert_warning("group_from et cible ne correspondent pas.")
   }
   
   if (!setequal(object@cible$group_to, object@group_to)) {
     status <- FALSE
-    cli::cli_alert_warning("group_to et cible ne correspondent pas.")
+    if(!quiet) cli::cli_alert_warning("group_to et cible ne correspondent pas.")
   }
   
   if (status) { 
-    cli::cli_alert_success("Le MeapsDataGroup est valide.") 
+    if(!quiet) cli::cli_alert_success("Le MeapsDataGroup est valide.") 
   } else if (abort) {
     cli::cli_abort("Le MeapsDataGroup n'est pas valide.")
   }

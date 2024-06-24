@@ -81,3 +81,41 @@ kl <- function(x,y, seuil = 1e-6) {
 khi2 <- function(estime, observe) {
   sum((estime - observe)^2/observe, na.rm=TRUE)
 }
+
+#' Test de Kolmogorov-Smirnov
+#' on suppose que les flux sont classés
+#' @param est distribution empirique estimée
+#' @param obs distribution empirique observée
+#' @return ks
+ks <- function(est, obs) {
+  max(abs(ecdf(est)-ecdf(obs)))
+}
+
+#' Test de Kolmogorov-Smirnov
+#' on suppose que les flux sont classés
+#' @param est distribution empirique estimée
+#' @param obs distribution empirique observée
+#' @return un double, le KS
+kolmogorov_smirnov <- function(est, obs) {
+  max(abs(cumsum(est)/sum(est)-cumsum(obs)/sum(obs)))
+}
+
+#' Test de Anderson–Darling
+#' on suppose que les flux sont classés
+#' @param est distribution empirique estimée
+#' @param obs distribution empirique observée
+#' @return un double, le AD
+anderson_darling <- function(est, obs, w = 1) {
+  sum((cumsum(est)/sum(est)-cumsum(obs)/sum(obs))^2*w)
+}
+
+#' Test de Cramer–von Mises
+#' on suppose que les flux sont classés
+#' @param est distribution empirique estimée
+#' @param obs distribution empirique observée
+#' @return un double, le AD
+cramer_vonmises <- function(est, obs, w = 1) {
+  eF <- head(cumsum(est)/sum(est), -1)
+  eO <- head(cumsum(obs)/sum(obs), -1)
+  sum((eO-eF)^2/eF/(1-eF))
+}

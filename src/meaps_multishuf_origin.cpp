@@ -50,9 +50,9 @@ using namespace Rcpp;
      Ns = shuf.ncol(), Nboot = shuf.nrow();
    
    // Passage explicite en std::vector pour rendre les vecteurs thread safe (ts_)(nécessaire pour openmp dans la macro).
-   std::vector<double> ts_emplois = as<std::vector<double>>(emplois);
-   std::vector<double> ts_fuite = as<std::vector<double>>(fuites);
-   const std::vector<double> ts_actifs = as<std::vector<double>>(actifs);
+   std::vector<double> ts_emplois = as< std::vector<double> >(emplois);
+   std::vector<double> ts_fuite = as< std::vector<double> >(fuites);
+   const std::vector<double> ts_actifs = as< std::vector<double> >(actifs);
    
    const std::vector<double> ts_parametres = as< std::vector<double> >(parametres);
    

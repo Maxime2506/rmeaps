@@ -62,7 +62,7 @@ class grav_puiss : public fonction_attraction {
   std::vector<double> parametres;
   grav_puiss(std::vector<double> param) : parametres(param){};
   virtual double operator()(double x) override {
-    return (1 + parametres[2] * (-parametres[0] * log(x + parametres[1])));
+    return (1 + parametres[2] * exp(-parametres[0] * log(x + parametres[1])));
   };
 };
 

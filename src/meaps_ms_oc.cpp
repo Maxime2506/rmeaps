@@ -11,7 +11,7 @@
 // #include "repartir_continu.h"
 #include "classes_attraction.h"
 
-// #include "fcts_penal.h"
+#include "fcts_penal.h"
 using namespace Rcpp;
 
 inline std::vector<double> _one_distrib_continu(
@@ -176,10 +176,10 @@ inline std::vector<double> _repartir_continu(
    const std::size_t N = actifs.size(), Nboot = shuf.nrow(), Ns = shuf.ncol();
    const double PLANCHER_KL = 1e-6; // gestion de cases nulles dans le calcul de l'entropie relative (KL).
    // Instantation de la fonction d'attraction.
-  const std::vector<double> param = as<std::vector<double> >(parametres);
-  mode_attraction type_att;
-  auto fct_attraction = type_att.create(param, attraction);
-
+   const std::vector<double> param = as<std::vector<double> >(parametres);
+   mode_attraction type_att;
+   auto fct_attraction = type_att.create(param, attraction);
+   
    auto Nref = *std::max_element(group_from.begin(), group_from.end());
    Nref = Nref + 1L;
    auto Kref = *std::max_element(group_to.begin(), group_to.end());
@@ -210,7 +210,7 @@ inline std::vector<double> _repartir_continu(
      }
    }
    
-   std::vector<double> xr_lor = as< std::vector<double> >(xr_odds);
+   std::vector<double> _xr_odds = as< std::vector<double> >(xr_odds);
    
    std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
    std::vector<double> fcpp = as<std::vector<double>>(fuites);
@@ -267,9 +267,16 @@ inline std::vector<double> _repartir_continu(
         emplois_libres(k_valid),
         repartition(k_valid, 0);
         
-        for (std::size_t k = 0; k < k_valid; ++k) {
-          facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
+        if (attraction == "odds") {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k] = exp( _xr_odds[debut + k] );
+          } 
+        } else {
+          for (std::size_t k = 0; k < k_valid; ++k) {
+            facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
+          }
         }
+        
         
         for (std::size_t k = 0; k < k_valid; ++k) {
           emplois_libres[k] = emp[ _jr_dist[ debut + k] ];
@@ -422,11 +429,11 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    
    const std::size_t N = actifs.size(), Nx  = xr_dist.size(),
      Nboot = shuf.nrow(), Ns = shuf.ncol();
-    // Instantation de la fonction d'attraction.
-  const std::vector<double> param = as<std::vector<double> >(parametres);
-  mode_attraction type_att;
-  auto fct_attraction = type_att.create(param, attraction);
-
+   // Instantation de la fonction d'attraction.
+   const std::vector<double> param = as<std::vector<double> >(parametres);
+   mode_attraction type_att;
+   auto fct_attraction = type_att.create(param, attraction);
+   
    int ntr = 1;
 #ifdef _OPENMP
    ntr = nthreads;
@@ -458,7 +465,7 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
    std::vector<double> emploisinitial = as<std::vector<double>>(emplois);
    std::vector<double> fcpp = as<std::vector<double>>(fuites);
    std::vector<double> actifscpp = as<std::vector<double>>(actifs);
-      
+   
    const std::vector<int> _jr_dist = as< std::vector<int> >(jr_dist);
    const std::vector<int> _p_dist = as< std::vector<int> >(p_dist);
    const std::vector<double> _xr_dist = as< std::vector<double> >(xr_dist);
@@ -514,8 +521,14 @@ double objectif_kl (NumericMatrix estim, NumericMatrix cible, double pseudozero 
           emplois_libres(k_valid),
           repartition(k_valid, 0);
           
-          for (std::size_t k = 0; k < k_valid; ++k) {
-          facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
+          if (attraction == "odds") {
+            for (std::size_t k = 0; k < k_valid; ++k) {
+              facteur_attraction[k] = exp( xr_odds[debut + k] );
+            } 
+          } else {
+            for (std::size_t k = 0; k < k_valid; ++k) {
+              facteur_attraction[k]  = (*fct_attraction)(_xr_dist[debut + k]);
+            }
           }
           
           for (std::size_t k = 0; k < k_valid; ++k) {

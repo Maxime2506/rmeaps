@@ -40,7 +40,8 @@ setMethod(
   definition = function(
       .Object,
       triplet, actifs, emplois, fuites,
-      nshuf = NULL, seuil = 40, seed = NULL) {
+      nshuf = NULL, seuil = 40, 
+      seed = NULL, quiet = FALSE) {
     fromidINS <- dplyr::distinct(triplet, fromidINS) |>
       dplyr::pull()
     # le tri est vérifié par ailleurs.
@@ -75,8 +76,7 @@ setMethod(
         nshuf = nshuf, seuil = seuil, seed = seed
       )
     }
-
-    check_meapsdata(.Object, abort = TRUE)
+    check_meapsdata(.Object, abort = TRUE, quiet = quiet)
 
     return(.Object)
   }
@@ -88,10 +88,10 @@ setMethod(
 #' @param emplois Un vecteur du nombre d'emplois, labélisé par toidINS.
 #' @param fuites Un vecteur de la proportion de fuite, labélisé selon fromidINS.
 meapsdata <- function(triplet, actifs, emplois, fuites,
-                      nshuf = NULL, seuil = 40, seed = NULL) {
+                      nshuf = NULL, seuil = 40, seed = NULL, quiet = FALSE) {
   new("MeapsData",
     triplet, actifs, emplois, fuites,
-    nshuf = nshuf, seuil = seuil, seed = seed
+    nshuf = nshuf, seuil = seuil, seed = seed, quiet = quiet
   )
 }
 
@@ -135,7 +135,7 @@ setClass("MeapsDataGroup",
 setMethod(
   f = "initialize", signature = "MeapsDataGroup",
   definition = function(.Object, triplet, actifs, emplois, fuites, shuf,
-                        froms, tos, group_from, group_to, cible, jr_dist, p_dist) {
+                        froms, tos, group_from, group_to, cible, jr_dist, p_dist, quiet = FALSE) {
     if (!is.null(cible)) {
       cible <- cible |>
         complete(group_from, group_to, fill = list(value = 0)) |>
@@ -165,8 +165,8 @@ setMethod(
     .Object@index_gfrom <- gf_lab[group_from]
     .Object@index_gto <- gt_lab[group_to]
 
-    check_meapsdata(.Object, abort = TRUE, )
-    check_meapsdatagroup(.Object, abort = TRUE)
+    check_meapsdata(.Object, abort = TRUE, quiet = quiet )
+    check_meapsdatagroup(.Object, abort = TRUE, quiet = quiet)
 
     return(.Object)
   }
@@ -196,14 +196,14 @@ setMethod("show", "MeapsDataGroup", function(object) {
 #' @param cible Un triplet (group_from, group_to, value) décrivant les flux groupés de référence.
 #'
 #' @import dplyr
-meapsdatagroup <- function(MeapsData, group_from, group_to, cible) {
+meapsdatagroup <- function(MeapsData, group_from, group_to, cible, quiet=FALSE) {
   new(
     "MeapsDataGroup", MeapsData@triplet, MeapsData@actifs,
     MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
     MeapsData@froms, MeapsData@tos,
     group_from[MeapsData@froms], group_to[MeapsData@tos],
     cible,
-    MeapsData@jr_dist, MeapsData@p_dist
+    MeapsData@jr_dist, MeapsData@p_dist, quiet
   )
 }
 

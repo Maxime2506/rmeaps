@@ -20,7 +20,7 @@ multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0,
   
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
   if (attraction == "odds") {
-    if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
+    if (length(odds) != nrow(MeapsData@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
@@ -49,8 +49,9 @@ multishuf_origin <- function(MeapsData, attraction = "constant", parametres = 0,
     nthreads = nthreads, verbose = verbose) |>
     tibble::as_tibble() |>
     dplyr::bind_cols(MeapsData@triplet |> select(-metric)) |>
-    #   dplyr::filter(flux > 0) |>
-    dplyr::relocate(fromidINS, toidINS, flux) 
+    dplyr::filter(flux > 0) |>
+    dplyr::relocate(fromidINS, toidINS, flux) |> 
+    dplyr::arrange(desc(flux))
 }
 
 #' Multishuf, réécrit en version continue avec une clause omp task depend.
@@ -97,7 +98,7 @@ multishuf_oc <- function(MeapsData, attraction = "constant",
   
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
   if (attraction == "odds") {
-    if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
+    if (length(odds) != nrow(MeapsData@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
@@ -299,14 +300,14 @@ meaps_grouped <- function(MeapsDataGroup, version = "all_in", attraction = "cons
 #'
 multishuf_oc_grouped <- function(
     MeapsDataGroup, attraction = "constant", parametres = 0, odds = 1,
-    nthreads = 0L, verbose = TRUE) {
+    nthreads = 0L, verbose = TRUE, weights = NULL) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
   
   if (attraction == "odds") {
-    if (length(odds) != nrow(object@triplet)) cli::cli_abort("vecteur odds invalide.")
+    if (length(odds) != nrow(MeapsDataGroup@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
     check_fct_attraction(attraction, parametres)
   }
@@ -350,10 +351,30 @@ multishuf_oc_grouped <- function(
         cible = tidyr::replace_na(cible, 0)) |>
       dplyr::filter(flux > 0 | cible > 0)
   }
-  
   flux <- flux |> dplyr::arrange(dplyr::desc(flux))
-  
-  return(list(flux = flux, kl = res$kl, lk=res$lk))
+  if(is.null(weights))
+    w <-  1
+  else {
+    w <- flux |>
+      dplyr::left_join(weights, by = c("group_from", "group_to")) |> 
+      dplyr::pull(w)
+  }
+  wflux <- w*flux$flux
+  wcible <- w*flux$cible
+  uwflux <- flux$flux
+  uwcible <- flux$cible
+  return(list(
+    flux = list(flux), 
+    kli = res$kl, lki=res$lk,
+    lk = kl(uwcible, uwflux),
+    ks = kolmogorov_smirnov(uwflux, uwcible),
+    ad = anderson_darling(uwflux, uwcible),
+    cm = cramer_vonmises(uwflux, uwcible),
+    wkl = kl(wflux, wcible),
+    wlk = kl(wcible, wflux),
+    wks = kolmogorov_smirnov(wflux, wcible),
+    wad = anderson_darling(wflux, wcible),
+    wcm = cramer_vonmises(wflux, wcible)))
 }
 
 #' Fonction all_in groupé.
@@ -706,12 +727,13 @@ meaps_optimx <- function(MeapsDataGroup, attraction, parametres,
 #' @import cli
 #' @import dplyr
 meaps_opt <- function(MeapsDataGroup, attraction, parametres, 
-                         fct_meaps = "all_in", 
-                         strategie = 1L, 
-                         amplitude_max = 1000, rayon_max = 10,
-                         lower = NULL, upper = NULL, control = NULL,
-                         nthreads = 0L, progress = TRUE,
-                         quiet = TRUE) {
+                      fct_meaps = "all_in", 
+                      strategie = 1L, 
+                      amplitude_max = 1000, rayon_max = 10,
+                      lower = NULL, upper = NULL, control = NULL,
+                      nthreads = 0L, progress = TRUE,
+                      objective = "kl",
+                      quiet = TRUE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   if (is.null(MeapsDataGroup@cible)) cli::cli_abort("Il n'y a pas de cible.")
   check_fct_attraction(attraction, parametres)
@@ -721,7 +743,7 @@ meaps_opt <- function(MeapsDataGroup, attraction, parametres,
     attraction = attraction,
     nthreads = nthreads, verbose = FALSE
   )
-
+  
   if(!fct_meaps %in%c("all_in", "multishuf_oc", "multishuf_task")) cli::cli_abort("moteur MEAPS inconnu")
   meaps_fun_ <- switch(fct_meaps,
                        "all_in" = all_in_grouped,
@@ -731,53 +753,55 @@ meaps_opt <- function(MeapsDataGroup, attraction, parametres,
   
   env <- environment()
   kl <- 1
-
+  
   fn <- function(par) {
     
     if(any(par<lower)|any(par>upper)) {
-      kl <- Inf} else {
-        estim <- do.call(
-          meaps_fun_,
-          args = append(arg, list(parametres = par))
-        )
-        kl <- estim$kl}
-    
-    kl <- estim$kl
+      kl <- Inf
+    } else {
+      estim <- do.call(
+        meaps_fun_,
+        args = append(arg, list(parametres = par))
+      )
+      if(objective%in%names(estim))
+        kl <- estim[[objective]]
+      else
+        cli::cli_abort("l'objectif n'est pas implémenté")        }
     min_kl <- min(get("kl", envir = env), kl)
     assign("kl", min_kl, envir = env)
     mes <- glue::glue("\nmin:{signif(min_kl, 4)} kl:{signif(kl, 4)} -> {str_c(signif(par,4), collapse=', ')}")
     if (progress) {
       cli::cli_progress_update(.envir = env, extra = list(mes=mes))
-      }
+    }
     return(kl)
   }
-
+  
   nb_par <- length(parametres)
   if (is.null(lower)) lower <- rep(0, nb_par)
   if (is.null(upper)) {
     upper <- switch(attraction,
-      "marche" = c(rayon_max, amplitude_max),
-      "rampe" = c(rayon_max, amplitude_max),
-      "grav_exp" = c(10 + log(1 + amplitude_max), amplitude_max),
-      "grav_puiss" = c(5, .2, 2 * amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
-    }
+                    "marche" = c(rayon_max, amplitude_max),
+                    "rampe" = c(rayon_max, amplitude_max),
+                    "grav_exp" = c(10 + log(1 + amplitude_max), amplitude_max),
+                    "grav_puiss" = c(5, .2, 2 * amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
+  }
   
   optim_method <- switch(strategie,
-    function(par) {
-      cmaes::cma_es(par = par, fn = fn, lower = lower, upper = upper, control = control) },
-    function(par)  {
-      dfoptim::nmkb(par = par, fn = fn, lower = lower, upper = upper, control = control) },
-    function(par)  {
-      dfoptim::mads(par = par, fn = fn, lower = lower, upper = upper, control = control) }
+                         function(par) {
+                           cmaes::cma_es(par = par, fn = fn, lower = lower, upper = upper, control = control) },
+                         function(par)  {
+                           dfoptim::nmkb(par = par, fn = fn, lower = lower, upper = upper, control = control) },
+                         function(par)  {
+                           dfoptim::mads(par = par, fn = fn, lower = lower, upper = upper, control = control) }
   )
-
+  
   cli::cli_progress_bar(
     format = "{cli::pb_spin} Estimation avec {attraction} n°{cli::pb_current} en {cli::pb_elapsed} : {cli::pb_extra$mes}", 
     extra = list(mes=""),
     .envir = env, clear = FALSE)
   
   res <- optim_method(par = parametres)
-
+  
   cli::cli_progress_done(.envir = env)
   
   return(res)
