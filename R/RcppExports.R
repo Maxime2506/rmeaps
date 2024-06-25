@@ -21,6 +21,18 @@ NULL
 
 #'
 #' @return renvoie les flux au format triplet.
+meaps_all_in2_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, distributions, parametres, attraction = "constant", nthreads = 0L, verbose = TRUE) {
+    .Call(`_rmeaps_meaps_all_in2_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, distributions, parametres, attraction, nthreads, verbose)
+}
+
+#' La fonction meaps qui distribue tous les actifs en même temps. En entrée, la matrice des distances (et si besoin des
+NULL
+
+#' "marche" où l'attrait vaut 1 jusqu'à une certaine distance (param 1) puis moins (param 2). f(x) = 1 si x < p1, = p2
+NULL
+
+#'
+#' @return renvoie les flux au format triplet.
 meapsmode_cpp <- function(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, j_mode, parametres, attraction = "constant", group_from = NULL, group_to = NULL, cible = NULL, nthreads = 0L, verbose = TRUE) {
     .Call(`_rmeaps_meapsmode_cpp`, jr_dist, p_dist, xr_dist, emplois, actifs, fuites, j_mode, parametres, attraction, group_from, group_to, cible, nthreads, verbose)
 }

@@ -207,4 +207,72 @@ meapsdatagroup <- function(MeapsData, group_from, group_to, cible, quiet=FALSE) 
   )
 }
 
+#' Définition d'une sous-classe MeapsDataMultiChamps qui ajoute à MeapsData des données synthétiques de différentes sources.
+#' @slot struct_groups Matrice où chaque ligne indique l'appartenance de groupe de l'élément jr dans la représentation en triplet.
+#' @slot n_groups Vecteur donnant le nombre de groupes dans chacune des lignes de struct_group.
+#' @slot cibles Liste des données agrégées sur lesquelles on souhaite se caler.
+setClass("MeapsDataMultiChamps",
+  representation = list(
+    struct_groups = "matrix",
+    n_groups = "integer",
+    cibles = "list"
+  ),
+  prototype = list(
+    struct_groups = matrix(),
+    n_groups = integer(),
+    cibles = NULL
+  ),
+  contains = "MeapsData"
+)
 
+#' Méthode d'initialisation pour MeapsDataMultiChamps.
+#' df_group est une data.frame avec fromidINS, toidINS classé comme le triplet, puis des variables de regroupements.
+setMethod(
+  f = "initialize", signature = "MeapsDataMultiChamps",
+  definition = function(.Object, triplet, actifs, emplois, fuites, shuf,
+                        froms, tos, df_groups, cibles, jr_dist, p_dist) {
+    
+    .Object@triplet <- triplet
+    .Object@actifs <- actifs[froms]
+    .Object@emplois <- emplois[tos]
+    .Object@fuites <- fuites[froms]
+    .Object@froms <- froms
+    .Object@tos <- tos
+    .Object@shuf <- shuf
+    .Object@jr_dist <- jr_dist
+    .Object@p_dist <- p_dist
+
+    check_meapsdata(.Object, abort = TRUE)
+
+    if (any(triplet$fromidINS != df_groups$fromidINS) | any(triplet$toidINS != df_groups$toidINS)) stop("df_groups n'est pas ordonné comme le triplet de MeapsData.")
+    df_groups <- df_groups |> dplyr::select(-c(fromidINS, toidINS))
+    .Object@struct_groups <- df_groups |> as.matrix() |> t()
+
+    .Object@n_groups <- map_int(df_groups, \(x) dplyr::n_distinct(x))
+    
+    n_cibles <- map_int(cibles, length)
+    if(any(n_cibles != .Object@n_groups)) stop("La définition des groupes n'est pas cohérente entre df_groups et cibles.")
+
+    .Object@cibles <- cibles
+
+    return(.Object)
+  }
+)
+
+
+#' Constructeur de MeapsDataMultiChamps.
+#' @param MeapsData Un objet MeapsData qui décrit la zone d'étude.
+#' @param df_groups Une data.frame avec fromidINS et toidINS dans le même ordre que le triplet MeapsData, puis avec les variables de regroupement.
+#' @param cibles Une liste de vecteurs, chacun ayant la taille du nombre de groupes et les valeurs de flux attendues dans le groupe correspondant.
+#'
+#' @import dplyr
+meapsdatamultichamps <- function(MeapsData, df_groups, cibles) {
+  new(
+    "MeapsDataMultiChamps", MeapsData@triplet, MeapsData@actifs,
+    MeapsData@emplois, MeapsData@fuites, MeapsData@shuf,
+    MeapsData@froms, MeapsData@tos,
+    df_groups,
+    cibles,
+    MeapsData@jr_dist, MeapsData@p_dist
+  )
+}

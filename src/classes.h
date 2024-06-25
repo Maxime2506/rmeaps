@@ -23,6 +23,7 @@ public:
       Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::vector<double> xr_, 
             const std::vector<double> actifs_, const std::vector<double> emplois_, const std::vector<double> fuites_);
 
+      Rcpp::NumericMatrix resumer(const Rcpp::NumericMatrix& distrib, const std::vector< std::vector<double> >& liens); 
       Rcpp::List format_sortie(const std::vector< std::vector<double> >& liens);
 
       const int n_from() const { return actifs.size(); }

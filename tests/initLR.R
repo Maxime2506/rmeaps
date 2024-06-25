@@ -19,14 +19,31 @@ dist <- dist |> filter(toidINS %in% names(group_to)) |> as.data.frame()
 LR <- new("MeapsData", dist, actifs = actifs, emplois = emplois, fuite = fuites)
 LRG <- meapsdatagroup(LR, group_from, group_to, cible)
 
+gfrom <- tibble(fromidINS = names(group_from), gf = group_from) |>
+  mutate(gf = factor(gf) |> as.integer())
 
-#cat("all_in 1 thread")
-#all_in(LR, nthreads = 1)
+gto <- tibble(toidINS = names(group_to), gt = group_to) |>
+  mutate(gt = factor(gt) |> as.integer())
 
-#cat("all_in multithread")
-#all_in(LR)
+strug <- dist |> left_join(gfrom, by = "fromidINS") |> left_join(gto, by = "toidINS")
+strug <- strug |> group_by(gf, gt) |> mutate(cc = cur_group_id()-1) |> ungroup()
+cible <- cible |> mutate(gf = factor(group_from) |> as.integer(), gt = factor(group_to) |> as.integer()) 
+v1 <- strug |> group_by(gf, gt) |> summarise(.groups = "drop") |> left_join(cible, by = c("gf", "gt"))   |> mutate(value = replace_na(value, 0)) |>pull(value)
 
-#cat("all_in grouped multi thread")
-#all_in_grouped(LR)
 
-multishuf(LR, nshuf = 8)
+strug <- strug |> ungroup() |> transmute(fromidINS, toidINS, cc, qq = cut_number(metric, n = 10, labels = FALSE)-1)
+
+
+v2 <- sum(cible$value)/10 |> rep(x=_, 10)
+
+
+LRMC <- meapsdatamultichamps(LR, strug, cibles = list(v1, v2))
+
+all_in_multichamps(MeapsDataMultiChamps = LRMC)
+
+ponderer_champs(LRMC)
+
+meaps_multiopt(LRMC, attraction = "marche", parametres = c(5, 40),
+               control = list(maxit = 100))
+
+

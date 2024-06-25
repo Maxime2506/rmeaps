@@ -27,8 +27,26 @@ Urban::Urban(const std::vector<int> jr_, const std::vector<int> p_, const std::v
              const std::vector<double> actifs_, const std::vector<double> emplois_, const std::vector<double> fuites_)
     : jr(jr_), p(p_), xr(xr_), actifs(actifs_), emplois(emplois_), fuites(fuites_) {};
 
+// Calcul de distribution des flux selon divers designs définis dans une matrice.
+Rcpp::NumericMatrix Urban::resumer(const Rcpp::NumericMatrix& distrib, const std::vector< std::vector<double> >& liens) {
+  const int N = n_from(), Nd = distrib.nrow(), Kd = distrib.ncol();
+  int Ng = 0;
+  for (auto i = 0; i < Nd; ++i)
+    for (auto j = 0; j < Kd; ++j)
+      if (distrib(i, j) > Ng) Ng = distrib(i,j);
+  ++Ng;
+  Rcpp::NumericMatrix resultat(Nd, Ng);
+  for(auto i_distrib = 0; i_distrib < Nd; ++i_distrib) {
+    for(auto i = 0; i < N; ++i)
+      for(auto k = p[i]; k < p[i + 1]; ++k) {
+        resultat(i_distrib, distrib(i_distrib, k)) += liens[i][ jr[k] ];
+      }
+  }
+  return resultat;
+}
+
 // Sortie : produit le triplet de la matrice détaillée des flux estimées par meaps.
-Rcpp::List Urban::format_sortie(const std::vector<std::vector<double> >& liens) {
+Rcpp::List Urban::format_sortie(const std::vector< std::vector<double> >& liens) {
   Rcpp::NumericVector resultat(xr.size());
 
 for (auto i = 0; i < n_from(); ++i) {

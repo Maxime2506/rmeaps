@@ -9,7 +9,7 @@
         "args": [
           "--vanilla",
           "-e",
-          "source('tests/test.R')"
+          "source('tests/initLR.R')"
         ],
         "env": {
           "R_HOME" : "/Library/Frameworks/R.framework/Resources"
