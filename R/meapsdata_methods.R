@@ -653,8 +653,7 @@ meaps_optimx <- function(MeapsDataGroup, attraction, parametres,
     nthreads = nthreads, verbose = FALSE
   )
 
-  if (!version %in% c("all_in", "multishuf_oc", "multishuf_task")) {
-    cli::cli_abort("moteur MEAPS inconnu")
+  if (!version %in% c("all_in", "multishuf_oc", "multishuf_task")) cli::cli_abort("moteur MEAPS inconnu")
   
   meaps_fun_ <- switch(
     version,
