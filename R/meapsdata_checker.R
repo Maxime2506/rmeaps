@@ -105,7 +105,7 @@ is_meapsdata_valid <- function(object, quiet = TRUE) {
 }
 
 is_meaps_normalized <- function(object, just_a_warning = TRUE, seuil = 1e-4, quiet = FALSE) {
-  delta <- (sum(object@actifs * (1 - object@fuites)) - sum(object@emplois))/sum(object@emplois)
+  delta <- abs(sum(object@actifs * (1 - object@fuites)) - sum(object@emplois))/sum(object@emplois)
   if (delta > seuil) {
     if (just_a_warning) { 
       if(!quiet) cli::cli_alert_warning(

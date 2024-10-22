@@ -185,6 +185,29 @@ all_in <- function(MeapsData, attraction = "constant", parametres = 0, nthreads 
     dplyr::relocate(fromidINS, toidINS, flux)
 }
 
+
+all_in_nosat <- function(MeapsData, attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE) {
+  if (!inherits(MeapsData, "MeapsData")) cli::cli_abort("Ce n'est pas un objet MeapsData.")
+  
+  check_fct_attraction(attraction, parametres)
+  
+  nosat_all_in_cpp(
+    jr_dist = MeapsData@jr_dist,
+    p_dist = MeapsData@p_dist,
+    xr_dist = MeapsData@triplet$metric,
+    emplois = MeapsData@emplois,
+    actifs = MeapsData@actifs,
+    fuites = MeapsData@fuites,
+    parametres = parametres,
+    attraction = attraction,
+    nthreads = nthreads,
+    verbose = verbose
+  ) |>
+    tibble::as_tibble() |>
+    dplyr::bind_cols(MeapsData@triplet |> dplyr::select(-metric)) |>
+    dplyr::relocate(fromidINS, toidINS, flux)
+}
+
 ## UN WRAPPER : "one method fits all"
 meaps <- function(
     MeapsData, version = "all_in", attraction = "constant", parametres = 0, nthreads = 0L, verbose = TRUE,
@@ -942,3 +965,78 @@ meaps_multiopt <- function(MeapsDataMultiChamps, attraction, parametres,
 
   return(res)
 }
+
+
+# méthode générique pour optimisation
+# il faut définir une fonction fct_metric qui transforme le triplet résultat de meaps en une mesure qu'il faut minimiser.
+meaps_optim_fn <- function(MeapsData, attraction, parametres,
+                           fct_meaps = "all_in", fct_metric, 
+                           strategie = 1L,
+                           amplitude_max = 1000, rayon_max = 10,
+                           lower = NULL, upper = NULL, control = NULL,
+                           nthreads = 0L, progress = TRUE, quiet = TRUE) {
+  
+  if (!inherits(MeapsData, "MeapsData")) cli::cli_abort(("Ce n'est pas un objet MeapsData"))
+  
+  check_fct_attraction(attraction, parametres)
+  
+  arg <- list(
+    MeapsData,
+    attraction = attraction,
+    nthreads = nthreads,
+    verbose = FALSE
+  )
+  
+  meaps_fun_ <- switch(fct_meaps,
+                       "all_in" = all_in,
+                       "all_in_nosat" = all_in_nosat)
+  
+  env <- environment()
+  
+  fn <- function(par) {
+    objective <- do.call(
+      meaps_fun_,
+      args = append(arg, list(parametres = par))
+    ) |> fct_metric()
+    
+    mes <- glue::glue("\nobjective:{signif(objective, 4)} -> {str_c(signif(par,4), collapse=', ')}")
+    if (progress) {
+      cli::cli_progress_update(.envir = env, extra = list(mes = mes))
+    }
+    return(objective)
+  }
+  
+  nb_par <- length(parametres)
+  if (is.null(lower)) lower <- rep(0, nb_par)
+  if (is.null(upper)) {
+    upper <- switch(attraction,
+                    "marche" = c(rayon_max, amplitude_max),
+                    "rampe" = c(rayon_max, amplitude_max),
+                    "grav_exp" = c(10 + log(1 + amplitude_max), amplitude_max),
+                    "grav_puiss" = c(5, .2, 2 * amplitude_max)) # le paramètre p1 ne devrait pas dépasser 200m. On est en km.
+  }
+  
+  optim_method <- switch(strategie,
+                         function(par) {
+                           optim(par = par, fn = fn, lower = lower, upper = upper, control = control)},
+                         function(par) {
+                           cmaes::cma_es(par = par, fn = fn, lower = lower, upper = upper, control = control) },
+                         function(par)  {
+                           dfoptim::nmkb(par = par, fn = fn, lower = lower, upper = upper, control = control) },
+                         function(par)  {
+                           dfoptim::mads(par = par, fn = fn, lower = lower, upper = upper, control = control) }
+  )
+  
+  cli::cli_progress_bar(
+    format = "{cli::pb_spin} Estimation avec {attraction} n°{cli::pb_current} en {cli::pb_elapsed} : {cli::pb_extra$mes}",
+    extra = list(mes = ""),
+    .envir = env, clear = FALSE
+  )
+  
+  res <- optim_method(par = parametres)
+  
+  cli::cli_progress_done(.envir = env)
+  
+  return(res)
+}
+

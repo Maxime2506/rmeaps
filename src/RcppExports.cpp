@@ -183,6 +183,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// nosat_all_in_cpp
+List nosat_all_in_cpp(const IntegerVector jr_dist, const IntegerVector p_dist, const NumericVector xr_dist, const NumericVector emplois, const NumericVector actifs, const NumericVector fuites, const NumericVector parametres, const std::string attraction, const Nullable<IntegerVector> group_from, const Nullable<IntegerVector> group_to, const Nullable<NumericVector> cible, const int nthreads, const bool verbose);
+RcppExport SEXP _rmeaps_nosat_all_in_cpp(SEXP jr_distSEXP, SEXP p_distSEXP, SEXP xr_distSEXP, SEXP emploisSEXP, SEXP actifsSEXP, SEXP fuitesSEXP, SEXP parametresSEXP, SEXP attractionSEXP, SEXP group_fromSEXP, SEXP group_toSEXP, SEXP cibleSEXP, SEXP nthreadsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerVector >::type jr_dist(jr_distSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type p_dist(p_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type xr_dist(xr_distSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type emplois(emploisSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type actifs(actifsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type fuites(fuitesSEXP);
+    Rcpp::traits::input_parameter< const NumericVector >::type parametres(parametresSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type attraction(attractionSEXP);
+    Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type group_from(group_fromSEXP);
+    Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type group_to(group_toSEXP);
+    Rcpp::traits::input_parameter< const Nullable<NumericVector> >::type cible(cibleSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(nosat_all_in_cpp(jr_dist, p_dist, xr_dist, emplois, actifs, fuites, parametres, attraction, group_from, group_to, cible, nthreads, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_meaps_all_in_cpp", (DL_FUNC) &_rmeaps_meaps_all_in_cpp, 13},
@@ -193,6 +216,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rmeaps_multishuf_oc_cpp", (DL_FUNC) &_rmeaps_multishuf_oc_cpp, 12},
     {"_rmeaps_multishuf_origin_cpp", (DL_FUNC) &_rmeaps_multishuf_origin_cpp, 14},
     {"_rmeaps_multishuf_task_cpp", (DL_FUNC) &_rmeaps_multishuf_task_cpp, 14},
+    {"_rmeaps_nosat_all_in_cpp", (DL_FUNC) &_rmeaps_nosat_all_in_cpp, 13},
     {NULL, NULL, 0}
 };
 
