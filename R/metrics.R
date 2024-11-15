@@ -82,6 +82,9 @@ khi2 <- function(estime, observe) {
   sum((estime - observe)^2/observe, na.rm=TRUE)
 }
 
+
+
+
 #' Test de Kolmogorov-Smirnov
 #' on suppose que les flux sont classés
 #' @param est distribution empirique estimée
@@ -118,4 +121,30 @@ cramer_vonmises <- function(est, obs, w = 1) {
   eF <- head(cumsum(est)/sum(est), -1)
   eO <- head(cumsum(obs)/sum(obs), -1)
   sum((eO-eF)^2/eF/(1-eF))
+}
+
+all_metrics <- function(flux, weights) {
+  if(is.null(weights))
+    w <-  1
+  else {
+    w <- flux |>
+      dplyr::left_join(weights, by = c("group_from", "group_to")) |> 
+      dplyr::pull(w)
+  }
+  wflux <- w*flux$flux
+  wcible <- w*flux$cible
+  uwflux <- flux$flux
+  uwcible <- flux$cible
+  return(list(
+    flux = list(flux), 
+    kl = kl(uwflux, uwcible),
+    lk = kl(uwcible, uwflux),
+    ks = kolmogorov_smirnov(uwflux, uwcible),
+    ad = anderson_darling(uwflux, uwcible),
+    cm = cramer_vonmises(uwflux, uwcible),
+    wkl = kl(wflux, wcible),
+    wlk = kl(wcible, wflux),
+    wks = kolmogorov_smirnov(wflux, wcible),
+    wad = anderson_darling(wflux, wcible),
+    wcm = cramer_vonmises(wflux, wcible)))
 }
