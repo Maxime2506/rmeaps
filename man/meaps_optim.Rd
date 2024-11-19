@@ -19,7 +19,8 @@ meaps_optim(
   nthreads = 0L,
   progress = TRUE,
   quiet = TRUE,
-  klway = "kl"
+  klway = "kl",
+  weights = NULL
 )
 }
 \description{
