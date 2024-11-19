@@ -389,7 +389,7 @@ multishuf_oc_grouped <- function(
 #' @import dplyr
 all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
                            parametres = 0, odds = 1,
-                           nthreads = 0L, verbose = TRUE) {
+                           nthreads = 0L, verbose = TRUE, weights = NULL) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   check_fct_attraction(attraction, parametres)
 
