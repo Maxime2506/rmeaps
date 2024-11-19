@@ -540,7 +540,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
     MeapsDataGroup,
     attraction = attraction,
     nthreads = nthreads, verbose = FALSE, 
-    weights = weigths
+    weights = weights
   )
   if (!is.null(odds)) arg <- append(arg, list(odds = odds))
 
