@@ -524,7 +524,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         lower = NULL, upper = NULL, control = NULL,
                         discret = NULL,
                         nthreads = 0L, progress = TRUE,
-                        quiet = TRUE, klway = "kl") {
+                        quiet = TRUE, klway = "kl", weights = NULL) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
@@ -539,7 +539,8 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
   arg <- list(
     MeapsDataGroup,
     attraction = attraction,
-    nthreads = nthreads, verbose = FALSE
+    nthreads = nthreads, verbose = FALSE, 
+    weights = weigths
   )
   if (!is.null(odds)) arg <- append(arg, list(odds = odds))
 
