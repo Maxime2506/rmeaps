@@ -381,7 +381,7 @@ multishuf_oc_grouped <- function(
   }
   flux <- flux |> dplyr::arrange(dplyr::desc(flux)) 
   
-  full_metrics(flux, weights)
+  all_metrics(flux, weights)
 }
 
 #' Fonction all_in groupé.
@@ -437,7 +437,7 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
   }
   flux <- flux |> dplyr::arrange(dplyr::desc(flux)) 
   
-  full_metrics(flux, weights)
+  all_metrics(flux, weights)
 }
 
 
