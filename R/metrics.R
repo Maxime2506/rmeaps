@@ -136,7 +136,7 @@ all_metrics <- function(flux, weights) {
   uwflux <- flux$flux
   uwcible <- flux$cible
   return(list(
-    flux = list(flux), 
+    flux = flux, 
     kl = kl(uwflux, uwcible),
     lk = kl(uwcible, uwflux),
     ks = kolmogorov_smirnov(uwflux, uwcible),
