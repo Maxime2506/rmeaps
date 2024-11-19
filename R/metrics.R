@@ -67,10 +67,14 @@ r2kl2 <- function(estime, observe, seuil = .99, bruit=1e-6) {
   return(list(r2kl = r2kln0, r2kl_l = r2klnb))
 }
 
-kl <- function(x,y, seuil = 1e-6) {
-  yn <- y[x>0]/sum(y[x>0])
+kl <- function(x, y, w = 1, seuil = 1e-6) {
+  if(length(w) != 1 )
+    wn <- w[x>0] / sum(w[x>0] )
+  else 
+    wn <- 1
+  yn <- wn * y[x>0]/sum(wn*y[x>0])
   yn[yn<seuil] <- seuil
-  xn <- x[x>0]/sum(x)
+  xn <-  wn * x[x>0]/sum(wn * x)
   sum( xn * log(xn/yn) )
 }
 
@@ -89,15 +93,6 @@ khi2 <- function(estime, observe) {
 #' on suppose que les flux sont classés
 #' @param est distribution empirique estimée
 #' @param obs distribution empirique observée
-#' @return ks
-ks <- function(est, obs) {
-  max(abs(ecdf(est)-ecdf(obs)))
-}
-
-#' Test de Kolmogorov-Smirnov
-#' on suppose que les flux sont classés
-#' @param est distribution empirique estimée
-#' @param obs distribution empirique observée
 #' @return un double, le KS
 kolmogorov_smirnov <- function(est, obs) {
   max(abs(cumsum(est)/sum(est)-cumsum(obs)/sum(obs)))
@@ -109,7 +104,7 @@ kolmogorov_smirnov <- function(est, obs) {
 #' @param obs distribution empirique observée
 #' @return un double, le AD
 anderson_darling <- function(est, obs, w = 1) {
-  sum((cumsum(est)/sum(est)-cumsum(obs)/sum(obs))^2*w)
+  sum((cumsum(est)/sum(est)-cumsum(obs)/sum(obs))^2 * w)
 }
 
 #' Test de Cramer–von Mises
@@ -120,7 +115,10 @@ anderson_darling <- function(est, obs, w = 1) {
 cramer_vonmises <- function(est, obs, w = 1) {
   eF <- head(cumsum(est)/sum(est), -1)
   eO <- head(cumsum(obs)/sum(obs), -1)
-  sum((eO-eF)^2/eF/(1-eF))
+  if(length(w)!=1)
+    w <- head(w, -1)
+  w <- w/sum(w)
+  sum((eO-eF)^2*w/eF/(1-eF))
 }
 
 all_metrics <- function(flux, weights) {
@@ -147,4 +145,20 @@ all_metrics <- function(flux, weights) {
     wks = kolmogorov_smirnov(wflux, wcible),
     wad = anderson_darling(wflux, wcible),
     wcm = cramer_vonmises(wflux, wcible)))
+}
+
+#' sum square error des logs, pondérée par les flux
+#' on suppose que les flux sont classés mais c'est pas important
+#' correspond à la fonction objectif d'une régression log log, mais pondérée pour se rapprocher de Poisson
+#' @param flux tibble des flux groupés
+#' @param w tibble des poids (ou des km) groupés (defaut 1, pas de pondération)
+#' @return un double, le AD
+ssew <- function(fluxs, w = 1, pond = "cible") {
+  fluxs |> 
+    dplyr::mutate(w = !!w, 
+                  pond = .data[[pond]]) |> 
+    dplyr::ungroup() |> 
+    dplyr::summarize( e =  sum( w / sum(w) * pond *(log(flux) - log(cible))^2),
+                      .groups = "drop") |> 
+    dplyr::pull(e)
 }

@@ -330,7 +330,6 @@ multishuf_oc_grouped <- function(
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
   # RQ : pas de méthode pour vérifier le bon ordre des odds.
-
   if (attraction == "odds") {
     if (length(odds) != nrow(MeapsDataGroup@triplet)) cli::cli_abort("vecteur odds invalide.")
   } else {
@@ -365,8 +364,7 @@ multishuf_oc_grouped <- function(
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
-    flux = res$flux,
-    cible = cible
+    flux = res$flux
   ) |>
     dplyr::filter(flux > 0)
   if (!is.null(MeapsDataGroup@cible)) {
@@ -380,9 +378,11 @@ multishuf_oc_grouped <- function(
       ) |>
       dplyr::filter(flux > 0 | cible > 0)
   }
+
   flux <- flux |> dplyr::arrange(dplyr::desc(flux)) 
   
   all_metrics(flux, weights)
+
 }
 
 #' Fonction all_in groupé.
@@ -424,8 +424,7 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
-    flux = res$flux,
-    cible = cible
+    flux = res$flux
   ) |>
     dplyr::filter(flux > 0)
   if (!is.null(MeapsDataGroup@cible)) {
@@ -530,11 +529,12 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         nthreads = 0L, progress = TRUE,
                         quiet = TRUE, klway = "kl", weights = NULL, future=FALSE) {
   
-  require("stringr")
-  require("glue")
-  require("furrr")
-  require("purrr")
-  require("cli")
+  library(stringr)
+  library(glue)
+  library(furrr)
+  library(purrr)
+  library(cli)
+  library(dplyr)
   
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
@@ -576,7 +576,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
             args = append(arg, list(parametres = par))
           )
           kl <- estim[[klway]]}
-      mes <- glue("kl:{signif(kl, 4)} ; {str_c(signif(par,4), collapse=', ')}")
+      mes <- glue("kl:{signif(kl, 4)} ; {stringr::str_c(signif(par,4), collapse=', ')}")
       if (progress) {
         cli::cli_progress_update(.envir = env, extra = list(mes = mes))
       }
@@ -622,7 +622,6 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
       value = best$kl,
       counts = NA,
       convergence = best$convergence,
-      message = best$message,
       all_iter = bf
     )
     return(res)
