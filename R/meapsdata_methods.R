@@ -365,7 +365,8 @@ multishuf_oc_grouped <- function(
   flux <- tibble::tibble(
     group_from = g_froms[res$i + 1L],
     group_to = g_tos[res$j + 1L],
-    flux = res$flux
+    flux = res$flux,
+    cible = cible
   ) |>
     dplyr::filter(flux > 0)
   if (!is.null(MeapsDataGroup@cible)) {
@@ -394,7 +395,10 @@ all_in_grouped <- function(MeapsDataGroup, attraction = "constant",
   check_fct_attraction(attraction, parametres)
 
   if (!is.null(MeapsDataGroup@cible)) {
-    cible <- MeapsDataGroup@cible |> dplyr::pull(value)
+    cible <- MeapsDataGroup@cible |>
+      tidyr::complete(group_from, group_to, fill = list(value = 0)) |>
+      dplyr::arrange(group_from, group_to) |>
+      dplyr::pull(value)
   } else {
     cible <- NULL
   }
