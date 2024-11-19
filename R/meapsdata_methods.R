@@ -524,7 +524,7 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         lower = NULL, upper = NULL, control = NULL,
                         discret = NULL,
                         nthreads = 0L, progress = TRUE,
-                        quiet = TRUE, klway = "kl", weights = NULL) {
+                        quiet = TRUE, klway = "kl", weights = NULL, future=FALSE) {
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
@@ -586,7 +586,11 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
     upper <- tail(upper, -1)
     tp <- progress
     progress <- FALSE
-    bf <- purrr::map_dfr(discret, \(d) {
+    if(future) 
+      mmap <- furrr::future_map_dfr
+    else
+      mmap <- purrr::map_dfr
+    bf <- mmap(discret, \(d) {
       opt <- stats::optim(
         par = tail(parametres, -1),
         fn = \(x) fn(c(d, x)),
