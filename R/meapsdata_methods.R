@@ -525,6 +525,13 @@ meaps_optim <- function(MeapsDataGroup, attraction, parametres, odds = NULL,
                         discret = NULL,
                         nthreads = 0L, progress = TRUE,
                         quiet = TRUE, klway = "kl", weights = NULL, future=FALSE) {
+  
+  require("stringr")
+  require("glue")
+  require("furrr")
+  require("purrr")
+  require("cli")
+  
   if (!inherits(MeapsDataGroup, "MeapsDataGroup")) {
     cli::cli_abort("Ce n'est pas un objet MeapsDataGroup.")
   }
